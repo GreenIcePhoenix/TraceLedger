@@ -19,6 +19,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.greenicephoenix.traceledger.domain.model.TransactionType
 import com.greenicephoenix.traceledger.domain.model.TransactionUiModel
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.SyncAlt
 
 @Composable
 fun TransactionRow(
@@ -94,17 +97,34 @@ fun TransactionRow(
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
 
-                        Text(
-                            text = buildString {
-                                append(categoryName)
-                                transaction.note?.let {
-                                    append(" · ")
-                                    append(it)
-                                }
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+
+                            Text(
+                                text = buildString {
+                                    append(categoryName)
+                                    transaction.note?.let {
+                                        append(" · ")
+                                        append(it)
+                                    }
+                                },
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+
+                            if (transaction.recurringId != null) {
+
+                                Spacer(modifier = Modifier.width(6.dp))
+
+                                Icon(
+                                    imageVector = Icons.Default.Sync,
+                                    contentDescription = "Recurring",
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
 
                         Text(
                             text = "$accountName · ${transaction.date}",

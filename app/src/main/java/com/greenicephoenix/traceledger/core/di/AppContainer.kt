@@ -10,10 +10,18 @@ import com.greenicephoenix.traceledger.feature.statistics.StatisticsViewModelFac
 import com.greenicephoenix.traceledger.feature.budgets.data.BudgetRepository
 import com.greenicephoenix.traceledger.core.repository.CategoryRepository
 import com.greenicephoenix.traceledger.feature.categories.CategoriesViewModelFactory
+import com.greenicephoenix.traceledger.core.datastore.SettingsDataStore
+import com.greenicephoenix.traceledger.core.repository.RecurringTransactionRepository
+import com.greenicephoenix.traceledger.core.recurring.RecurringTransactionGenerator
+import com.greenicephoenix.traceledger.feature.recurring.RecurringTransactionsViewModelFactory
+import com.greenicephoenix.traceledger.feature.recurring.AddEditRecurringViewModelFactory
 
 class AppContainer(context: Context) {
 
     private val database = TraceLedgerDatabase.getInstance(context)
+
+    val settingsDataStore: SettingsDataStore =
+        SettingsDataStore(context)
 
     val accountRepository: AccountRepository =
         AccountRepository(database.accountDao())
@@ -55,5 +63,28 @@ class AppContainer(context: Context) {
         )
     }
 
+    val recurringTransactionRepository: RecurringTransactionRepository by lazy {
+        RecurringTransactionRepository(
+            recurringDao = database.recurringTransactionDao(),
+            transactionDao = database.transactionDao()
+        )
+    }
+
+    val recurringGenerator: RecurringTransactionGenerator by lazy {
+        RecurringTransactionGenerator(
+            recurringRepository = recurringTransactionRepository,
+            transactionRepository = transactionRepository
+        )
+    }
+
+    val recurringViewModelFactory =
+        RecurringTransactionsViewModelFactory(
+            recurringTransactionRepository
+        )
+
+    val addEditRecurringFactory =
+        AddEditRecurringViewModelFactory(
+            recurringTransactionRepository
+        )
 
 }

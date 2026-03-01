@@ -13,11 +13,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.greenicephoenix.traceledger.BuildConfig
 import com.greenicephoenix.traceledger.R
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import com.greenicephoenix.traceledger.core.util.ChangelogParser
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,13 +30,19 @@ fun AboutScreen(
 
     val context = LocalContext.current
 
-    val versionName = context.packageManager
-        .getPackageInfo(context.packageName, 0)
-        .versionName
+    val versionName = BuildConfig.VERSION_NAME
+    var showPrevious by remember { mutableStateOf(false) }
 
-    val changelogText = remember {
-        loadChangelog(context)
+    val allChangelogs = remember {
+        ChangelogParser.load(context)
     }
+
+    val sortedVersions = allChangelogs.keys.sortedDescending()
+
+    val changelogText = allChangelogs[versionName]
+        ?: "No changelog available for this version."
+
+    val previousVersions = sortedVersions.filter { it != versionName }
 
     Scaffold(
         topBar = {
@@ -100,7 +109,7 @@ fun AboutScreen(
                     )
 
                     Text(
-                        text = "Changelog",
+                        text = "What's New",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onBackground
                     )
@@ -110,6 +119,40 @@ fun AboutScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                     )
+
+                    if (previousVersions.isNotEmpty()) {
+
+                        TextButton(
+                            onClick = { showPrevious = !showPrevious }
+                        ) {
+                            Text(
+                                text = if (showPrevious) "Hide Previous Versions"
+                                else "View Previous Versions"
+                            )
+                        }
+
+                        if (showPrevious) {
+                            previousVersions.forEach { version ->
+
+                                HorizontalDivider(
+                                    thickness = 0.5.dp,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.1f)
+                                )
+
+                                Text(
+                                    text = "Version $version",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+
+                                Text(
+                                    text = allChangelogs[version] ?: "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                    }
 
                     HorizontalDivider(
                         thickness = 0.5.dp,
@@ -133,13 +176,24 @@ fun AboutScreen(
     }
 }
 
-private fun loadChangelog(context: android.content.Context): String {
+private fun loadChangelog(context: android.content.Context): Map<String, String> {
     return try {
-        context.resources
+        val fullText = context.resources
             .openRawResource(R.raw.changelog)
             .bufferedReader()
             .use { it.readText() }
+
+        val sections = fullText.split("# ")
+            .filter { it.isNotBlank() }
+
+        sections.associate { section ->
+            val lines = section.lines()
+            val version = lines.first().trim()
+            val content = lines.drop(1).joinToString("\n").trim()
+            version to content
+        }
+
     } catch (e: Exception) {
-        "Changelog unavailable."
+        emptyMap()
     }
 }

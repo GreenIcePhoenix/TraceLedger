@@ -12,9 +12,11 @@ import com.greenicephoenix.traceledger.core.database.dao.CategoryDao
 import com.greenicephoenix.traceledger.core.database.entity.AccountEntity
 import com.greenicephoenix.traceledger.core.database.entity.TransactionEntity
 import com.greenicephoenix.traceledger.core.database.entity.CategoryEntity
+import com.greenicephoenix.traceledger.core.database.entity.RecurringTransactionEntity
 import com.greenicephoenix.traceledger.feature.budgets.data.BudgetDao
 import com.greenicephoenix.traceledger.feature.budgets.data.BudgetEntity
 import com.greenicephoenix.traceledger.BuildConfig
+import com.greenicephoenix.traceledger.core.database.dao.RecurringTransactionDao
 import com.greenicephoenix.traceledger.core.database.migrations.*
 
 @Database(
@@ -22,9 +24,10 @@ import com.greenicephoenix.traceledger.core.database.migrations.*
         AccountEntity::class,
         TransactionEntity::class,
         BudgetEntity::class,
-        CategoryEntity::class
+        CategoryEntity::class,
+        RecurringTransactionEntity::class // NEW
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 @TypeConverters(RoomConverters::class)
@@ -34,6 +37,7 @@ abstract class TraceLedgerDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
     abstract fun budgetDao(): BudgetDao
     abstract fun categoryDao(): CategoryDao
+    abstract fun recurringTransactionDao(): RecurringTransactionDao
 
     companion object {
 
@@ -58,7 +62,9 @@ abstract class TraceLedgerDatabase : RoomDatabase() {
                     .addMigrations(
                         MIGRATION_4_5,
                         MIGRATION_5_6,
-                        MIGRATION_6_7
+                        MIGRATION_6_7,
+                        MIGRATION_7_8,
+                        MIGRATION_8_9
                     )
 
             if (BuildConfig.DEBUG) {

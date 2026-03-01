@@ -1,4 +1,5 @@
-Version 0.3.0 — Major UI Upgrade
+# 0.3.0
+🎨 Major UI Upgrade
 • Full light mode support across the app
 • Improved contrast and readability
 • Cleaner dashboard and financial summaries
@@ -7,7 +8,10 @@ Version 0.3.0 — Major UI Upgrade
 • Improved bottom navigation clarity
 • Better typography hierarchy and spacing
 
-Version 0.2.0
-• Budgets support
-• Improved import preview
-• UI stability improvements
+
+# 0.2.0
+• Initial dashboard implementation
+• Accounts and transactions
+• Budgets module
+• Statistics and charts
+• JSON / CSV export & import

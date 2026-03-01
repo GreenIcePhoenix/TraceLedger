@@ -33,7 +33,8 @@ import java.time.LocalDate
     indices = [
         Index("categoryId"),
         Index("fromAccountId"),
-        Index("toAccountId")
+        Index("toAccountId"),
+        Index("recurringId") // NEW
     ]
 )
 data class TransactionEntity(
@@ -45,5 +46,7 @@ data class TransactionEntity(
     val toAccountId: String?,
     val categoryId: String?,
     val note: String?,
-    val createdAt: Instant
+    val createdAt: Instant,
+    // NEW — nullable and defaulted
+    val recurringId: String? = null
 )

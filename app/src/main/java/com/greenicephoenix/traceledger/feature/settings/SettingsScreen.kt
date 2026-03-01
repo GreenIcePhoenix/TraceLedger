@@ -37,7 +37,7 @@ fun SettingsScreen(
     onExportUriReady: (ExportFormat, Uri) -> Unit,
     onImportContinue: () -> Unit,
     onImportUriReady: (Uri) -> Unit,
-    onImportPreviewRequested: suspend (Uri) -> ImportPreview, // NEW
+    onImportPreviewRequested: suspend (Uri) -> ImportPreview,
     onImportConfirmed: (Uri, (Int?) -> Unit) -> Unit,
     onImportError: (String) -> Unit
 ) {
@@ -155,6 +155,13 @@ fun SettingsScreen(
             title = "Budgets",
             subtitle = "Monthly spending limits",
             onClick = onBudgetsClick
+        )
+
+        // ───────── Recurring Transactions ─────────
+        SettingsItem(
+            title = "Recurring Transactions",
+            subtitle = "Manage automatic repeating transactions",
+            onClick = { onNavigate(Routes.RECURRING) }
         )
 
         // ───────── Export ─────────

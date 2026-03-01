@@ -9,6 +9,7 @@ import com.greenicephoenix.traceledger.domain.model.TransactionType
 import com.greenicephoenix.traceledger.domain.model.TransactionUiModel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.LocalDate
 
 class TransactionRepository(
     private val database: TraceLedgerDatabase,
@@ -180,7 +181,8 @@ class TransactionRepository(
             toAccountId = toAccountId,
             categoryId = categoryId,
             note = note,
-            createdAt = createdAt
+            createdAt = createdAt,
+            recurringId = recurringId
         )
     }
 
@@ -194,7 +196,24 @@ class TransactionRepository(
             toAccountId = toAccountId,
             categoryId = categoryId,
             note = note,
-            createdAt = createdAt
+            createdAt = createdAt,
+            recurringId = recurringId
         )
     }
+
+    suspend fun getByRecurringAndDate(
+        recurringId: String,
+        date: LocalDate
+    ): TransactionUiModel? {
+        return transactionDao
+            .getByRecurringAndDate(recurringId, date)
+            ?.toUiModel()
+    }
+
+    suspend fun runInTransaction(block: suspend () -> Unit) {
+        database.withTransaction {
+            block()
+        }
+    }
+
 }

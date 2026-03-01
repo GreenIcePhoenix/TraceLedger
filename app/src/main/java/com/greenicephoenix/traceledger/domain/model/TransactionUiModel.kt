@@ -17,19 +17,22 @@ data class TransactionUiModel(
 
     // Core
     val type: TransactionType,
-    val amount: BigDecimal,      // always positive
-    val date: LocalDate,         // user-selected date
+    val amount: BigDecimal,
+    val date: LocalDate,
 
     // Accounts
-    val fromAccountId: String?,  // EXPENSE, TRANSFER
-    val toAccountId: String?,    // INCOME, TRANSFER
+    val fromAccountId: String?,
+    val toAccountId: String?,
 
     // Category
-    val categoryId: String?,     // EXPENSE, INCOME only
+    val categoryId: String?,
 
     // Optional metadata
     val note: String? = null,
 
     // System
-    val createdAt: Instant
+    val createdAt: Instant,
+
+    // 🔁 NEW — null for manual transactions
+    val recurringId: String? = null
 )

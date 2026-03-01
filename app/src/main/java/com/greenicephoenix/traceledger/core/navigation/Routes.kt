@@ -21,6 +21,9 @@ object Routes {
     const val BUDGETS = "budgets"
     const val ADD_EDIT_BUDGET = "add-edit-budget"
     const val ABOUT = "about"
+    const val RECURRING = "recurring"
+    const val ADD_RECURRING = "add_recurring"
+    const val EDIT_RECURRING = "edit_recurring/{recurringId}"
 
 
 }

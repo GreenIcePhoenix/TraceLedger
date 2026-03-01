@@ -7,6 +7,7 @@ import androidx.room.Query
 import com.greenicephoenix.traceledger.core.database.entity.TransactionEntity
 import kotlinx.coroutines.flow.Flow
 import androidx.room.Update
+import java.time.LocalDate
 
 @Dao
 interface TransactionDao {
@@ -37,4 +38,16 @@ interface TransactionDao {
 
     @Query("DELETE FROM transactions")
     suspend fun deleteAll()
+
+    @Query("""
+        SELECT * FROM transactions
+        WHERE recurringId = :recurringId
+        AND date = :date
+        LIMIT 1
+    """)
+    suspend fun getByRecurringAndDate(
+        recurringId: String,
+        date: LocalDate
+    ): TransactionEntity?
+
 }

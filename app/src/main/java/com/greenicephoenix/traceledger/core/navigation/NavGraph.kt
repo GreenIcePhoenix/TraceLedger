@@ -41,6 +41,9 @@ import com.greenicephoenix.traceledger.feature.budgets.BudgetsScreen
 import com.greenicephoenix.traceledger.feature.budgets.AddEditBudgetScreen
 import com.greenicephoenix.traceledger.feature.budgets.BudgetsViewModel
 import com.greenicephoenix.traceledger.feature.budgets.BudgetsViewModelFactory
+import com.greenicephoenix.traceledger.feature.recurring.AddEditRecurringScreen
+import com.greenicephoenix.traceledger.feature.recurring.AddEditRecurringViewModel
+import com.greenicephoenix.traceledger.feature.recurring.RecurringTransactionsScreen
 
 /**
  * Central navigation graph for TraceLedger
@@ -580,6 +583,106 @@ fun TraceLedgerNavGraph(
             )
         }
 
+        /* ---------------- RECURRING ---------------- */
+        composable(Routes.RECURRING) {
+
+            val app = LocalContext.current
+                .applicationContext as TraceLedgerApp
+
+            RecurringTransactionsScreen(
+                viewModelFactory = app.container.recurringViewModelFactory,
+                onAddClick = {
+                    navController.navigate(Routes.ADD_RECURRING)
+                },
+                onEditClick = { recurring ->
+                    navController.navigate(
+                        "edit_recurring/${recurring.id}"
+                    )
+
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        /* ----------------ADD RECURRING ---------------- */
+        composable(Routes.ADD_RECURRING) {
+
+            val app = LocalContext.current
+                .applicationContext as TraceLedgerApp
+
+            val viewModel: AddEditRecurringViewModel =
+                viewModel(factory = app.container.addEditRecurringFactory)
+
+            val accountsViewModel: AccountsViewModel = viewModel()
+            val accounts by accountsViewModel.accounts.collectAsState()
+
+            AddEditRecurringScreen(
+                accounts = accounts,
+                categories = categories,
+                existing = null,
+                onSave = { type, amount, fromId, toId, categoryId, frequency, start, end, note ->
+                    viewModel.saveRecurring(
+                        type = type,
+                        amount = amount,
+                        fromAccountId = fromId,
+                        toAccountId = toId,
+                        categoryId = categoryId,
+                        frequency = frequency,
+                        startDate = start,
+                        endDate = end,
+                        note = note
+                    )
+
+                    navController.popBackStack()
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        /* ----------------EDIT RECURRING ---------------- */
+        composable(
+            route = Routes.EDIT_RECURRING,
+            arguments = listOf(
+                navArgument("recurringId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+
+            val recurringId =
+                backStackEntry.arguments?.getString("recurringId")
+                    ?: return@composable
+
+            val app = LocalContext.current
+                .applicationContext as TraceLedgerApp
+
+            val viewModel: AddEditRecurringViewModel =
+                viewModel(factory = app.container.addEditRecurringFactory)
+
+            val accountsViewModel: AccountsViewModel = viewModel()
+            val accounts by accountsViewModel.accounts.collectAsState()
+
+            AddEditRecurringScreen(
+                accounts = accounts,
+                categories = categories,
+                onSave = { type, amount, fromId, toId, categoryId, frequency, start, end, note ->
+
+                    viewModel.saveRecurring(
+                        type = type,
+                        amount = amount,
+                        fromAccountId = fromId,
+                        toAccountId = toId,
+                        categoryId = categoryId,
+                        frequency = frequency,
+                        startDate = start,
+                        endDate = end,
+                        note = note
+                    )
+                    navController.popBackStack()
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
 
     }
 }
