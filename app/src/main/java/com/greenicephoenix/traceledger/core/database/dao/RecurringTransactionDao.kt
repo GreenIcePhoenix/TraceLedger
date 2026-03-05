@@ -21,9 +21,10 @@ interface RecurringTransactionDao {
 
     @Query(
         """
-        SELECT * FROM recurring_transactions
-        WHERE endDate IS NULL OR endDate >= :today
-        """
+    SELECT * FROM recurring_transactions
+    WHERE isActive = 1
+    AND (endDate IS NULL OR endDate >= :today)
+    """
     )
     suspend fun getActiveRecurring(today: String): List<RecurringTransactionEntity>
 

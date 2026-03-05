@@ -1,5 +1,6 @@
 package com.greenicephoenix.traceledger.feature.transactions.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -10,6 +11,8 @@ import androidx.compose.ui.unit.dp
 import com.greenicephoenix.traceledger.domain.model.TransactionUiModel
 import com.greenicephoenix.traceledger.domain.model.TransactionType
 import java.time.format.DateTimeFormatter
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SyncAlt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,6 +55,33 @@ fun TransactionDetailSheet(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
             )
+
+            if (transaction.recurringId != null) {
+
+                Row(
+                    modifier = Modifier
+                        .background(
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+                            RoundedCornerShape(10.dp)
+                        )
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+
+                    Icon(
+                        imageVector = Icons.Default.SyncAlt,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+
+                    Text(
+                        text = "Recurring transaction",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
 
             HorizontalDivider(
                 thickness = 0.5.dp,

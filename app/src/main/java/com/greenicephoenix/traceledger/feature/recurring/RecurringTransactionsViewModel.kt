@@ -25,4 +25,10 @@ class RecurringTransactionsViewModel(
             repository.delete(recurring)
         }
     }
+
+    fun toggleActive(recurring: RecurringTransactionEntity) {
+        viewModelScope.launch {
+            repository.toggleActive(recurring)
+        }
+    }
 }

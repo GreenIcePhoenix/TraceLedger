@@ -36,5 +36,6 @@ data class RecurringTransactionEntity(
 
     val frequency: String, // DAILY, WEEKLY, MONTHLY, QUARTERLY, HALF_YEARLY, YEARLY
 
-    val lastGeneratedDate: LocalDate?
+    val lastGeneratedDate: LocalDate?,
+    val isActive: Boolean = true
 )

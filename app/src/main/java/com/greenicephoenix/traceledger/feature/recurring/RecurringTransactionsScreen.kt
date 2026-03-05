@@ -18,6 +18,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.greenicephoenix.traceledger.core.database.entity.RecurringTransactionEntity
 import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
 import androidx.compose.material.icons.Icons
+import com.greenicephoenix.traceledger.core.recurring.RecurringDateCalculator
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -119,7 +120,8 @@ fun RecurringTransactionsScreen(
                     RecurringItemCard(
                         recurring = recurring,
                         onClick = { onEditClick(recurring) },
-                        onDelete = { viewModel.delete(recurring) }
+                        onDelete = { viewModel.delete(it) },
+                        onToggle = { viewModel.toggleActive(it) }
                     )
                 }
             }
@@ -131,8 +133,16 @@ fun RecurringTransactionsScreen(
 private fun RecurringItemCard(
     recurring: RecurringTransactionEntity,
     onClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: (RecurringTransactionEntity) -> Unit,
+    onToggle: (RecurringTransactionEntity) -> Unit
 ) {
+
+    val nextRun = RecurringDateCalculator.nextExecutionDate(
+        startDate = recurring.startDate,
+        lastGeneratedDate = recurring.lastGeneratedDate,
+        frequency = recurring.frequency
+    )
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -142,6 +152,7 @@ private fun RecurringItemCard(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
+
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -155,19 +166,55 @@ private fun RecurringItemCard(
 
             Text(
                 text = recurring.amount.toPlainString(),
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            Text(
+                text = "Next: $nextRun",
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                 style = MaterialTheme.typography.bodySmall
             )
 
             Spacer(modifier = Modifier.height(6.dp))
 
-            TextButton(
-                onClick = onDelete
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+
                 Text(
-                    text = "Delete",
-                    color = NothingRed
+                    text = if (recurring.isActive) "Active" else "Paused",
+                    color =
+                        if (recurring.isActive)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    style = MaterialTheme.typography.bodySmall
                 )
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+
+                    TextButton(
+                        onClick = { onToggle(recurring) }
+                    ) {
+                        Text(
+                            text = if (recurring.isActive) "Pause" else "Resume"
+                        )
+                    }
+
+                    TextButton(
+                        onClick = { onDelete(recurring) }
+                    ) {
+                        Text(
+                            text = "Delete",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
             }
         }
     }

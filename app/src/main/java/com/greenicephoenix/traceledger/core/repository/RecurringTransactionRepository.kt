@@ -28,4 +28,9 @@ class RecurringTransactionRepository(
     suspend fun getById(id: String): RecurringTransactionEntity? =
         recurringDao.getById(id)
 
+    suspend fun toggleActive(recurring: RecurringTransactionEntity) {
+        recurringDao.update(
+            recurring.copy(isActive = !recurring.isActive)
+        )
+    }
 }
