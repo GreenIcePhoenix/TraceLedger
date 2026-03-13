@@ -3,51 +3,59 @@ package com.greenicephoenix.traceledger.core.navigation
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import com.greenicephoenix.traceledger.feature.accounts.AccountsScreen
-import com.greenicephoenix.traceledger.feature.accounts.AddEditAccountScreen
-import com.greenicephoenix.traceledger.feature.dashboard.DashboardScreen
-import com.greenicephoenix.traceledger.feature.statistics.StatisticsScreen
-import com.greenicephoenix.traceledger.feature.addtransaction.AddTransactionScreen
-import com.greenicephoenix.traceledger.feature.transactions.HistoryScreen
-import com.greenicephoenix.traceledger.feature.accounts.AccountsViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.greenicephoenix.traceledger.feature.categories.CategoriesScreen
-import com.greenicephoenix.traceledger.feature.categories.CategoriesViewModel
-import com.greenicephoenix.traceledger.feature.settings.SettingsScreen
-import com.greenicephoenix.traceledger.feature.categories.AddEditCategoryScreen
-import com.greenicephoenix.traceledger.feature.addtransaction.AddTransactionViewModel
-import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.navigation
 import androidx.navigation.navArgument
 import com.greenicephoenix.traceledger.TraceLedgerApp
-import com.greenicephoenix.traceledger.feature.addtransaction.AddTransactionViewModelFactory
-import com.greenicephoenix.traceledger.feature.statistics.ExpenseBreakdownScreen
-import com.greenicephoenix.traceledger.feature.statistics.IncomeBreakdownScreen
-import com.greenicephoenix.traceledger.feature.statistics.StatisticsViewModel
-import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewModel
-import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewModelFactory
-import androidx.navigation.compose.navigation
 import com.greenicephoenix.traceledger.feature.about.AboutScreen
-import com.greenicephoenix.traceledger.feature.statistics.CashflowScreen
-import com.greenicephoenix.traceledger.feature.budgets.BudgetsScreen
+import com.greenicephoenix.traceledger.feature.accounts.AccountsScreen
+import com.greenicephoenix.traceledger.feature.accounts.AccountsViewModel
+import com.greenicephoenix.traceledger.feature.accounts.AddEditAccountScreen
+import com.greenicephoenix.traceledger.feature.addtransaction.AddTransactionScreen
+import com.greenicephoenix.traceledger.feature.addtransaction.AddTransactionViewModel
+import com.greenicephoenix.traceledger.feature.addtransaction.AddTransactionViewModelFactory
 import com.greenicephoenix.traceledger.feature.budgets.AddEditBudgetScreen
+import com.greenicephoenix.traceledger.feature.budgets.BudgetsScreen
 import com.greenicephoenix.traceledger.feature.budgets.BudgetsViewModel
 import com.greenicephoenix.traceledger.feature.budgets.BudgetsViewModelFactory
+import com.greenicephoenix.traceledger.feature.categories.AddEditCategoryScreen
+import com.greenicephoenix.traceledger.feature.categories.CategoriesScreen
+import com.greenicephoenix.traceledger.feature.categories.CategoriesViewModel
+import com.greenicephoenix.traceledger.feature.dashboard.DashboardScreen
 import com.greenicephoenix.traceledger.feature.recurring.AddEditRecurringScreen
 import com.greenicephoenix.traceledger.feature.recurring.AddEditRecurringViewModel
 import com.greenicephoenix.traceledger.feature.recurring.RecurringTransactionsScreen
+import com.greenicephoenix.traceledger.feature.settings.SettingsScreen
+import com.greenicephoenix.traceledger.feature.statistics.CashflowScreen
+import com.greenicephoenix.traceledger.feature.statistics.ExpenseBreakdownScreen
+import com.greenicephoenix.traceledger.feature.statistics.IncomeBreakdownScreen
+import com.greenicephoenix.traceledger.feature.statistics.StatisticsScreen
+import com.greenicephoenix.traceledger.feature.statistics.StatisticsViewModel
+import com.greenicephoenix.traceledger.feature.transactions.HistoryScreen
+import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewModel
+import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewModelFactory
+import kotlinx.coroutines.launch
 
 /**
- * Central navigation graph for TraceLedger
- * This file owns ALL navigation decisions.
+ * Central navigation graph for TraceLedger.
+ *
+ * RULES:
+ * - All routes must be defined in Routes.kt
+ * - No feature may create its own NavHost
+ * - All ViewModels must use factories from AppContainer
+ *
+ * FIX: All AccountsViewModel usages now use app.container.accountsViewModelFactory
+ * instead of the bare viewModel() call (which relied on AndroidViewModel and
+ * pulled repos directly from Application — an architecture violation).
  */
 @Composable
 fun TraceLedgerNavGraph(
@@ -55,14 +63,15 @@ fun TraceLedgerNavGraph(
     snackbarHostState: SnackbarHostState,
     isLightTheme: Boolean
 ) {
-
     val context = LocalContext.current
     val app = context.applicationContext as TraceLedgerApp
 
+    // ── Shared ViewModels (alive for the full nav graph lifetime) ─────────────
+    // These are scoped to the NavGraph composable, so they survive screen navigation
+    // within the graph but are cleared when the graph itself leaves composition.
+
     val categoriesViewModel: CategoriesViewModel =
-        viewModel(
-            factory = app.container.categoriesViewModelFactory
-        )
+        viewModel(factory = app.container.categoriesViewModelFactory)
 
     val budgetsViewModel: BudgetsViewModel = viewModel(
         factory = BudgetsViewModelFactory(
@@ -71,27 +80,28 @@ fun TraceLedgerNavGraph(
         )
     )
 
-    val categories by categoriesViewModel.categories.collectAsState()
+    // FIX: AccountsViewModel now uses factory from AppContainer.
+    // Previously created with viewModel() (no factory), which forced the ViewModel
+    // to use AndroidViewModel and pull repos from the Application object directly.
+    // Scoped here at the graph level so the same instance is shared across all
+    // screens that need accounts, avoiding redundant DB observers.
+    val accountsViewModel: AccountsViewModel =
+        viewModel(factory = app.container.accountsViewModelFactory)
 
+    val categories by categoriesViewModel.categories.collectAsState()
+    val accounts by accountsViewModel.accounts.collectAsState()
 
     NavHost(
         navController = navController,
         startDestination = Routes.DASHBOARD
     ) {
 
-        /* ---------------- DASHBOARD ---------------- */
+        /* ── DASHBOARD ─────────────────────────────────────────────────────── */
         composable(Routes.DASHBOARD) {
 
-            val context = LocalContext.current
-            val app = context.applicationContext as TraceLedgerApp
-
-            val statisticsViewModel =
-                viewModel<StatisticsViewModel>(
-                    factory = app.container.statisticsViewModelFactory
-                )
-
-            val accountsViewModel: AccountsViewModel = viewModel()
-            val accounts by accountsViewModel.accounts.collectAsState()
+            val statisticsViewModel = viewModel<StatisticsViewModel>(
+                factory = app.container.statisticsViewModelFactory
+            )
 
             DashboardScreen(
                 accounts = accounts,
@@ -107,12 +117,8 @@ fun TraceLedgerNavGraph(
             )
         }
 
-        /* ---------------- ACCOUNTS ---------------- */
+        /* ── ACCOUNTS ──────────────────────────────────────────────────────── */
         composable(Routes.ACCOUNTS) {
-
-            val accountsViewModel: AccountsViewModel = viewModel()
-            val accounts by accountsViewModel.accounts.collectAsState()
-
             AccountsScreen(
                 accounts = accounts,
                 onBack = { navController.popBackStack() },
@@ -129,34 +135,23 @@ fun TraceLedgerNavGraph(
             )
         }
 
-        /* ---------------- ADD ACCOUNT ---------------- */
+        /* ── ADD ACCOUNT ───────────────────────────────────────────────────── */
         composable(Routes.ADD_ACCOUNT) {
-
-            val accountsViewModel: AccountsViewModel = viewModel()
-
             AddEditAccountScreen(
                 existingAccount = null,
                 onCancel = { navController.popBackStack() },
                 onSave = { newAccount ->
-                    accountsViewModel.addAccount(newAccount)
+                    accountsViewModel.saveAccount(newAccount)  // FIX: was addAccount()
                     navController.popBackStack()
                 }
             )
         }
 
-        /* ---------------- EDIT ACCOUNT ---------------- */
+        /* ── EDIT ACCOUNT ──────────────────────────────────────────────────── */
         composable(
             route = Routes.EDIT_ACCOUNT,
-            arguments = listOf(
-                navArgument("accountId") {
-                    type = NavType.StringType
-                }
-            )
+            arguments = listOf(navArgument("accountId") { type = NavType.StringType })
         ) { backStackEntry ->
-
-            val accountsViewModel: AccountsViewModel = viewModel()
-            val accounts by accountsViewModel.accounts.collectAsState()
-
             val accountId = backStackEntry.arguments?.getString("accountId")
             val accountToEdit = accounts.firstOrNull { it.id == accountId }
 
@@ -164,31 +159,24 @@ fun TraceLedgerNavGraph(
                 existingAccount = accountToEdit,
                 onCancel = { navController.popBackStack() },
                 onSave = { updatedAccount ->
-                    accountsViewModel.updateAccount(updatedAccount)
+                    accountsViewModel.saveAccount(updatedAccount)  // FIX: was updateAccount()
                     navController.popBackStack()
                 }
             )
         }
 
-        /* ---------------- TRANSACTIONS LIST ---------------- */
+        /* ── TRANSACTIONS LIST ─────────────────────────────────────────────── */
         composable(Routes.TRANSACTIONS) {
-
-            val context = LocalContext.current
-            val app = context.applicationContext as TraceLedgerApp
-
-            val transactionsViewModel: TransactionsViewModel =
-                viewModel(
-                    factory = TransactionsViewModelFactory(
-                        transactionRepository = app.container.transactionRepository
-                    )
+            val transactionsViewModel: TransactionsViewModel = viewModel(
+                factory = TransactionsViewModelFactory(
+                    transactionRepository = app.container.transactionRepository
                 )
-
-            val accountsViewModel: AccountsViewModel = viewModel()
+            )
 
             HistoryScreen(
                 viewModel = transactionsViewModel,
-                accounts = accountsViewModel.accounts.collectAsState().value,
-                categories = categoriesViewModel.categories.collectAsState().value,
+                accounts = accounts,
+                categories = categories,
                 onBack = { navController.popBackStack() },
                 onEditTransaction = { transactionId ->
                     navController.navigate(
@@ -196,33 +184,20 @@ fun TraceLedgerNavGraph(
                     )
                 }
             )
-
         }
 
-        /* ---------------- ADD TRANSACTION ---------------- */
+        /* ── ADD TRANSACTION ───────────────────────────────────────────────── */
         composable(Routes.ADD_TRANSACTION) {
-
             val scope = rememberCoroutineScope()
 
-            val context = LocalContext.current
-            val app = context.applicationContext as TraceLedgerApp
-
-            // ✅ Create ViewModel FIRST
-            val addTransactionViewModel: AddTransactionViewModel =
-                viewModel(
-                    factory = AddTransactionViewModelFactory(
-                        transactionRepository = app.container.transactionRepository
-                    )
+            val addTransactionViewModel: AddTransactionViewModel = viewModel(
+                factory = AddTransactionViewModelFactory(
+                    transactionRepository = app.container.transactionRepository
                 )
+            )
 
-            // ✅ Collect state
             val state by addTransactionViewModel.state.collectAsState()
 
-            // ✅ Accounts are NOT in scope here — fetch them explicitly
-            val accountsViewModel: AccountsViewModel = viewModel()
-            val accounts by accountsViewModel.accounts.collectAsState()
-
-            // ✅ UI
             AddTransactionScreen(
                 state = state,
                 accounts = accounts,
@@ -232,53 +207,36 @@ fun TraceLedgerNavGraph(
                 onCancel = { navController.popBackStack() }
             )
 
-            // ✅ Save-complete side effect
             LaunchedEffect(state.saveCompleted) {
                 if (state.saveCompleted) {
                     navController.popBackStack()
-
-                    scope.launch {
-                        snackbarHostState.showSnackbar(
-                            message = "Transaction added"
-                        )
-                    }
-
+                    scope.launch { snackbarHostState.showSnackbar("Transaction added") }
                     addTransactionViewModel.consumeSaveCompleted()
                 }
             }
         }
 
-        /* ---------------- EDIT TRANSACTION ---------------- */
+        /* ── EDIT TRANSACTION ──────────────────────────────────────────────── */
         composable(
             route = Routes.EDIT_TRANSACTION,
-            arguments = listOf(
-                navArgument("transactionId") {
-                    type = NavType.StringType
-                }
-            )
+            arguments = listOf(navArgument("transactionId") { type = NavType.StringType })
         ) { backStackEntry ->
+            val transactionId = backStackEntry.arguments?.getString("transactionId")
+                ?: return@composable
 
-            val transactionId =
-                backStackEntry.arguments?.getString("transactionId") ?: return@composable
+            val scope = rememberCoroutineScope()
 
-            val context = LocalContext.current
-            val app = context.applicationContext as TraceLedgerApp
-
-            val viewModel: AddTransactionViewModel =
-                viewModel(
-                    factory = AddTransactionViewModelFactory(
-                        transactionRepository = app.container.transactionRepository
-                    )
+            val viewModel: AddTransactionViewModel = viewModel(
+                factory = AddTransactionViewModelFactory(
+                    transactionRepository = app.container.transactionRepository
                 )
+            )
 
             LaunchedEffect(transactionId) {
                 viewModel.initEdit(transactionId)
             }
 
             val state by viewModel.state.collectAsState()
-
-            val accountsViewModel: AccountsViewModel = viewModel()
-            val accounts by accountsViewModel.accounts.collectAsState()
 
             AddTransactionScreen(
                 state = state,
@@ -289,70 +247,46 @@ fun TraceLedgerNavGraph(
                 onCancel = { navController.popBackStack() }
             )
 
-            // 🔑 THIS WAS MISSING
-            val scope = rememberCoroutineScope()
-
             LaunchedEffect(state.saveCompleted) {
                 if (state.saveCompleted) {
-
                     navController.popBackStack()
-
-                    scope.launch {
-                        snackbarHostState.showSnackbar("Transaction updated")
-                    }
-
+                    scope.launch { snackbarHostState.showSnackbar("Transaction updated") }
                     viewModel.consumeSaveCompleted()
                 }
             }
         }
 
-        /* ---------------- STATISTICS ---------------- */
+        /* ── STATISTICS (nested graph) ─────────────────────────────────────── */
+        // Statistics screens share a single StatisticsViewModel scoped to the
+        // nested graph, so month selection persists as you navigate between
+        // Overview → Breakdown → Income screens.
         navigation(
             route = Routes.STATISTICS,
             startDestination = Routes.STATISTICS_OVERVIEW
         ) {
-
             composable(Routes.STATISTICS_OVERVIEW) { backStackEntry ->
-
-                val context = LocalContext.current
-                val app = context.applicationContext as TraceLedgerApp
-
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry(Routes.STATISTICS)
                 }
-
-                // ✅ ONE shared StatisticsViewModel
-                val statisticsViewModel =
-                    viewModel<StatisticsViewModel>(
-                        parentEntry,
-                        factory = app.container.statisticsViewModelFactory
-                    )
-
+                val statisticsViewModel = viewModel<StatisticsViewModel>(
+                    parentEntry,
+                    factory = app.container.statisticsViewModelFactory
+                )
                 StatisticsScreen(
                     viewModel = statisticsViewModel,
                     categoryMap = categories.associateBy { it.id },
-                    onNavigate = { route ->
-                        navController.navigate(route)
-                    }
+                    onNavigate = { route -> navController.navigate(route) }
                 )
             }
 
             composable(Routes.STATISTICS_BREAKDOWN) { backStackEntry ->
-
-                val context = LocalContext.current
-                val app = context.applicationContext as TraceLedgerApp
-
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry(Routes.STATISTICS)
                 }
-
-                // ✅ SAME ViewModel instance (scoped to graph)
-                val statisticsViewModel =
-                    viewModel<StatisticsViewModel>(
-                        parentEntry,
-                        factory = app.container.statisticsViewModelFactory
-                    )
-
+                val statisticsViewModel = viewModel<StatisticsViewModel>(
+                    parentEntry,
+                    factory = app.container.statisticsViewModelFactory
+                )
                 ExpenseBreakdownScreen(
                     viewModel = statisticsViewModel,
                     categoryMap = categories.associateBy { it.id },
@@ -361,21 +295,13 @@ fun TraceLedgerNavGraph(
             }
 
             composable(Routes.STATISTICS_INCOME) { backStackEntry ->
-
-                val context = LocalContext.current
-                val app = context.applicationContext as TraceLedgerApp
-
                 val parentEntry = remember(backStackEntry) {
                     navController.getBackStackEntry(Routes.STATISTICS)
                 }
-
-                // ✅ SAME ViewModel instance (scoped to graph)
-                val statisticsViewModel =
-                    viewModel<StatisticsViewModel>(
-                        parentEntry,
-                        factory = app.container.statisticsViewModelFactory
-                    )
-
+                val statisticsViewModel = viewModel<StatisticsViewModel>(
+                    parentEntry,
+                    factory = app.container.statisticsViewModelFactory
+                )
                 IncomeBreakdownScreen(
                     viewModel = statisticsViewModel,
                     categoryMap = categories.associateBy { it.id },
@@ -385,68 +311,48 @@ fun TraceLedgerNavGraph(
         }
 
         composable(Routes.STATISTICS_CASHFLOW) { backStackEntry ->
-
-            val context = LocalContext.current
-            val app = context.applicationContext as TraceLedgerApp
-
             val parentEntry = remember(backStackEntry) {
                 navController.getBackStackEntry(Routes.STATISTICS)
             }
-
-            val statisticsViewModel =
-                viewModel<StatisticsViewModel>(
-                    parentEntry,
-                    factory = app.container.statisticsViewModelFactory
-                )
-
+            val statisticsViewModel = viewModel<StatisticsViewModel>(
+                parentEntry,
+                factory = app.container.statisticsViewModelFactory
+            )
             CashflowScreen(
                 viewModel = statisticsViewModel,
                 onBack = { navController.popBackStack() }
             )
         }
 
-
-
-        /* ---------------- SETTINGS ---------------- */
+        /* ── SETTINGS ──────────────────────────────────────────────────────── */
         composable(Routes.SETTINGS) {
             val scope = rememberCoroutineScope()
 
             SettingsScreen(
-                onBudgetsClick = {
-                    navController.navigate(Routes.BUDGETS)
-                },
-                onNavigate = { route ->
-                    navController.navigate(route)
-                },
-                onExportSelected = { format ->
-                    // TODO: trigger SAF export flow
-                    // format == ExportFormat.JSON or CSV
-                },
+                onBudgetsClick = { navController.navigate(Routes.BUDGETS) },
+                onNavigate = { route -> navController.navigate(route) },
+                onExportSelected = { /* SAF flow triggered inside SettingsScreen */ },
                 onExportUriReady = { format, uri ->
                     scope.launch {
                         try {
                             app.container.exportService.export(format, uri)
                             snackbarHostState.showSnackbar("Export completed")
                         } catch (e: Exception) {
-                            snackbarHostState.showSnackbar("Export failed")
+                            snackbarHostState.showSnackbar("Export failed: ${e.message}")
                         }
                     }
                 },
-                onImportContinue = {
-                    // handled by screen → SAF launcher
-                },
+                onImportContinue = { /* handled by SAF launcher inside SettingsScreen */ },
                 onImportUriReady = { uri ->
                     scope.launch {
                         try {
                             app.container.importService.importJson(
                                 uri = uri,
-                                onProgress = { /* no-op for now */ }
+                                onProgress = { /* no-op */ }
                             )
                             snackbarHostState.showSnackbar("Import completed")
                         } catch (e: Exception) {
-                            snackbarHostState.showSnackbar(
-                                e.message ?: "Import failed"
-                            )
+                            snackbarHostState.showSnackbar(e.message ?: "Import failed")
                         }
                     }
                 },
@@ -462,25 +368,19 @@ fun TraceLedgerNavGraph(
                         snackbarHostState.showSnackbar("CSV import completed")
                     }
                 },
-                onImportError = { message ->                // ✅ NEW
-                    scope.launch {
-                        snackbarHostState.showSnackbar(message)
-                    }
+                onImportError = { message ->
+                    scope.launch { snackbarHostState.showSnackbar(message) }
                 }
-
             )
         }
 
-        /* ---------------- CATEGORIES ---------------- */
+        /* ── CATEGORIES ────────────────────────────────────────────────────── */
         composable(Routes.CATEGORIES) {
-
             CategoriesScreen(
                 categories = categories,
                 isLightTheme = isLightTheme,
                 onBack = { navController.popBackStack() },
-                onAddCategory = {
-                    navController.navigate(Routes.ADD_CATEGORY)
-                },
+                onAddCategory = { navController.navigate(Routes.ADD_CATEGORY) },
                 onCategoryClick = { category ->
                     navController.navigate(
                         Routes.EDIT_CATEGORY.replace("{categoryId}", category.id)
@@ -502,13 +402,8 @@ fun TraceLedgerNavGraph(
 
         composable(
             route = Routes.EDIT_CATEGORY,
-            arguments = listOf(
-                navArgument("categoryId") {
-                    type = NavType.StringType
-                }
-            )
+            arguments = listOf(navArgument("categoryId") { type = NavType.StringType })
         ) { backStackEntry ->
-
             val categoryId = backStackEntry.arguments?.getString("categoryId")
             val categoryToEdit = categories.firstOrNull { it.id == categoryId }
 
@@ -522,15 +417,12 @@ fun TraceLedgerNavGraph(
             )
         }
 
-        /* ---------------- BUDGETS ---------------- */
+        /* ── BUDGETS ───────────────────────────────────────────────────────── */
         composable(Routes.BUDGETS) {
-
             BudgetsScreen(
                 viewModel = budgetsViewModel,
                 categories = categories,
-                onAddBudget = {
-                    navController.navigate(Routes.ADD_EDIT_BUDGET)
-                },
+                onAddBudget = { navController.navigate(Routes.ADD_EDIT_BUDGET) },
                 onEditBudget = { budgetId ->
                     navController.navigate("${Routes.ADD_EDIT_BUDGET}/$budgetId")
                 },
@@ -538,11 +430,8 @@ fun TraceLedgerNavGraph(
             )
         }
 
-        /* ---------------- ADD BUDGET ---------------- */
         composable(Routes.ADD_EDIT_BUDGET) {
-
             val selectedMonth by budgetsViewModel.selectedMonth.collectAsState()
-
             AddEditBudgetScreen(
                 viewModel = budgetsViewModel,
                 categories = categories,
@@ -552,7 +441,6 @@ fun TraceLedgerNavGraph(
             )
         }
 
-        /* ---------------- EDIT BUDGET ---------------- */
         composable(
             route = "${Routes.ADD_EDIT_BUDGET}/{budgetId}",
             arguments = listOf(
@@ -563,10 +451,8 @@ fun TraceLedgerNavGraph(
                 }
             )
         ) { backStackEntry ->
-
             val budgetId = backStackEntry.arguments?.getString("budgetId")
             val selectedMonth by budgetsViewModel.selectedMonth.collectAsState()
-
             AddEditBudgetScreen(
                 viewModel = budgetsViewModel,
                 categories = categories,
@@ -576,45 +462,26 @@ fun TraceLedgerNavGraph(
             )
         }
 
-        /* ---------------- ABOUT ---------------- */
+        /* ── ABOUT ─────────────────────────────────────────────────────────── */
         composable(Routes.ABOUT) {
-            AboutScreen(
-                onBack = { navController.popBackStack() }
-            )
+            AboutScreen(onBack = { navController.popBackStack() })
         }
 
-        /* ---------------- RECURRING ---------------- */
+        /* ── RECURRING ─────────────────────────────────────────────────────── */
         composable(Routes.RECURRING) {
-
-            val app = LocalContext.current
-                .applicationContext as TraceLedgerApp
-
             RecurringTransactionsScreen(
                 viewModelFactory = app.container.recurringViewModelFactory,
-                onAddClick = {
-                    navController.navigate(Routes.ADD_RECURRING)
-                },
+                onAddClick = { navController.navigate(Routes.ADD_RECURRING) },
                 onEditClick = { recurring ->
-                    navController.navigate(
-                        "edit_recurring/${recurring.id}"
-                    )
-
+                    navController.navigate("edit_recurring/${recurring.id}")
                 },
                 onBack = { navController.popBackStack() }
             )
         }
 
-        /* ----------------ADD RECURRING ---------------- */
         composable(Routes.ADD_RECURRING) {
-
-            val app = LocalContext.current
-                .applicationContext as TraceLedgerApp
-
             val viewModel: AddEditRecurringViewModel =
                 viewModel(factory = app.container.addEditRecurringFactory)
-
-            val accountsViewModel: AccountsViewModel = viewModel()
-            val accounts by accountsViewModel.accounts.collectAsState()
 
             AddEditRecurringScreen(
                 accounts = accounts,
@@ -632,41 +499,27 @@ fun TraceLedgerNavGraph(
                         endDate = end,
                         note = note
                     )
-
                     navController.popBackStack()
                 },
                 onBack = { navController.popBackStack() }
             )
         }
 
-        /* ----------------EDIT RECURRING ---------------- */
         composable(
             route = Routes.EDIT_RECURRING,
-            arguments = listOf(
-                navArgument("recurringId") {
-                    type = NavType.StringType
-                }
-            )
+            arguments = listOf(navArgument("recurringId") { type = NavType.StringType })
         ) { backStackEntry ->
-
-            val recurringId =
-                backStackEntry.arguments?.getString("recurringId")
-                    ?: return@composable
-
-            val app = LocalContext.current
-                .applicationContext as TraceLedgerApp
+            val recurringId = backStackEntry.arguments?.getString("recurringId")
+                ?: return@composable
 
             val viewModel: AddEditRecurringViewModel =
                 viewModel(factory = app.container.addEditRecurringFactory)
 
-            val accountsViewModel: AccountsViewModel = viewModel()
-            val accounts by accountsViewModel.accounts.collectAsState()
-
             AddEditRecurringScreen(
                 accounts = accounts,
                 categories = categories,
+                existing = null, // TODO: load existing recurring by ID for true edit mode
                 onSave = { type, amount, fromId, toId, categoryId, frequency, start, end, note ->
-
                     viewModel.saveRecurring(
                         type = type,
                         amount = amount,
@@ -683,6 +536,5 @@ fun TraceLedgerNavGraph(
                 onBack = { navController.popBackStack() }
             )
         }
-
     }
 }

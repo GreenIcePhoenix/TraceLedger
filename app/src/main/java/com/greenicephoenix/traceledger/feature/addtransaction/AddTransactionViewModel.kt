@@ -8,6 +8,7 @@ import com.greenicephoenix.traceledger.domain.model.TransactionType
 import java.math.BigDecimal
 import com.greenicephoenix.traceledger.domain.model.TransactionUiModel
 import java.time.Instant
+import java.util.UUID  // FIX: import UUID instead of relying on System.currentTimeMillis
 import com.greenicephoenix.traceledger.core.repository.TransactionRepository
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
@@ -63,7 +64,9 @@ class AddTransactionViewModel(
     }
 
     // ─────────────────────────────────────────────
-    // TYPE SWITCH LOGIC (LOCKED BEHAVIOR)
+    // TYPE SWITCH LOGIC
+    // When the user switches type, clear fields that
+    // don't apply to the new type to avoid invalid state.
     // ─────────────────────────────────────────────
 
     private fun handleTypeChange(type: TransactionType) {
@@ -71,24 +74,22 @@ class AddTransactionViewModel(
             when (type) {
                 TransactionType.EXPENSE -> it.copy(
                     type = type,
-                    toAccountId = null
+                    toAccountId = null   // Expense has no destination account
                 )
-
                 TransactionType.INCOME -> it.copy(
                     type = type,
-                    fromAccountId = null
+                    fromAccountId = null  // Income has no source account
                 )
-
                 TransactionType.TRANSFER -> it.copy(
                     type = type,
-                    categoryId = null
+                    categoryId = null    // Transfer has no category
                 )
             }
         }
     }
 
     // ─────────────────────────────────────────────
-    // VALIDATION
+    // VALIDATION + SAVE
     // ─────────────────────────────────────────────
 
     private fun validateAndFinalize() {
@@ -96,12 +97,7 @@ class AddTransactionViewModel(
         val error = validate(current)
 
         if (error != null) {
-            update {
-                it.copy(
-                    validationError = error,
-                    saveCompleted = false
-                )
-            }
+            update { it.copy(validationError = error, saveCompleted = false) }
             return
         }
 
@@ -109,67 +105,40 @@ class AddTransactionViewModel(
 
         viewModelScope.launch {
             if (editingTransactionId == null) {
-                // ADD
+                // New transaction — insert with balance adjustment
                 transactionRepository.insertTransactionWithBalance(transaction)
             } else {
-                // UPDATE
-                val transactionId = editingTransactionId!!
-
-                val updatedTx = transaction.copy(id = transactionId)
+                // Editing existing — reverse old balance, apply new balance
+                val updatedTx = transaction.copy(id = editingTransactionId!!)
                 transactionRepository.updateTransactionWithBalance(updatedTx)
             }
 
-            update {
-                it.copy(
-                    validationError = null,
-                    saveCompleted = true
-                )
-            }
+            update { it.copy(validationError = null, saveCompleted = true) }
         }
     }
 
     private fun validate(state: AddTransactionState): TransactionValidationError? {
-
         val amountValue = state.amount.toBigDecimalOrNull()
-        if (state.amount.isBlank()) {
-            return TransactionValidationError.MissingAmount
-        }
-        if (amountValue == null || amountValue <= BigDecimal.ZERO) {
-            return TransactionValidationError.InvalidAmount
-        }
+
+        if (state.amount.isBlank()) return TransactionValidationError.MissingAmount
+        if (amountValue == null || amountValue <= BigDecimal.ZERO) return TransactionValidationError.InvalidAmount
 
         return when (state.type) {
-
-            TransactionType.EXPENSE -> {
-                when {
-                    state.fromAccountId == null ->
-                        TransactionValidationError.MissingFromAccount
-                    state.categoryId == null ->
-                        TransactionValidationError.MissingCategory
-                    else -> null
-                }
+            TransactionType.EXPENSE -> when {
+                state.fromAccountId == null -> TransactionValidationError.MissingFromAccount
+                state.categoryId == null    -> TransactionValidationError.MissingCategory
+                else                        -> null
             }
-
-            TransactionType.INCOME -> {
-                when {
-                    state.toAccountId == null ->
-                        TransactionValidationError.MissingToAccount
-                    state.categoryId == null ->
-                        TransactionValidationError.MissingCategory
-                    else -> null
-                }
+            TransactionType.INCOME -> when {
+                state.toAccountId == null -> TransactionValidationError.MissingToAccount
+                state.categoryId == null  -> TransactionValidationError.MissingCategory
+                else                      -> null
             }
-
-            TransactionType.TRANSFER -> {
-                when {
-                    state.fromAccountId == null ->
-                        TransactionValidationError.MissingFromAccount
-                    state.toAccountId == null ->
-                        TransactionValidationError.MissingToAccount
-                    state.fromAccountId == state.toAccountId ->
-                        TransactionValidationError.SameAccountTransfer
-                    else -> null
-                }
+            TransactionType.TRANSFER -> when {
+                state.fromAccountId == null                    -> TransactionValidationError.MissingFromAccount
+                state.toAccountId == null                      -> TransactionValidationError.MissingToAccount
+                state.fromAccountId == state.toAccountId       -> TransactionValidationError.SameAccountTransfer
+                else                                           -> null
             }
         }
     }
@@ -177,36 +146,29 @@ class AddTransactionViewModel(
     // ─────────────────────────────────────────────
     // DELETE
     // ─────────────────────────────────────────────
+
     private fun deleteTransactionIfEditing() {
         val transactionId = editingTransactionId ?: return
 
         viewModelScope.launch {
             transactionRepository.deleteTransactionWithBalance(transactionId)
-            update {
-                it.copy(
-                    saveCompleted = true,
-                    validationError = null
-                )
-            }
+            update { it.copy(saveCompleted = true, validationError = null) }
         }
     }
 
     // ─────────────────────────────────────────────
     // CAN SAVE DERIVATION
+    // Recomputed after every event so the Save button
+    // state stays in sync without explicit triggers.
     // ─────────────────────────────────────────────
 
     private fun recomputeCanSave() {
         val error = validate(_state.value)
-        update {
-            it.copy(
-                canSave = error == null,
-                validationError = error
-            )
-        }
+        update { it.copy(canSave = error == null, validationError = error) }
     }
 
     // ─────────────────────────────────────────────
-    // STATE UPDATE HELPER
+    // STATE HELPERS
     // ─────────────────────────────────────────────
 
     private inline fun update(block: (AddTransactionState) -> AddTransactionState) {
@@ -218,48 +180,46 @@ class AddTransactionViewModel(
     }
 
     /**
-     * Converts validated UI state into a TransactionUiModel.
-     * Assumes validation has already passed.
+     * Build a TransactionUiModel from validated state.
+     *
+     * FIX: ID now uses UUID.randomUUID() instead of System.currentTimeMillis().
+     * The old approach caused silent data loss when two transactions were saved
+     * in the same millisecond (possible when recurring generator runs multiple
+     * entries at once). UUID guarantees global uniqueness with no collision risk.
      */
     private fun buildTransaction(state: AddTransactionState): TransactionUiModel {
         return TransactionUiModel(
-            id = System.currentTimeMillis().toString(),
+            id = UUID.randomUUID().toString(), // FIX: was System.currentTimeMillis().toString()
             type = state.type,
-            amount = state.amount.toBigDecimal(), // SAFE: validated already
+            amount = state.amount.toBigDecimal(), // Safe — already validated above
             date = state.date,
             fromAccountId = state.fromAccountId,
             toAccountId = state.toAccountId,
             categoryId = state.categoryId,
             note = state.notes.takeIf { it.isNotBlank() },
             createdAt = Instant.now()
+            // recurringId intentionally omitted — manual transactions are never recurring
         )
     }
 
-    private fun populateFromTransaction(tx: TransactionUiModel) {
-        _state.value = AddTransactionState(
-            type = tx.type,
-            amount = tx.amount.toPlainString(),
-            date = tx.date,
-            notes = tx.note.orEmpty(),
-            fromAccountId = tx.fromAccountId,
-            toAccountId = tx.toAccountId,
-            categoryId = tx.categoryId,
-            canSave = true,
-            saveCompleted = false
-        )
-    }
+    // ─────────────────────────────────────────────
+    // EDIT MODE INITIALIZATION
+    // Called from NavGraph when opening an existing transaction.
+    // The hasLoadedEditData guard prevents double-loading on
+    // recomposition (e.g. screen rotation).
+    // ─────────────────────────────────────────────
 
     private var editingTransactionId: String? = null
     private var hasLoadedEditData = false
 
     fun initEdit(transactionId: String) {
-        if (hasLoadedEditData) return
+        if (hasLoadedEditData) return  // Guard: only load once per ViewModel instance
         hasLoadedEditData = true
         editingTransactionId = transactionId
 
         viewModelScope.launch {
             val tx = transactionRepository.getTransactionById(transactionId)
-                ?: return@launch
+                ?: return@launch  // Transaction not found — nothing to load
 
             _state.value = AddTransactionState(
                 type = tx.type,
@@ -276,5 +236,4 @@ class AddTransactionViewModel(
             recomputeCanSave()
         }
     }
-
 }
