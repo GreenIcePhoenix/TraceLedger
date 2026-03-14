@@ -1,6 +1,7 @@
 package com.greenicephoenix.traceledger.core.navigation
 
 object Routes {
+    const val ONBOARDING          = "onboarding"
     const val DASHBOARD           = "dashboard"
     const val ACCOUNTS            = "accounts"
     const val ADD_ACCOUNT         = "add_account"

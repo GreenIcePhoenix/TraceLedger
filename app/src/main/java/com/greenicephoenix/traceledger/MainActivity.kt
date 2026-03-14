@@ -27,6 +27,7 @@ import com.greenicephoenix.traceledger.core.ui.theme.ThemeManager
 import com.greenicephoenix.traceledger.core.ui.theme.ThemeMode
 import com.greenicephoenix.traceledger.core.ui.theme.TraceLedgerTheme
 import com.greenicephoenix.traceledger.core.util.ChangelogParser
+import com.greenicephoenix.traceledger.feature.onboarding.OnboardingScreen
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -37,90 +38,80 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // ── System bar insets ─────────────────────────────────────────────────
-        // We control padding ourselves via Compose insets, so tell the system
-        // not to apply its own window fitting.
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        // ── One-time startup work (NOT in Compose) ────────────────────────────
-        // These run once when the Activity is created, in the Activity's
-        // coroutine scope — not inside the Compose tree.
-        //
-        // FIX: Previously these were in LaunchedEffect(Unit) inside setContent.
-        // LaunchedEffect(Unit) re-triggers when the Compose tree is recreated
-        // (e.g. theme changes). Moving them here guarantees they run exactly once
-        // per Activity lifecycle, regardless of recompositions.
-        lifecycleScope.launch {
-            // Initialize currency from DataStore (loads user's saved preference)
-            CurrencyManager.init(applicationContext)
+        // Read both theme and onboarding state synchronously before first frame
+        // to avoid any flash of wrong content.
+        val app           = applicationContext as TraceLedgerApp
+        val settingsStore = app.container.settingsDataStore
 
-            // Run recurring transaction generator.
-            // This checks all active recurring rules and creates any transactions
-            // that are due today and haven't been generated yet.
-            // Safe to run multiple times — duplicate guard is inside the generator.
-            val app = applicationContext as TraceLedgerApp
-            app.container.recurringGenerator.generateIfNeeded()
-        }
-
-        // ── FIX: Read theme preference before setContent ──────────────────────
-        // Previously the theme was loaded asynchronously inside Compose using
-        // collectAsState(initial = ThemeMode.DARK). This caused a one-frame flash
-        // of the wrong theme every time the app launched (dark flash for light
-        // theme users, or vice versa). Reading it synchronously here eliminates
-        // that flash. runBlocking is acceptable here because:
-        //   1. It only runs once at app start
-        //   2. DataStore reads from an in-memory cache after first access
-        //   3. The alternative (showing the wrong theme) is worse UX
         val initialTheme = runBlocking {
             ThemeManager.themeModeFlow(applicationContext).first()
+        }
+        val initialOnboardingDone = runBlocking {
+            settingsStore.onboardingComplete.first() ?: false
+        }
+
+        // One-time startup work — runs once per Activity lifecycle
+        lifecycleScope.launch {
+            CurrencyManager.init(applicationContext)
+            app.container.recurringGenerator.generateIfNeeded()
         }
 
         setContent {
             val context = LocalContext.current
-            val app = context.applicationContext as TraceLedgerApp
-            val settingsDataStore = app.container.settingsDataStore
+            val view    = LocalView.current
 
-            // ── Theme state ───────────────────────────────────────────────────
-            // Start with the pre-loaded value (no flash), then stay reactive
-            // so in-app theme changes take effect immediately.
             val themeMode by ThemeManager
                 .themeModeFlow(context)
-                .collectAsState(initial = initialTheme)  // FIX: use pre-loaded value
+                .collectAsState(initial = initialTheme)
 
-            // ── Status bar icon color ─────────────────────────────────────────
-            val view = LocalView.current
+            // Track whether onboarding is complete reactively so it updates
+            // immediately when completeOnboarding() writes to DataStore.
+            val onboardingComplete by settingsStore.onboardingComplete
+                .collectAsState(initial = initialOnboardingDone)
+
+            // Status bar icon colour synced to theme
             LaunchedEffect(themeMode) {
-                val window = this@MainActivity.window
+                val window     = this@MainActivity.window
                 val controller = WindowInsetsControllerCompat(window, view)
-                // Light theme → dark icons on status bar (readable on light bg)
-                // Dark theme → light icons on status bar (readable on dark bg)
                 controller.isAppearanceLightStatusBars = (themeMode == ThemeMode.LIGHT)
             }
 
-            // ── Changelog sheet state ─────────────────────────────────────────
-            val lastSeenVersion by settingsDataStore.lastSeenVersion
-                .collectAsState(initial = null)
-
-            var hasCheckedVersion by remember { mutableStateOf(false) }
+            // Changelog sheet state
+            val lastSeenVersion by settingsStore.lastSeenVersion.collectAsState(initial = null)
+            var hasCheckedVersion  by remember { mutableStateOf(false) }
             var showChangelogSheet by remember { mutableStateOf(false) }
 
             LaunchedEffect(lastSeenVersion) {
-                if (!hasCheckedVersion) {
-                    hasCheckedVersion = true
-                    return@LaunchedEffect
-                }
+                if (!hasCheckedVersion) { hasCheckedVersion = true; return@LaunchedEffect }
                 val currentVersion = BuildConfig.VERSION_NAME
                 when (lastSeenVersion) {
-                    null           -> showChangelogSheet = true   // First install
-                    currentVersion -> { /* Already seen this version */ }
-                    else           -> showChangelogSheet = true   // New version
+                    null           -> showChangelogSheet = true
+                    currentVersion -> {}
+                    else           -> showChangelogSheet = true
                 }
             }
 
             TraceLedgerTheme(themeMode = themeMode) {
 
+                // ── ONBOARDING ────────────────────────────────────────────────
+                // Show onboarding fullscreen if not yet completed.
+                // Once completed, it will never be shown again.
+                if (onboardingComplete != true) {
+                    OnboardingScreen(
+                        onComplete = {
+                            lifecycleScope.launch {
+                                settingsStore.completeOnboarding()
+                            }
+                        }
+                    )
+                    return@TraceLedgerTheme
+                }
+
+                // ── MAIN APP ──────────────────────────────────────────────────
                 val navController = rememberNavController()
-                var currentRoute by remember { mutableStateOf<String?>(null) }
+                var currentRoute  by remember { mutableStateOf<String?>(null) }
 
                 val showBottomBar = currentRoute?.let { route ->
                     route == Routes.DASHBOARD ||
@@ -131,19 +122,19 @@ class MainActivity : ComponentActivity() {
 
                 val snackbarHostState = remember { SnackbarHostState() }
 
-                // ── Changelog sheet ───────────────────────────────────────────
+                // Changelog sheet
                 if (showChangelogSheet) {
                     ModalBottomSheet(
                         onDismissRequest = {
                             showChangelogSheet = false
                             lifecycleScope.launch {
-                                settingsDataStore.setLastSeenVersion(BuildConfig.VERSION_NAME)
+                                settingsStore.setLastSeenVersion(BuildConfig.VERSION_NAME)
                             }
                         }
                     ) {
-                        val allChangelogs = ChangelogParser.load(context)
+                        val allChangelogs  = ChangelogParser.load(context)
                         val currentVersion = BuildConfig.VERSION_NAME
-                        val changelogText = allChangelogs[currentVersion] ?: "No changelog available."
+                        val changelogText  = allChangelogs[currentVersion] ?: "No changelog available."
 
                         Column(
                             modifier = Modifier
@@ -153,17 +144,17 @@ class MainActivity : ComponentActivity() {
                         ) {
                             AnimatedVisibility(
                                 visible = true,
-                                enter = fadeIn() + slideInVertically { it / 4 }
+                                enter   = fadeIn() + slideInVertically { it / 4 }
                             ) {
                                 Column {
                                     Text(
-                                        text = "What's New in $currentVersion",
+                                        text  = "What's New in $currentVersion",
                                         style = MaterialTheme.typography.titleLarge,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
                                     Spacer(Modifier.height(16.dp))
                                     Text(
-                                        text = changelogText,
+                                        text  = changelogText,
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                                     )
@@ -172,30 +163,27 @@ class MainActivity : ComponentActivity() {
                                         onClick = {
                                             showChangelogSheet = false
                                             lifecycleScope.launch {
-                                                settingsDataStore.setLastSeenVersion(BuildConfig.VERSION_NAME)
+                                                settingsStore.setLastSeenVersion(BuildConfig.VERSION_NAME)
                                             }
                                         },
                                         modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Text("Got it")
-                                    }
+                                    ) { Text("Got it") }
                                 }
                             }
                         }
                     }
                 }
 
-                // ── Main scaffold ─────────────────────────────────────────────
                 Scaffold(
                     snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-                    bottomBar = {
+                    bottomBar    = {
                         if (showBottomBar) {
                             BottomBar(
                                 currentRoute = currentRoute,
-                                onNavigate = { route ->
+                                onNavigate   = { route ->
                                     navController.navigate(route) {
                                         launchSingleTop = true
-                                        restoreState = true
+                                        restoreState    = true
                                         popUpTo(Routes.DASHBOARD) { saveState = true }
                                     }
                                 },
@@ -209,12 +197,10 @@ class MainActivity : ComponentActivity() {
                 ) { paddingValues ->
                     Box(modifier = Modifier.padding(paddingValues)) {
                         TraceLedgerNavGraph(
-                            navController = navController,
+                            navController     = navController,
                             snackbarHostState = snackbarHostState,
-                            isLightTheme = themeMode == ThemeMode.LIGHT
+                            isLightTheme      = themeMode == ThemeMode.LIGHT
                         )
-                        // Read current route AFTER NavGraph is attached to avoid
-                        // reading from an uninitialized back stack.
                         val backStackEntry by navController.currentBackStackEntryAsState()
                         currentRoute = backStackEntry?.destination?.route
                     }
