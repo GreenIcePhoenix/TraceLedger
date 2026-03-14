@@ -5,17 +5,22 @@ import android.net.Uri
 import androidx.room.withTransaction
 import com.greenicephoenix.traceledger.core.database.TraceLedgerDatabase
 import com.greenicephoenix.traceledger.core.export.ExportEnvelope
-import com.greenicephoenix.traceledger.core.database.entity.*
+import com.greenicephoenix.traceledger.core.database.entity.AccountEntity
+import com.greenicephoenix.traceledger.core.database.entity.CategoryEntity
+import com.greenicephoenix.traceledger.core.database.entity.TransactionEntity
 import com.greenicephoenix.traceledger.feature.budgets.data.BudgetEntity
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import java.io.InputStreamReader
 import java.math.BigDecimal
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
-import kotlin.text.contains
-import kotlin.text.insert
+
+// FIX: Removed two bad imports that caused compile errors:
+//   import kotlin.text.contains  — not needed, String.contains() is available by default
+//   import kotlin.text.insert    — this does not exist in Kotlin stdlib. It was a ghost
+//                                  import that the IDE auto-added and never got removed.
+// Both caused "None of the following candidates is applicable" errors on StringBuilder.
 
 class ImportService(
     private val database: TraceLedgerDatabase,
@@ -27,8 +32,14 @@ class ImportService(
         explicitNulls = false
     }
 
+    // ── JSON IMPORT ───────────────────────────────────────────────────────────
+
     /**
-     * Full replace import with progress reporting.
+     * Full replace import from a TraceLedger JSON backup.
+     * Wipes all existing data, then inserts everything from the backup file.
+     * Runs inside a single Room transaction — either all succeeds or nothing changes.
+     *
+     * [onProgress] receives 0–100 as a percentage of items processed.
      */
     suspend fun importJson(
         uri: Uri,
@@ -38,7 +49,6 @@ class ImportService(
         validateEnvelope(envelope)
 
         database.withTransaction {
-
             wipeAll()
 
             val total =
@@ -48,10 +58,9 @@ class ImportService(
                         envelope.transactions.size
 
             var done = 0
-
             fun step() {
                 done++
-                onProgress((done * 100) / total)
+                if (total > 0) onProgress((done * 100) / total)
             }
 
             envelope.accounts.forEach {
@@ -96,7 +105,12 @@ class ImportService(
             }
 
             envelope.transactions.forEach {
-                database.transactionDao().insert(
+                // FIX: was transactionDao().insert() — that method was removed
+                // from TransactionDao because it lacked OnConflictStrategy and
+                // bypassed balance logic. For import we use insertTransaction()
+                // directly (not the WithBalance variant) because import is a
+                // raw data restore — balances are already encoded in AccountEntity.
+                database.transactionDao().insertTransaction(
                     TransactionEntity(
                         id = it.id,
                         type = it.type,
@@ -114,9 +128,14 @@ class ImportService(
         }
     }
 
+    // ── CSV IMPORT ────────────────────────────────────────────────────────────
+
     /**
-     * CSV import for transactions only.
-     * Additive, non-destructive.
+     * Additive CSV import — transactions only, does not wipe existing data.
+     * Rows referencing unknown account/category IDs are silently skipped.
+     *
+     * Expected CSV columns (9 minimum):
+     *   id, type, amount, date, fromAccountId, toAccountId, categoryId, note, createdAt
      */
     suspend fun importCsvTransactions(
         uri: Uri,
@@ -131,9 +150,9 @@ class ImportService(
             database.categoryDao().getAllOnce().map { it.id }.toSet()
 
         val lines = stream.bufferedReader().readLines()
-        if (lines.size <= 1) return
+        if (lines.size <= 1) return  // Empty or header-only file
 
-        val rows = lines.drop(1)
+        val rows = lines.drop(1)  // Skip header row
         val total = rows.size
         var processed = 0
 
@@ -143,158 +162,72 @@ class ImportService(
                 onProgress((processed * 100) / total)
 
                 val cols = parseCsvLine(line)
-                if (cols.size < 9) return@forEach
+                if (cols.size < 9) return@forEach  // Skip malformed rows
 
                 val fromAccountId = cols[4].ifBlank { null }
-                val toAccountId = cols[5].ifBlank { null }
-                val categoryId = cols[6].ifBlank { null }
+                val toAccountId   = cols[5].ifBlank { null }
+                val categoryId    = cols[6].ifBlank { null }
 
-                if (
+                // Skip rows that reference accounts/categories not in the DB
+                val hasUnknownAccount =
                     (fromAccountId != null && fromAccountId !in existingAccountIds) ||
-                    (toAccountId != null && toAccountId !in existingAccountIds) ||
-                    (categoryId != null && categoryId !in existingCategoryIds)
-                ) return@forEach
+                            (toAccountId   != null && toAccountId   !in existingAccountIds)
 
-                database.transactionDao().insert(
+                val hasUnknownCategory =
+                    categoryId != null && categoryId !in existingCategoryIds
+
+                if (hasUnknownAccount || hasUnknownCategory) return@forEach
+
+                // FIX: was transactionDao().insert() — replaced with insertTransaction()
+                database.transactionDao().insertTransaction(
                     TransactionEntity(
-                        id = cols[0],
-                        type = cols[1],
-                        amount = BigDecimal(cols[2]),
-                        date = LocalDate.parse(cols[3]),
+                        id           = cols[0],
+                        type         = cols[1],
+                        amount       = BigDecimal(cols[2]),
+                        date         = LocalDate.parse(cols[3]),
                         fromAccountId = fromAccountId,
-                        toAccountId = toAccountId,
-                        categoryId = categoryId,
-                        note = cols[7].ifBlank { null },
-                        createdAt = Instant.ofEpochSecond(cols[8].toLong())
+                        toAccountId  = toAccountId,
+                        categoryId   = categoryId,
+                        note         = cols[7].ifBlank { null },
+                        createdAt    = Instant.ofEpochSecond(cols[8].toLong())
                     )
                 )
             }
         }
     }
 
-    private fun readEnvelope(uri: Uri): ExportEnvelope {
-        val stream = contentResolver.openInputStream(uri)
-            ?: error("Unable to open input stream")
+    // ── PREVIEW ───────────────────────────────────────────────────────────────
 
-        return InputStreamReader(stream).use { reader ->
-            json.decodeFromString(
-                ExportEnvelope.serializer(),
-                reader.readText()
-            )
-        }
-    }
-
-    private fun validateEnvelope(envelope: ExportEnvelope) {
-        require(envelope.meta.app == "TraceLedger") {
-            "Invalid backup file (app mismatch)"
-        }
-        require(envelope.meta.schemaVersion <= database.openHelper.readableDatabase.version) {
-            "Backup schema is newer than app schema"
-        }
-    }
-
-    private suspend fun wipeAll() {
-        database.transactionDao().deleteAll()
-        database.budgetDao().deleteAll()
-        database.categoryDao().deleteAll()
-        database.accountDao().deleteAll()
-    }
-
-    private suspend fun insertAll(envelope: ExportEnvelope) {
-        envelope.accounts.forEach {
-            database.accountDao().insert(
-                AccountEntity(
-                    id = it.id,
-                    name = it.name,
-                    type = it.type,
-                    balance = BigDecimal(it.balance),
-                    color = it.color,
-                    details = null,
-                    includeInTotal = it.includeInTotal
-                )
-            )
-        }
-
-        envelope.categories.forEach {
-            database.categoryDao().insert(
-                CategoryEntity(
-                    id = it.id,
-                    name = it.name,
-                    type = it.type,
-                    color = it.color,
-                    icon = it.icon
-                )
-            )
-        }
-
-        envelope.budgets.forEach {
-            database.budgetDao().insert(
-                BudgetEntity(
-                    id = it.id,
-                    categoryId = it.categoryId,
-                    limitAmount = BigDecimal(it.limitAmount),
-                    month = YearMonth.parse(it.month),
-                    isActive = it.isActive
-                )
-            )
-        }
-
-        envelope.transactions.forEach {
-            database.transactionDao().insert(
-                TransactionEntity(
-                    id = it.id,
-                    type = it.type,
-                    amount = BigDecimal(it.amount),
-                    date = LocalDate.parse(it.date),
-                    fromAccountId = it.fromAccountId,
-                    toAccountId = it.toAccountId,
-                    categoryId = it.categoryId,
-                    note = it.note,
-                    createdAt = Instant.ofEpochSecond(it.createdAtEpoch)
-                )
-            )
-        }
-    }
-
-    suspend fun previewJson(uri: Uri): ImportPreview {
+    fun previewJson(uri: Uri): ImportPreview {
         val envelope = readEnvelope(uri)
         validateEnvelope(envelope)
-
         return ImportPreview(
-            accounts = envelope.accounts.size,
-            categories = envelope.categories.size,
-            budgets = envelope.budgets.size,
+            accounts     = envelope.accounts.size,
+            categories   = envelope.categories.size,
+            budgets      = envelope.budgets.size,
             transactions = envelope.transactions.size
         )
     }
 
     suspend fun previewCsv(uri: Uri): ImportPreview {
-
         val existingAccountIds =
             database.accountDao().getAllOnce().map { it.id }.toSet()
-
         val existingCategoryIds =
             database.categoryDao().getAllOnce().map { it.id }.toSet()
 
         var total = 0
         var valid = 0
-
         val skipped = mutableMapOf<SkipReason, Int>()
 
         val stream = contentResolver.openInputStream(uri)
             ?: error("Unable to open CSV file")
 
         stream.bufferedReader().use { reader ->
-
             val lines = reader.readLines()
+            if (lines.isEmpty()) error("Empty CSV file")
 
-            if (lines.isEmpty()) {
-                error("Empty CSV file")
-            }
-
-            lines.drop(1).forEach { line: String ->
+            lines.drop(1).forEach { line ->
                 total++
-
                 val cols = parseCsvLine(line)
 
                 if (cols.size < 9) {
@@ -304,41 +237,74 @@ class ImportService(
                 }
 
                 val fromAccountId = cols[4].ifBlank { null }
-                val toAccountId = cols[5].ifBlank { null }
-                val categoryId = cols[6].ifBlank { null }
+                val toAccountId   = cols[5].ifBlank { null }
+                val categoryId    = cols[6].ifBlank { null }
 
                 val unknownAccount =
                     (fromAccountId != null && fromAccountId !in existingAccountIds) ||
-                            (toAccountId != null && toAccountId !in existingAccountIds)
+                            (toAccountId   != null && toAccountId   !in existingAccountIds)
 
                 val unknownCategory =
                     categoryId != null && categoryId !in existingCategoryIds
 
                 when {
-                    unknownAccount -> {
-                        skipped[SkipReason.UNKNOWN_ACCOUNT] =
-                            (skipped[SkipReason.UNKNOWN_ACCOUNT] ?: 0) + 1
-                    }
-
-                    unknownCategory -> {
-                        skipped[SkipReason.UNKNOWN_CATEGORY] =
-                            (skipped[SkipReason.UNKNOWN_CATEGORY] ?: 0) + 1
-                    }
-
-                    else -> valid++
+                    unknownAccount  -> skipped[SkipReason.UNKNOWN_ACCOUNT]  =
+                        (skipped[SkipReason.UNKNOWN_ACCOUNT]  ?: 0) + 1
+                    unknownCategory -> skipped[SkipReason.UNKNOWN_CATEGORY] =
+                        (skipped[SkipReason.UNKNOWN_CATEGORY] ?: 0) + 1
+                    else            -> valid++
                 }
             }
         }
 
         return ImportPreview(
-            totalRows = total,
-            validRows = valid,
-            skippedRows = total - valid,
+            totalRows      = total,
+            validRows      = valid,
+            skippedRows    = total - valid,
             skippedByReason = skipped
         )
     }
 
+    // ── INTERNALS ─────────────────────────────────────────────────────────────
 
+    private fun readEnvelope(uri: Uri): ExportEnvelope {
+        val stream = contentResolver.openInputStream(uri)
+            ?: error("Unable to open input stream")
+        return InputStreamReader(stream).use { reader ->
+            json.decodeFromString(ExportEnvelope.serializer(), reader.readText())
+        }
+    }
+
+    private fun validateEnvelope(envelope: ExportEnvelope) {
+        require(envelope.meta.app == "TraceLedger") {
+            "Invalid backup file (app mismatch)"
+        }
+        require(envelope.meta.schemaVersion <= database.openHelper.readableDatabase.version) {
+            "Backup schema is newer than this version of TraceLedger"
+        }
+    }
+
+    /**
+     * Wipe all tables in dependency order.
+     * Transactions first (they reference accounts + categories via FK).
+     * Budgets next (they reference categories).
+     * Then categories and accounts.
+     *
+     * FIX: transactionDao().deleteAll() renamed to deleteAllTransactions()
+     * to match our updated TransactionDao. Other DAOs (account, category,
+     * budget) still use deleteAll() — those weren't changed.
+     */
+    private suspend fun wipeAll() {
+        database.transactionDao().deleteAllTransactions()  // FIX: was deleteAll()
+        database.budgetDao().deleteAll()
+        database.categoryDao().deleteAll()
+        database.accountDao().deleteAll()
+    }
+
+    /**
+     * Parse a single CSV line, handling quoted fields that may contain commas.
+     * Example: 'hello,"world, with comma",test' → ["hello", "world, with comma", "test"]
+     */
     private fun parseCsvLine(line: String): List<String> {
         val result = mutableListOf<String>()
         var current = StringBuilder()
@@ -346,17 +312,15 @@ class ImportService(
 
         for (c in line) {
             when {
-                c == '"' -> inQuotes = !inQuotes
+                c == '"'            -> inQuotes = !inQuotes
                 c == ',' && !inQuotes -> {
                     result.add(current.toString())
                     current = StringBuilder()
                 }
-                else -> current.append(c)
+                else                -> current.append(c)
             }
         }
         result.add(current.toString())
         return result
     }
 }
-
-

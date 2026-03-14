@@ -4,13 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.greenicephoenix.traceledger.core.database.entity.CategoryEntity
 import com.greenicephoenix.traceledger.core.repository.CategoryRepository
-import kotlinx.coroutines.flow.StateFlow
-import com.greenicephoenix.traceledger.domain.model.CategoryUiModel
 import com.greenicephoenix.traceledger.domain.model.CategoryType
+import com.greenicephoenix.traceledger.domain.model.CategoryUiModel
 import com.greenicephoenix.traceledger.feature.categories.data.CategorySeed
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 class CategoriesViewModel(
@@ -22,50 +19,46 @@ class CategoriesViewModel(
             .map { entities ->
                 entities.map {
                     CategoryUiModel(
-                        id = it.id,
-                        name = it.name,
-                        type = CategoryType.valueOf(it.type),
+                        id    = it.id,
+                        name  = it.name,
+                        type  = CategoryType.valueOf(it.type),
                         color = it.color,
-                        icon = it.icon
+                        icon  = it.icon
                     )
                 }
             }
-            .stateIn(
-                viewModelScope,
-                SharingStarted.WhileSubscribed(5_000),
-                emptyList()
-            )
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
-        viewModelScope.launch {
-            repository.seedIfEmpty(CategorySeed.defaults())
-        }
+        viewModelScope.launch { repository.seedIfEmpty(CategorySeed.defaults()) }
     }
 
+    // Null = no error. Non-null = message to show in error dialog.
+    private val _deleteError = MutableStateFlow<String?>(null)
+    val deleteError: StateFlow<String?> = _deleteError.asStateFlow()
+
+    fun clearDeleteError() { _deleteError.value = null }
+
     fun addCategory(category: CategoryUiModel) {
-        viewModelScope.launch {
-            repository.upsert(category.toEntity())
-        }
+        viewModelScope.launch { repository.upsert(category.toEntity()) }
     }
 
     fun updateCategory(category: CategoryUiModel) {
-        viewModelScope.launch {
-            repository.upsert(category.toEntity())
-        }
+        viewModelScope.launch { repository.upsert(category.toEntity()) }
     }
 
     fun deleteCategory(categoryId: String) {
         viewModelScope.launch {
             repository.delete(categoryId)
+                .onFailure { e -> _deleteError.value = e.message }
         }
     }
 
-    private fun CategoryUiModel.toEntity(): CategoryEntity =
-        CategoryEntity(
-            id = id,
-            name = name,
-            type = type.name,
-            color = color,
-            icon = icon
-        )
+    private fun CategoryUiModel.toEntity() = CategoryEntity(
+        id    = id,
+        name  = name,
+        type  = type.name,
+        color = color,
+        icon  = icon
+    )
 }

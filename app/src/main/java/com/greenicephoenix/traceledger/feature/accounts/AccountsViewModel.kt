@@ -3,53 +3,32 @@ package com.greenicephoenix.traceledger.feature.accounts
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.greenicephoenix.traceledger.core.repository.AccountRepository
-import com.greenicephoenix.traceledger.core.repository.TransactionRepository
 import com.greenicephoenix.traceledger.domain.model.AccountUiModel
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import com.greenicephoenix.traceledger.TraceLedgerApp
-
 
 class AccountsViewModel(
-    application: Application
-) : AndroidViewModel(application) {
-
-    private val app =
-        getApplication<TraceLedgerApp>()
-
-    private val accountRepository =
-        app.container.accountRepository
-
-    private val transactionRepository =
-        app.container.transactionRepository
+    private val accountRepository: AccountRepository
+) : ViewModel() {
 
     val accounts: StateFlow<List<AccountUiModel>> =
         accountRepository.observeAccounts()
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000),
-                initialValue = emptyList()
-            )
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun addAccount(account: AccountUiModel) {
-        viewModelScope.launch {
-            accountRepository.upsert(account)
-        }
-    }
+    // Null = no error. Non-null = message to show in an error dialog.
+    private val _deleteError = MutableStateFlow<String?>(null)
+    val deleteError: StateFlow<String?> = _deleteError.asStateFlow()
 
-    fun updateAccount(account: AccountUiModel) {
-        viewModelScope.launch {
-            accountRepository.upsert(account)
-        }
+    fun clearDeleteError() { _deleteError.value = null }
+
+    fun saveAccount(account: AccountUiModel) {
+        viewModelScope.launch { accountRepository.upsert(account) }
     }
 
     fun deleteAccount(accountId: String) {
         viewModelScope.launch {
             accountRepository.delete(accountId)
+                .onFailure { e -> _deleteError.value = e.message }
         }
     }
 }

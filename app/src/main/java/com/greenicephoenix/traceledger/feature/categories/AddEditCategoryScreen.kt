@@ -123,7 +123,7 @@ fun AddEditCategoryScreen(
 
                         val category = CategoryUiModel(
                             id = existingCategory?.id
-                                ?: System.currentTimeMillis().toString(),
+                                ?: java.util.UUID.randomUUID().toString(),
                             name = name.trim(),
                             type = type,
                             color = selectedColor.toArgb().toLong(),
