@@ -38,7 +38,7 @@ fun CashflowScreen(
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
         item {
-            BackHeader(title = "Cashflow", onBack = onBack)
+            BackHeader(title = "CASHFLOW", onBack = onBack)
         }
 
         item {
@@ -64,18 +64,48 @@ fun CashflowScreen(
                 }
             }
         } else {
+            // FIX: Replaced cramped single-column layout with proper 3-column row.
+            // Previously: date on left, income+expense+net stacked in tiny labelSmall
+            //             on the right — unreadable at a glance.
+            // Now: date | income | expense | net  as 4 evenly-spaced columns.
+            item {
+                // Column headers
+                Row(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text     = "Date",
+                        style    = MaterialTheme.typography.labelSmall,
+                        color    = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
+                        modifier = Modifier.weight(1.4f)
+                    )
+                    listOf("In", "Out", "Net").forEachIndexed { i, label ->
+                        Text(
+                            text     = label,
+                            style    = MaterialTheme.typography.labelSmall,
+                            color    = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
+                            modifier = Modifier.weight(1f),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.End
+                        )
+                    }
+                }
+
+                HorizontalDivider(
+                    modifier  = Modifier.padding(top = 6.dp),
+                    thickness = 0.5.dp,
+                    color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                )
+            }
+
             items(cashflow.size) { index ->
                 val entry = cashflow[index]
                 val date  = LocalDate.of(selectedMonth.year, selectedMonth.month, entry.day)
+                val net   = entry.income.subtract(entry.expense)
 
                 CashflowRow(
                     date    = date.format(rowDateFormatter),
                     income  = CurrencyFormatter.format(entry.income.toPlainString(), currency),
                     expense = CurrencyFormatter.format(entry.expense.toPlainString(), currency),
-                    net     = CurrencyFormatter.format(
-                        entry.income.subtract(entry.expense).toPlainString(), currency
-                    ),
-                    netPositive = entry.income >= entry.expense
+                    net     = CurrencyFormatter.format(net.toPlainString(), currency),
+                    netPositive = net.signum() >= 0
                 )
             }
         }
@@ -83,9 +113,10 @@ fun CashflowScreen(
         item { Spacer(Modifier.height(48.dp)) }
     }
 
-    // Day detail sheet
+    // Day detail bottom sheet
     selectedEntry?.let { entry ->
         val date = LocalDate.of(selectedMonth.year, selectedMonth.month, entry.day)
+        val net  = entry.income.subtract(entry.expense)
 
         ModalBottomSheet(
             onDismissRequest = { selectedEntry = null },
@@ -102,28 +133,16 @@ fun CashflowScreen(
                 )
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier              = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    SheetStatColumn(
-                        modifier = Modifier.weight(1f),
-                        label    = "INCOME",
-                        value    = CurrencyFormatter.format(entry.income.toPlainString(), currency),
-                        color    = SuccessGreen
-                    )
-                    SheetStatColumn(
-                        modifier = Modifier.weight(1f),
-                        label    = "EXPENSE",
-                        value    = CurrencyFormatter.format(entry.expense.toPlainString(), currency),
-                        color    = NothingRed
-                    )
+                    SheetStatColumn(Modifier.weight(1f), "INCOME",  CurrencyFormatter.format(entry.income.toPlainString(), currency), SuccessGreen)
+                    SheetStatColumn(Modifier.weight(1f), "EXPENSE", CurrencyFormatter.format(entry.expense.toPlainString(), currency), NothingRed)
                     SheetStatColumn(
                         modifier = Modifier.weight(1f),
                         label    = "NET",
-                        value    = CurrencyFormatter.format(
-                            entry.income.subtract(entry.expense).toPlainString(), currency
-                        ),
-                        color    = if (entry.income >= entry.expense) SuccessGreen else NothingRed
+                        value    = CurrencyFormatter.format(net.toPlainString(), currency),
+                        color    = if (net.signum() >= 0) SuccessGreen else NothingRed
                     )
                 }
 
@@ -133,6 +152,9 @@ fun CashflowScreen(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CashflowRow — 4-column row: date | income | expense | net
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun CashflowRow(
     date: String,
@@ -142,25 +164,36 @@ private fun CashflowRow(
     netPositive: Boolean
 ) {
     Row(
-        modifier          = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier          = Modifier.fillMaxWidth().padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text  = date,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.weight(1f)
+            text     = date,
+            style    = MaterialTheme.typography.bodyMedium,
+            color    = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.weight(1.4f)
         )
-        Column(horizontalAlignment = Alignment.End) {
-            Text(text = "+ $income",  style = MaterialTheme.typography.bodySmall, color = SuccessGreen)
-            Text(text = "− $expense", style = MaterialTheme.typography.bodySmall, color = NothingRed)
-            Text(
-                text  = net,
-                style = MaterialTheme.typography.labelSmall,
-                color = if (netPositive) SuccessGreen.copy(alpha = 0.7f) else NothingRed.copy(alpha = 0.7f)
-            )
-        }
+        Text(
+            text      = income,
+            style     = MaterialTheme.typography.bodyMedium,
+            color     = SuccessGreen,
+            modifier  = Modifier.weight(1f),
+            textAlign = androidx.compose.ui.text.style.TextAlign.End
+        )
+        Text(
+            text      = expense,
+            style     = MaterialTheme.typography.bodyMedium,
+            color     = NothingRed,
+            modifier  = Modifier.weight(1f),
+            textAlign = androidx.compose.ui.text.style.TextAlign.End
+        )
+        Text(
+            text      = net,
+            style     = MaterialTheme.typography.bodyMedium,
+            color     = if (netPositive) SuccessGreen.copy(alpha = 0.8f) else NothingRed.copy(alpha = 0.8f),
+            modifier  = Modifier.weight(1f),
+            textAlign = androidx.compose.ui.text.style.TextAlign.End
+        )
     }
 }
 
@@ -172,11 +205,7 @@ private fun SheetStatColumn(
     color: androidx.compose.ui.graphics.Color
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text  = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-        )
-        Text(text = value, style = MaterialTheme.typography.bodyMedium, color = color)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+        Text(value, style = MaterialTheme.typography.bodyMedium, color = color)
     }
 }

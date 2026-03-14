@@ -73,7 +73,7 @@ fun CategoryTrendLineChart(
                 .height(220.dp)
         ) {
 
-            val leftPadding = 32.dp.toPx()
+            val leftPadding = 52.dp.toPx()
             val bottomPadding = 24.dp.toPx()
 
             val chartWidth = size.width - leftPadding
@@ -257,19 +257,22 @@ fun CategoryTrendLineChart(
 }
 
 private fun formatCompactMagnitude(value: BigDecimal): String {
-    val abs = value.abs()
+    // Round to 2 decimal places first to avoid high-precision BigDecimal strings
+    // (e.g. BigDecimal(doubleValue) multiplication gives "166.66667163372039794921875")
+    val rounded = value.abs().setScale(2, java.math.RoundingMode.HALF_UP)
+
     return when {
-        abs >= BigDecimal("100000") ->
-            abs.divide(BigDecimal("100000"))
-                .setScale(1, java.math.RoundingMode.HALF_UP)
-                .stripTrailingZeros()
-                .toPlainString() + "L"
-        abs >= BigDecimal("1000") ->
-            abs.divide(BigDecimal("1000"))
-                .setScale(1, java.math.RoundingMode.HALF_UP)
-                .stripTrailingZeros()
-                .toPlainString() + "k"
-        else ->
-            abs.stripTrailingZeros().toPlainString()
+        rounded >= BigDecimal("100000") ->
+            rounded.divide(BigDecimal("100000"), 1, java.math.RoundingMode.HALF_UP)
+                .stripTrailingZeros().toPlainString() + "L"
+
+        rounded >= BigDecimal("1000") ->
+            rounded.divide(BigDecimal("1000"), 1, java.math.RoundingMode.HALF_UP)
+                .stripTrailingZeros().toPlainString() + "k"
+
+        rounded >= BigDecimal("1") ->
+            rounded.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString()
+
+        else -> "0"
     }
 }

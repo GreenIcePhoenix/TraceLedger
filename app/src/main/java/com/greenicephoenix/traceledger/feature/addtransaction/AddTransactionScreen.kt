@@ -159,7 +159,7 @@ fun AddTransactionScreen(
                 ) {
                     Text(
                         text = "Delete",
-                        color = Color(0xFFE53935)
+                        color = NothingRed
                     )
                 }
             },
@@ -405,7 +405,7 @@ private fun TransactionForm(
                     ),
                     border = BorderStroke(
                         width = 1.dp,
-                        color = Color(0xFFE53935)
+                        color = NothingRed
                     ),
                     shape = RoundedCornerShape(14.dp)
                 ) {

@@ -28,6 +28,7 @@ import com.greenicephoenix.traceledger.feature.recurring.AddEditRecurringViewMod
 import com.greenicephoenix.traceledger.feature.recurring.RecurringTransactionsScreen
 import com.greenicephoenix.traceledger.feature.settings.SettingsScreen
 import com.greenicephoenix.traceledger.feature.statistics.CashflowScreen
+import com.greenicephoenix.traceledger.feature.statistics.CategoryTrendScreen
 import com.greenicephoenix.traceledger.feature.statistics.ExpenseBreakdownScreen
 import com.greenicephoenix.traceledger.feature.statistics.IncomeBreakdownScreen
 import com.greenicephoenix.traceledger.feature.statistics.StatisticsScreen
@@ -234,6 +235,20 @@ fun TraceLedgerNavGraph(
                 val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
                 val statisticsViewModel = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
                 IncomeBreakdownScreen(
+                    viewModel   = statisticsViewModel,
+                    categoryMap = categories.associateBy { it.id },
+                    onBack      = { navController.popBackStack() }
+                )
+            }
+            composable(Routes.STATISTICS_TRENDS) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(Routes.STATISTICS)
+                }
+                val statisticsViewModel = viewModel<StatisticsViewModel>(
+                    parentEntry,
+                    factory = app.container.statisticsViewModelFactory
+                )
+                CategoryTrendScreen(
                     viewModel   = statisticsViewModel,
                     categoryMap = categories.associateBy { it.id },
                     onBack      = { navController.popBackStack() }

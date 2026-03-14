@@ -33,6 +33,13 @@ class TransactionsViewModel(
     private val _typeFilter = MutableStateFlow<TransactionType?>(null)
     val typeFilter: StateFlow<TransactionType?> = _typeFilter.asStateFlow()
 
+    // Amount range filter — null means no limit applied
+    private val _minAmount = MutableStateFlow<BigDecimal?>(null)
+    val minAmount: StateFlow<BigDecimal?> = _minAmount.asStateFlow()
+
+    private val _maxAmount = MutableStateFlow<BigDecimal?>(null)
+    val maxAmount: StateFlow<BigDecimal?> = _maxAmount.asStateFlow()
+
     private val accountNameMap  = MutableStateFlow<Map<String, String>>(emptyMap())
     private val categoryNameMap = MutableStateFlow<Map<String, String>>(emptyMap())
 
@@ -45,14 +52,33 @@ class TransactionsViewModel(
         }
 
     private val filteredTransactions: StateFlow<List<TransactionUiModel>> =
-        combine(monthlyTransactions, _typeFilter, _searchQuery, referenceData) { transactions, typeFilter, query, ref ->
+        combine(
+            monthlyTransactions,
+            _typeFilter,
+            _searchQuery,
+            _minAmount,
+            _maxAmount,
+            referenceData
+        ) { args ->
+            @Suppress("UNCHECKED_CAST")
+            val transactions = args[0] as List<TransactionUiModel>
+            val typeFilter   = args[1] as TransactionType?
+            val query        = args[2] as String
+            val minAmt       = args[3] as BigDecimal?
+            val maxAmt       = args[4] as BigDecimal?
+            val ref          = args[5] as Pair<Map<String, String>, Map<String, String>>
+
             val (accounts, categories) = ref
             val q = query.trim().lowercase()
+
             transactions.asSequence()
                 .filter { typeFilter == null || it.type == typeFilter }
+                .filter { minAmt == null || it.amount >= minAmt }
+                .filter { maxAmt == null || it.amount <= maxAmt }
                 .filter { tx ->
                     if (q.isBlank()) return@filter true
-                    val accountMatch  = tx.fromAccountId?.let { accounts[it] }?.contains(q) == true || tx.toAccountId?.let { accounts[it] }?.contains(q) == true
+                    val accountMatch  = tx.fromAccountId?.let { accounts[it] }?.contains(q) == true ||
+                            tx.toAccountId?.let   { accounts[it] }?.contains(q) == true
                     val categoryMatch = tx.categoryId?.let { categories[it] }?.contains(q) == true
                     val amountMatch   = tx.amount.toPlainString().contains(q)
                     val notesMatch    = tx.note?.lowercase()?.contains(q) == true
@@ -82,7 +108,12 @@ class TransactionsViewModel(
             list.filter { it.type == TransactionType.EXPENSE }.fold(BigDecimal.ZERO) { acc, tx -> acc + tx.amount }
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BigDecimal.ZERO)
 
-    // Phase 2: delete directly from the detail sheet (with snackbar feedback in HistoryScreen)
+    // Returns true when any non-text filter is active (used to show a filter badge)
+    val hasActiveFilters: StateFlow<Boolean> =
+        combine(_typeFilter, _minAmount, _maxAmount) { type, min, max ->
+            type != null || min != null || max != null
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
     fun deleteTransaction(transaction: TransactionUiModel) {
         viewModelScope.launch {
             transactionRepository.deleteTransactionWithBalance(transaction.id)
@@ -95,6 +126,9 @@ class TransactionsViewModel(
 
     fun updateSearch(query: String)              { _searchQuery.value = query }
     fun updateTypeFilter(type: TransactionType?) { _typeFilter.value  = type  }
+    fun updateMinAmount(amount: BigDecimal?)     { _minAmount.value   = amount }
+    fun updateMaxAmount(amount: BigDecimal?)     { _maxAmount.value   = amount }
+    fun clearAmountFilter()                      { _minAmount.value = null; _maxAmount.value = null }
 
     fun setAccounts(accounts: List<AccountUiModel>) {
         accountNameMap.value = accounts.associate { it.id to it.name.lowercase() }

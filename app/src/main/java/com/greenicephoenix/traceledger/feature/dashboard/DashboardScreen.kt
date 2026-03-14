@@ -79,13 +79,31 @@ fun DashboardScreen(
 
     // Collect all available insights into a list so we can render them in a loop
     val insights = buildList {
-        spendingInsight?.let { add(InsightItem(icon = Icons.AutoMirrored.Filled.TrendingUp, text = it)) }
-        savingsSummary?.let  { add(InsightItem(icon = Icons.Default.Savings,    text = it)) }
-        netWorthTrend?.let   { add(InsightItem(icon = Icons.Default.AccountBalance, text = it)) }
-        recurringCost?.let   { add(InsightItem(
-            icon = Icons.Default.Repeat,
-            text = "Recurring expenses: ${CurrencyFormatter.format(it.toPlainString(), currency)}/mo"
-        ))}
+        spendingInsight?.let {
+            // Green if spending went down, red if up, neutral if unchanged
+            val color = when {
+                it.contains("less")      -> SuccessGreen
+                it.contains("more")      -> NothingRed
+                else                     -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            }
+            add(InsightItem(Icons.AutoMirrored.Filled.TrendingUp, it, color))
+        }
+        savingsSummary?.let {
+            val color = if (it.contains("Overspent")) NothingRed else SuccessGreen
+            add(InsightItem(Icons.Default.Savings, it, color))
+        }
+        netWorthTrend?.let {
+            val color = if (it.contains("up")) SuccessGreen else NothingRed
+            add(InsightItem(Icons.Default.AccountBalance, it, color))
+        }
+        recurringCost?.let {
+            // Recurring cost is neutral-informational — use a muted white/grey
+            add(InsightItem(
+                icon      = Icons.Default.Repeat,
+                text      = "Recurring expenses: ${CurrencyFormatter.format(it.toPlainString(), currency)}/mo",
+                iconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+            ))
+        }
     }
 
     LazyVerticalGrid(
@@ -247,7 +265,7 @@ fun DashboardScreen(
                         verticalArrangement = Arrangement.spacedBy(0.dp)
                     ) {
                         insights.forEachIndexed { index, insight ->
-                            InsightRow(icon = insight.icon, text = insight.text)
+                            InsightRow(icon = insight.icon, text = insight.text, iconColor = insight.iconColor)
                             if (index < insights.lastIndex) {
                                 HorizontalDivider(
                                     modifier  = Modifier.padding(horizontal = 16.dp),
@@ -371,14 +389,15 @@ fun DashboardScreen(
 // ─────────────────────────────────────────────────────────────────────────────
 private data class InsightItem(
     val icon: ImageVector,
-    val text: String
+    val text: String,
+    val iconColor: Color
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
 // InsightRow — renders one insight inside the insights card
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
-private fun InsightRow(icon: ImageVector, text: String) {
+private fun InsightRow(icon: ImageVector, text: String, iconColor: Color) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -389,7 +408,7 @@ private fun InsightRow(icon: ImageVector, text: String) {
         Icon(
             imageVector        = icon,
             contentDescription = null,
-            tint               = MaterialTheme.colorScheme.primary,
+            tint               = iconColor,
             modifier           = Modifier.size(18.dp)
         )
         Text(
