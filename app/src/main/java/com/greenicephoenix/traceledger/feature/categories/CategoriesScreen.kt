@@ -19,14 +19,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
 import com.greenicephoenix.traceledger.domain.model.CategoryType
 import com.greenicephoenix.traceledger.domain.model.CategoryUiModel
-import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
 
 @Composable
 fun CategoriesScreen(
     categories: List<CategoryUiModel>,
     isLightTheme: Boolean,
+    viewModel: CategoriesViewModel,        // Phase 2: added so we can observe deleteError
     onBack: () -> Unit,
     onAddCategory: () -> Unit,
     onCategoryClick: (CategoryUiModel) -> Unit
@@ -37,47 +38,63 @@ fun CategoriesScreen(
         categories.filter { it.type == selectedType }
     }
 
+    // Phase 2: observe delete errors reactively from the ViewModel.
+    // When Room's FK constraint fires (category has linked transactions),
+    // the ViewModel emits a message here and we show an AlertDialog.
+    val deleteError by viewModel.deleteError.collectAsState()
+
+    // ── DELETE BLOCKED ERROR DIALOG ───────────────────────────────────────────
+    deleteError?.let { message ->
+        AlertDialog(
+            onDismissRequest = { viewModel.clearDeleteError() },
+            title = { Text("Cannot delete category") },
+            text  = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearDeleteError() }) {
+                    Text("OK")
+                }
+            }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
 
-        // ================= HEADER =================
+        // ── HEADER ────────────────────────────────────────────────────────────
         CategoriesHeader(
             selectedType = selectedType,
             onTypeChange = { selectedType = it },
-            onBack = onBack
+            onBack       = onBack
         )
 
-        // ================= GRID =================
+        // ── GRID ──────────────────────────────────────────────────────────────
         LazyVerticalGrid(
             columns = GridCells.Fixed(2),
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement   = Arrangement.spacedBy(16.dp)
         ) {
 
-            // ADD CATEGORY CARD
+            // Add card always first
             item {
-                AddCategoryCard(
-                    isLightTheme = isLightTheme,
-                    onClick = onAddCategory
-                )
+                AddCategoryCard(isLightTheme = isLightTheme, onClick = onAddCategory)
             }
 
-            // CATEGORY CARDS
-            items(filteredCategories) { category ->
+            // Category cards
+            items(filteredCategories, key = { it.id }) { category ->
                 CategoryCard(
-                    category = category,
+                    category     = category,
                     isLightTheme = isLightTheme,
-                    onClick = { onCategoryClick(category) }
+                    onClick      = { onCategoryClick(category) }
                 )
             }
 
-            // bottom spacer (FAB safety / future)
+            // Bottom spacer so last row isn't hidden behind nav bar
             item(span = { GridItemSpan(2) }) {
                 Spacer(modifier = Modifier.height(96.dp))
             }
@@ -85,6 +102,9 @@ fun CategoriesScreen(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CategoriesHeader
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun CategoriesHeader(
     selectedType: CategoryType,
@@ -96,35 +116,31 @@ private fun CategoriesHeader(
             .fillMaxWidth()
             .padding(16.dp)
     ) {
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "Back",
-                    tint = MaterialTheme.colorScheme.onBackground
+                    tint               = MaterialTheme.colorScheme.onBackground
                 )
             }
-
             Text(
-                text = "CATEGORIES",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onBackground,
+                text     = "CATEGORIES",
+                style    = MaterialTheme.typography.headlineMedium,
+                color    = MaterialTheme.colorScheme.onBackground,
                 modifier = Modifier.padding(start = 8.dp)
             )
         }
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        CategoryTypeSelector(
-            selectedType = selectedType,
-            onTypeChange = onTypeChange
-        )
+        CategoryTypeSelector(selectedType = selectedType, onTypeChange = onTypeChange)
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CategoryTypeSelector — EXPENSE / INCOME pill toggle
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun CategoryTypeSelector(
     selectedType: CategoryType,
@@ -134,127 +150,92 @@ private fun CategoryTypeSelector(
         modifier = Modifier
             .fillMaxWidth()
             .height(44.dp)
-            .background(
-                MaterialTheme.colorScheme.surface,
-                RoundedCornerShape(22.dp)
-            )
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(22.dp))
             .padding(4.dp)
     ) {
         CategoryType.entries.forEach { type ->
             val selected = type == selectedType
-
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
                     .background(
-                        if (selected) NothingRed.copy(alpha = 0.25f)
-                        else Color.Transparent,
+                        if (selected) NothingRed.copy(alpha = 0.25f) else Color.Transparent,
                         RoundedCornerShape(18.dp)
                     )
                     .clickable { onTypeChange(type) },
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = type.name,
-                    color = if (selected)
-                        NothingRed
-                    else
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    text  = type.name,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (selected) NothingRed
+                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
             }
         }
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// AddCategoryCard
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
-private fun AddCategoryCard(
-    isLightTheme: Boolean,
-    onClick: () -> Unit
-) {
-
-    // ✅ ADD THIS BLOCK — INSIDE THE COMPOSABLE
-    val baseSurface = MaterialTheme.colorScheme.surface
-    val gradientColors =
-        if (isLightTheme) {
-            listOf(
-                baseSurface,
-                baseSurface
-            )
-        } else {
-            listOf(
-                Color(0xFF1A1A1A),
-                Color(0xFF0F0F0F)
-            )
-        }
+private fun AddCategoryCard(isLightTheme: Boolean, onClick: () -> Unit) {
+    val baseSurface     = MaterialTheme.colorScheme.surface
+    val gradientColors  = if (isLightTheme) listOf(baseSurface, baseSurface)
+    else listOf(Color(0xFF1A1A1A), Color(0xFF0F0F0F))
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .height(60.dp)
             .clickable { onClick() },
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        shape = RoundedCornerShape(20.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape  = RoundedCornerShape(20.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    brush = Brush.verticalGradient(gradientColors),
-                    shape = RoundedCornerShape(18.dp)
-                ),
+                .background(Brush.verticalGradient(gradientColors), RoundedCornerShape(18.dp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Add,
+                imageVector        = Icons.Default.Add,
                 contentDescription = "Add Category",
-                tint = NothingRed,
-                modifier = Modifier.size(28.dp)
+                tint               = NothingRed,
+                modifier           = Modifier.size(28.dp)
             )
         }
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CategoryCard
+// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun CategoryCard(
     category: CategoryUiModel,
     isLightTheme: Boolean,
     onClick: () -> Unit
 ) {
-    val baseSurface = MaterialTheme.colorScheme.surface
-    val gradientColors =
-        if (isLightTheme) {
-            listOf(
-                baseSurface,
-                baseSurface
-            )
-        } else {
-            listOf(
-                Color(0xFF1A1A1A),
-                Color(0xFF0F0F0F)
-            )
-        }
+    val baseSurface    = MaterialTheme.colorScheme.surface
+    val gradientColors = if (isLightTheme) listOf(baseSurface, baseSurface)
+    else listOf(Color(0xFF1A1A1A), Color(0xFF0F0F0F))
 
     Card(
-        modifier = Modifier
+        modifier  = Modifier
             .fillMaxWidth()
             .height(60.dp)
             .clickable { onClick() },
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent
-        ),
+        shape     = RoundedCornerShape(18.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.Transparent),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    brush = Brush.verticalGradient(gradientColors),
-                    shape = RoundedCornerShape(18.dp)
-                )
+                .background(Brush.verticalGradient(gradientColors), RoundedCornerShape(18.dp))
         ) {
             Column(
                 modifier = Modifier
@@ -262,37 +243,27 @@ private fun CategoryCard(
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-
-                // ── ICON + NAME ───────────────────────────────
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = CategoryIcons.all[category.icon]
-                            ?: Icons.Default.Category,
+                        imageVector        = CategoryIcons.all[category.icon] ?: Icons.Default.Category,
                         contentDescription = null,
-                        tint = Color(category.color),
-                        modifier = Modifier.size(24.dp)
+                        tint               = Color(category.color),
+                        modifier           = Modifier.size(24.dp)
                     )
-
                     Spacer(modifier = Modifier.width(10.dp))
-
                     Text(
-                        text = category.name,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        style = MaterialTheme.typography.bodyMedium
+                        text  = category.name,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
 
-                // ── SUBTLE DIVIDER ────────────────────────────
+                // Colour accent line at bottom of card
                 Box(
                     modifier = Modifier
                         .height(2.dp)
                         .fillMaxWidth(0.8f)
-                        .background(
-                            Color(category.color).copy(alpha = 0.35f),
-                            RoundedCornerShape(1.dp)
-                        )
+                        .background(Color(category.color).copy(alpha = 0.35f), RoundedCornerShape(1.dp))
                 )
             }
         }

@@ -26,6 +26,7 @@ import com.greenicephoenix.traceledger.feature.transactions.components.Transacti
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 @Composable
 fun HistoryScreen(
@@ -42,187 +43,168 @@ fun HistoryScreen(
     val groupedTransactions by viewModel.groupedTransactions.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val typeFilter by viewModel.typeFilter.collectAsState()
-    val totalIn by viewModel.totalIn.collectAsState()
+    val totalIn  by viewModel.totalIn.collectAsState()
     val totalOut by viewModel.totalOut.collectAsState()
 
-    LaunchedEffect(accounts)   { viewModel.setAccounts(accounts) }
+    // Snackbar for delete confirmation feedback
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(accounts)   { viewModel.setAccounts(accounts)    }
     LaunchedEffect(categories) { viewModel.setCategories(categories) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(horizontal = 16.dp)
-            .padding(top = 16.dp)
-    ) {
-
-        // ── HEADER ────────────────────────────────────────────────────────────
-        Text(
-            text  = "TRANSACTIONS",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        // ── SEARCH ────────────────────────────────────────────────────────────
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = viewModel::updateSearch,
-            placeholder = {
-                Text(
-                    "Search by amount, note, category…",
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
-            },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor   = MaterialTheme.colorScheme.primary,
-                unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                focusedTextColor     = MaterialTheme.colorScheme.onSurface,
-                unfocusedTextColor   = MaterialTheme.colorScheme.onSurface,
-                cursorColor          = MaterialTheme.colorScheme.primary
-            )
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        // ── TYPE FILTER CHIPS ─────────────────────────────────────────────────
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(
-                null                    to "ALL",
-                TransactionType.EXPENSE  to "EXPENSE",
-                TransactionType.INCOME   to "INCOME",
-                TransactionType.TRANSFER to "TRANSFER"
-            ).forEach { (type, label) ->
-                val selected = typeFilter == type
-                FilterChip(
-                    selected = selected,
-                    onClick  = { viewModel.updateTypeFilter(type) },
-                    label    = {
-                        Text(
-                            label,
-                            style = MaterialTheme.typography.labelMedium,
-                            color = if (selected)
-                                MaterialTheme.colorScheme.onPrimary
-                            else
-                                MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                )
-            }
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        // ── MONTH SELECTOR ────────────────────────────────────────────────────
-        com.greenicephoenix.traceledger.core.ui.components.MonthSelector(
-            month      = month,
-            onPrevious = { viewModel.goToPreviousMonth() },
-            onNext     = { viewModel.goToNextMonth() }
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        // ── MONTHLY TOTALS ────────────────────────────────────────────────────
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text  = "In  ${CurrencyFormatter.format(totalIn.toPlainString(), currency)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = SuccessGreen
-            )
-            Text(
-                text  = "Out  ${CurrencyFormatter.format(totalOut.toPlainString(), currency)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = NothingRed
-            )
-        }
-
-        Spacer(Modifier.height(12.dp))
-
-        // ── GROUPED TRANSACTION LIST ──────────────────────────────────────────
-        // Renders date header + transactions for each day.
-        // Single LazyColumn keeps smooth scrolling — no nested scrolling.
-        // Each item has a stable unique key to prevent unnecessary recomposition.
-        LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(0.dp),
-            contentPadding = PaddingValues(bottom = 96.dp)
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(horizontal = 16.dp)
+                .padding(top = 16.dp)
         ) {
 
-            // Empty state
-            if (groupedTransactions.isEmpty()) {
-                item(key = "empty_state") {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 80.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text  = if (searchQuery.isBlank())
-                                "No transactions this month"
-                            else
-                                "No results for \"$searchQuery\"",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-                        )
-                    }
-                }
-            }
+            // ── HEADER ────────────────────────────────────────────────────────
+            Text(
+                text  = "TRANSACTIONS",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
 
-            groupedTransactions.forEach { group ->
+            Spacer(Modifier.height(12.dp))
 
-                // ── DATE HEADER ───────────────────────────────────────────────
-                // key prefixed with "header_" to avoid collision with tx IDs
-                item(key = "header_${group.date}") {
-                    DateSectionHeader(date = group.date)
-                }
-
-                // ── TRANSACTION ROWS FOR THIS DAY ─────────────────────────────
-                items(
-                    items = group.transactions,
-                    key   = { tx -> tx.id }
-                ) { tx ->
-                    val category = categories.firstOrNull { it.id == tx.categoryId }
-                    val account  = when (tx.type) {
-                        TransactionType.EXPENSE,
-                        TransactionType.TRANSFER -> accounts.firstOrNull { it.id == tx.fromAccountId }
-                        TransactionType.INCOME   -> accounts.firstOrNull { it.id == tx.toAccountId }
-                    }
-
-                    val displayTitle = if (tx.type == TransactionType.TRANSFER) {
-                        "Transfer → ${accounts.firstOrNull { it.id == tx.toAccountId }?.name ?: "Account"}"
-                    } else {
-                        category?.name ?: "Category"
-                    }
-
-                    val categoryIcon = if (tx.type == TransactionType.TRANSFER) {
-                        Icons.Default.SyncAlt
-                    } else {
-                        CategoryIcons.all[category?.icon] ?: CategoryIcons.all["default"]!!
-                    }
-
-                    val iconColor = if (tx.type == TransactionType.TRANSFER) {
-                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    } else {
-                        Color(category?.color ?: 0xFF9E9E9E)
-                    }
-
-                    TransactionRow(
-                        transaction   = tx,
-                        categoryName  = displayTitle,
-                        categoryIcon  = categoryIcon,
-                        categoryColor = iconColor,
-                        accountName   = account?.name ?: "Account",
-                        amountText    = CurrencyFormatter.format(tx.amount.toPlainString(), currency),
-                        onClick       = { selectedTransaction = tx }
+            // ── SEARCH ────────────────────────────────────────────────────────
+            OutlinedTextField(
+                value         = searchQuery,
+                onValueChange = viewModel::updateSearch,
+                placeholder   = {
+                    Text(
+                        "Search by amount, note, category…",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                     )
+                },
+                singleLine = true,
+                modifier   = Modifier.fillMaxWidth(),
+                colors     = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor   = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                    focusedTextColor     = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor   = MaterialTheme.colorScheme.onSurface,
+                    cursorColor          = MaterialTheme.colorScheme.primary
+                )
+            )
 
-                    Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
+
+            // ── TYPE FILTER CHIPS ─────────────────────────────────────────────
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    null to "ALL",
+                    TransactionType.EXPENSE  to "EXPENSE",
+                    TransactionType.INCOME   to "INCOME",
+                    TransactionType.TRANSFER to "TRANSFER"
+                ).forEach { (type, label) ->
+                    val selected = typeFilter == type
+                    FilterChip(
+                        selected = selected,
+                        onClick  = { viewModel.updateTypeFilter(type) },
+                        label    = {
+                            Text(
+                                label,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (selected) MaterialTheme.colorScheme.onPrimary
+                                else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // ── MONTH SELECTOR ────────────────────────────────────────────────
+            com.greenicephoenix.traceledger.core.ui.components.MonthSelector(
+                month      = month,
+                onPrevious = { viewModel.goToPreviousMonth() },
+                onNext     = { viewModel.goToNextMonth() }
+            )
+
+            Spacer(Modifier.height(8.dp))
+
+            // ── MONTHLY TOTALS ────────────────────────────────────────────────
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text  = "In  ${CurrencyFormatter.format(totalIn.toPlainString(), currency)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SuccessGreen
+                )
+                Text(
+                    text  = "Out  ${CurrencyFormatter.format(totalOut.toPlainString(), currency)}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = NothingRed
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // ── GROUPED TRANSACTION LIST ──────────────────────────────────────
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(0.dp),
+                contentPadding      = PaddingValues(bottom = 96.dp)
+            ) {
+                if (groupedTransactions.isEmpty()) {
+                    item(key = "empty_state") {
+                        Box(
+                            modifier = Modifier.fillMaxWidth().padding(top = 80.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text  = if (searchQuery.isBlank()) "No transactions this month"
+                                else "No results for \"$searchQuery\"",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                            )
+                        }
+                    }
+                }
+
+                groupedTransactions.forEach { group ->
+                    item(key = "header_${group.date}") {
+                        DateSectionHeader(date = group.date)
+                    }
+
+                    items(group.transactions, key = { it.id }) { tx ->
+                        val category = categories.firstOrNull { it.id == tx.categoryId }
+                        val account  = when (tx.type) {
+                            TransactionType.EXPENSE,
+                            TransactionType.TRANSFER -> accounts.firstOrNull { it.id == tx.fromAccountId }
+                            TransactionType.INCOME   -> accounts.firstOrNull { it.id == tx.toAccountId }
+                        }
+                        val displayTitle = if (tx.type == TransactionType.TRANSFER) {
+                            "Transfer → ${accounts.firstOrNull { it.id == tx.toAccountId }?.name ?: "Account"}"
+                        } else {
+                            category?.name ?: "Category"
+                        }
+                        val categoryIcon  = if (tx.type == TransactionType.TRANSFER) Icons.Default.SyncAlt
+                        else CategoryIcons.all[category?.icon] ?: CategoryIcons.all["default"]!!
+                        val iconColor     = if (tx.type == TransactionType.TRANSFER) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        else Color(category?.color ?: 0xFF9E9E9E)
+
+                        TransactionRow(
+                            transaction   = tx,
+                            categoryName  = displayTitle,
+                            categoryIcon  = categoryIcon,
+                            categoryColor = iconColor,
+                            accountName   = account?.name ?: "Account",
+                            amountText    = CurrencyFormatter.format(tx.amount.toPlainString(), currency),
+                            onClick       = { selectedTransaction = tx }
+                        )
+                        Spacer(Modifier.height(10.dp))
+                    }
                 }
             }
         }
@@ -235,7 +217,6 @@ fun HistoryScreen(
         } else {
             categories.firstOrNull { it.id == tx.categoryId }?.name ?: "Category"
         }
-
         val accountName = when (tx.type) {
             TransactionType.EXPENSE  -> accounts.firstOrNull { it.id == tx.fromAccountId }?.name
             TransactionType.INCOME   -> accounts.firstOrNull { it.id == tx.toAccountId }?.name
@@ -250,35 +231,31 @@ fun HistoryScreen(
             onEdit       = {
                 selectedTransaction = null
                 onEditTransaction(tx.id)
+            },
+            // Phase 2: delete directly from the sheet and show a snackbar
+            onDelete     = { deletedTx ->
+                viewModel.deleteTransaction(deletedTx)
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        message        = "Transaction deleted",
+                        withDismissAction = true
+                    )
+                }
             }
         )
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DateSectionHeader
-//
-// Renders the date label above each group.
-// "Today" and "Yesterday" for recent dates, formatted date otherwise.
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun DateSectionHeader(date: LocalDate) {
     val today     = LocalDate.now()
     val yesterday = today.minusDays(1)
-
-    val label = when (date) {
+    val label     = when (date) {
         today     -> "Today"
         yesterday -> "Yesterday"
-        else      -> date.format(
-            DateTimeFormatter.ofPattern("EEE, d MMM", Locale.getDefault())
-        )
+        else      -> date.format(DateTimeFormatter.ofPattern("EEE, d MMM", Locale.getDefault()))
     }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 16.dp, bottom = 6.dp)
-    ) {
+    Box(modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 6.dp)) {
         Text(
             text  = label,
             style = MaterialTheme.typography.labelSmall,

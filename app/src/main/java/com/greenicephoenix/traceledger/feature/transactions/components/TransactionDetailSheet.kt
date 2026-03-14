@@ -20,17 +20,6 @@ import com.greenicephoenix.traceledger.domain.model.TransactionType
 import com.greenicephoenix.traceledger.domain.model.TransactionUiModel
 import java.time.format.DateTimeFormatter
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TransactionDetailSheet
-//
-// A bottom sheet that shows full details of a tapped transaction.
-// FIX: Previously had no Edit or Delete buttons — this is now fixed.
-// FIX: Was unreachable because HistoryScreen never set selectedTransaction.
-//
-// The sheet provides two actions:
-//   Edit   → closes sheet, navigates to AddTransactionScreen in edit mode
-//   Delete → shows a confirmation dialog, then deletes and closes sheet
-// ─────────────────────────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TransactionDetailSheet(
@@ -38,24 +27,20 @@ fun TransactionDetailSheet(
     categoryName: String,
     accountName: String,
     onDismiss: () -> Unit,
-    onEdit: () -> Unit                          // FIX: new — navigate to edit screen
+    onEdit: () -> Unit,
+    // Phase 2: separate onDelete callback so HistoryScreen can show a snackbar
+    // after deletion completes, without navigating anywhere.
+    onDelete: (TransactionUiModel) -> Unit
 ) {
     val currency by CurrencyManager.currency.collectAsState()
-
-    // State for delete confirmation dialog
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    // ── DELETE CONFIRMATION DIALOG ────────────────────────────────────────────
+    // ── Delete confirmation dialog ─────────────────────────────────────────────
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = {
-                Text(
-                    "Delete transaction?",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            },
-            text = {
+            title = { Text("Delete transaction?", style = MaterialTheme.typography.titleMedium) },
+            text  = {
                 Text(
                     "This will reverse the balance change on your account. This cannot be undone.",
                     style = MaterialTheme.typography.bodyMedium
@@ -65,30 +50,21 @@ fun TransactionDetailSheet(
                 TextButton(
                     onClick = {
                         showDeleteConfirm = false
-                        // Note: actual deletion is handled by onEdit navigating to
-                        // the AddTransaction screen in edit mode where Delete is also
-                        // available. For direct deletion from the sheet, the ViewModel
-                        // delete event needs to be wired here.
-                        // For now: navigate to edit screen so user can delete there.
-                        // This is intentional — edit screen has the full delete flow.
-                        onEdit()
+                        onDismiss()           // Close sheet first
+                        onDelete(transaction) // Then trigger delete + snackbar in parent
                     }
-                ) {
-                    Text("Delete", color = NothingRed)
-                }
+                ) { Text("Delete", color = NothingRed) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
             }
         )
     }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        containerColor   = MaterialTheme.colorScheme.surface,
+        shape            = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
     ) {
         Column(
             modifier = Modifier
@@ -100,11 +76,7 @@ fun TransactionDetailSheet(
 
             // ── TYPE LABEL ────────────────────────────────────────────────────
             Text(
-                text = when (transaction.type) {
-                    TransactionType.EXPENSE  -> "EXPENSE"
-                    TransactionType.INCOME   -> "INCOME"
-                    TransactionType.TRANSFER -> "TRANSFER"
-                },
+                text  = transaction.type.name,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
             )
@@ -113,16 +85,16 @@ fun TransactionDetailSheet(
 
             // ── CATEGORY / TITLE ──────────────────────────────────────────────
             Text(
-                text = categoryName,
+                text  = categoryName,
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(Modifier.height(2.dp))
 
-            // ── ACCOUNT NAME ──────────────────────────────────────────────────
+            // ── ACCOUNT ───────────────────────────────────────────────────────
             Text(
-                text = accountName,
+                text  = accountName,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
@@ -131,7 +103,7 @@ fun TransactionDetailSheet(
 
             // ── AMOUNT ────────────────────────────────────────────────────────
             Text(
-                text = CurrencyFormatter.format(transaction.amount.toPlainString(), currency),
+                text  = CurrencyFormatter.format(transaction.amount.toPlainString(), currency),
                 style = MaterialTheme.typography.displaySmall,
                 color = when (transaction.type) {
                     TransactionType.INCOME   -> SuccessGreen
@@ -141,10 +113,7 @@ fun TransactionDetailSheet(
             )
 
             Spacer(Modifier.height(20.dp))
-            HorizontalDivider(
-                thickness = 0.5.dp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
-            )
+            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
             Spacer(Modifier.height(16.dp))
 
             // ── DATE ──────────────────────────────────────────────────────────
@@ -153,7 +122,7 @@ fun TransactionDetailSheet(
                 value = transaction.date.format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
             )
 
-            // ── NOTE (optional) ───────────────────────────────────────────────
+            // ── NOTE ──────────────────────────────────────────────────────────
             transaction.note?.takeIf { it.isNotBlank() }?.let {
                 Spacer(Modifier.height(12.dp))
                 DetailRow(label = "NOTE", value = it)
@@ -170,16 +139,16 @@ fun TransactionDetailSheet(
                         )
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment     = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Default.SyncAlt,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(14.dp)
+                        tint        = MaterialTheme.colorScheme.primary,
+                        modifier    = Modifier.size(14.dp)
                     )
                     Text(
-                        text = "Auto-generated by recurring rule",
+                        text  = "Auto-generated by recurring rule",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
@@ -187,56 +156,31 @@ fun TransactionDetailSheet(
             }
 
             Spacer(Modifier.height(28.dp))
-            HorizontalDivider(
-                thickness = 0.5.dp,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
-            )
+            HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f))
             Spacer(Modifier.height(16.dp))
 
-            // ── ACTIONS ROW ───────────────────────────────────────────────────
-            // FIX: Previously there were no actions in this sheet.
-            // Users had no way to edit or delete from here.
+            // ── ACTIONS ───────────────────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-
-                // DELETE button
                 OutlinedButton(
-                    onClick = { showDeleteConfirm = true },
+                    onClick  = { showDeleteConfirm = true },
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = NothingRed
-                    ),
-                    border = androidx.compose.foundation.BorderStroke(
-                        1.dp, NothingRed.copy(alpha = 0.5f)
-                    )
+                    colors   = ButtonDefaults.outlinedButtonColors(contentColor = NothingRed),
+                    border   = androidx.compose.foundation.BorderStroke(1.dp, NothingRed.copy(alpha = 0.5f))
                 ) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Icon(Icons.Default.Delete, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text("Delete", style = MaterialTheme.typography.labelLarge)
                 }
 
-                // EDIT button
                 Button(
-                    onClick = {
-                        onDismiss()     // Close sheet
-                        onEdit()        // Navigate to edit screen
-                    },
+                    onClick  = { onDismiss(); onEdit() },
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
+                    colors   = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Icon(Icons.Default.Edit, null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text("Edit", style = MaterialTheme.typography.labelLarge)
                 }
@@ -245,19 +189,16 @@ fun TransactionDetailSheet(
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DetailRow — reusable label + value layout for the detail sheet
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun DetailRow(label: String, value: String) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(
-            text = label,
+            text  = label,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
         )
         Text(
-            text = value,
+            text  = value,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface
         )
