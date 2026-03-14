@@ -3,17 +3,12 @@ package com.greenicephoenix.traceledger
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
@@ -27,6 +22,7 @@ import com.greenicephoenix.traceledger.core.ui.theme.ThemeManager
 import com.greenicephoenix.traceledger.core.ui.theme.ThemeMode
 import com.greenicephoenix.traceledger.core.ui.theme.TraceLedgerTheme
 import com.greenicephoenix.traceledger.core.util.ChangelogParser
+import com.greenicephoenix.traceledger.feature.about.WhatsNewSheet
 import com.greenicephoenix.traceledger.feature.onboarding.OnboardingScreen
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -40,19 +36,13 @@ class MainActivity : ComponentActivity() {
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
-        // Read both theme and onboarding state synchronously before first frame
-        // to avoid any flash of wrong content.
         val app           = applicationContext as TraceLedgerApp
         val settingsStore = app.container.settingsDataStore
 
-        val initialTheme = runBlocking {
-            ThemeManager.themeModeFlow(applicationContext).first()
-        }
-        val initialOnboardingDone = runBlocking {
-            settingsStore.onboardingComplete.first() ?: false
-        }
+        // Read persisted state synchronously before first frame — prevents flash
+        val initialTheme          = runBlocking { ThemeManager.themeModeFlow(applicationContext).first() }
+        val initialOnboardingDone = runBlocking { settingsStore.onboardingComplete.first() ?: false }
 
-        // One-time startup work — runs once per Activity lifecycle
         lifecycleScope.launch {
             CurrencyManager.init(applicationContext)
             app.container.recurringGenerator.generateIfNeeded()
@@ -62,51 +52,62 @@ class MainActivity : ComponentActivity() {
             val context = LocalContext.current
             val view    = LocalView.current
 
-            val themeMode by ThemeManager
-                .themeModeFlow(context)
+            val themeMode by ThemeManager.themeModeFlow(context)
                 .collectAsState(initial = initialTheme)
 
-            // Track whether onboarding is complete reactively so it updates
-            // immediately when completeOnboarding() writes to DataStore.
             val onboardingComplete by settingsStore.onboardingComplete
                 .collectAsState(initial = initialOnboardingDone)
 
-            // Status bar icon colour synced to theme
             LaunchedEffect(themeMode) {
-                val window     = this@MainActivity.window
-                val controller = WindowInsetsControllerCompat(window, view)
-                controller.isAppearanceLightStatusBars = (themeMode == ThemeMode.LIGHT)
+                WindowInsetsControllerCompat(window, view).isAppearanceLightStatusBars =
+                    (themeMode == ThemeMode.LIGHT)
             }
 
-            // Changelog sheet state
+            // Changelog / What's New sheet
             val lastSeenVersion by settingsStore.lastSeenVersion.collectAsState(initial = null)
             var hasCheckedVersion  by remember { mutableStateOf(false) }
-            var showChangelogSheet by remember { mutableStateOf(false) }
+            var showWhatsNew       by remember { mutableStateOf(false) }
 
             LaunchedEffect(lastSeenVersion) {
                 if (!hasCheckedVersion) { hasCheckedVersion = true; return@LaunchedEffect }
-                val currentVersion = BuildConfig.VERSION_NAME
                 when (lastSeenVersion) {
-                    null           -> showChangelogSheet = true
-                    currentVersion -> {}
-                    else           -> showChangelogSheet = true
+                    null, BuildConfig.VERSION_NAME -> {
+                        if (lastSeenVersion == null) showWhatsNew = true
+                    }
+                    else -> showWhatsNew = true
                 }
             }
 
             TraceLedgerTheme(themeMode = themeMode) {
 
                 // ── ONBOARDING ────────────────────────────────────────────────
-                // Show onboarding fullscreen if not yet completed.
-                // Once completed, it will never be shown again.
                 if (onboardingComplete != true) {
                     OnboardingScreen(
                         onComplete = {
-                            lifecycleScope.launch {
-                                settingsStore.completeOnboarding()
-                            }
+                            lifecycleScope.launch { settingsStore.completeOnboarding() }
                         }
                     )
                     return@TraceLedgerTheme
+                }
+
+                // ── WHAT'S NEW SHEET ──────────────────────────────────────────
+                if (showWhatsNew) {
+                    val allVersions   = remember { ChangelogParser.loadVersioned(context) }
+                    val currentEntry  = allVersions.firstOrNull {
+                        it.version == BuildConfig.VERSION_NAME
+                    }
+
+                    if (currentEntry != null) {
+                        WhatsNewSheet(
+                            changelog = currentEntry,
+                            onDismiss = {
+                                showWhatsNew = false
+                                lifecycleScope.launch {
+                                    settingsStore.setLastSeenVersion(BuildConfig.VERSION_NAME)
+                                }
+                            }
+                        )
+                    }
                 }
 
                 // ── MAIN APP ──────────────────────────────────────────────────
@@ -122,65 +123,13 @@ class MainActivity : ComponentActivity() {
 
                 val snackbarHostState = remember { SnackbarHostState() }
 
-                // Changelog sheet
-                if (showChangelogSheet) {
-                    ModalBottomSheet(
-                        onDismissRequest = {
-                            showChangelogSheet = false
-                            lifecycleScope.launch {
-                                settingsStore.setLastSeenVersion(BuildConfig.VERSION_NAME)
-                            }
-                        }
-                    ) {
-                        val allChangelogs  = ChangelogParser.load(context)
-                        val currentVersion = BuildConfig.VERSION_NAME
-                        val changelogText  = allChangelogs[currentVersion] ?: "No changelog available."
-
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .verticalScroll(androidx.compose.foundation.rememberScrollState())
-                                .padding(24.dp)
-                        ) {
-                            AnimatedVisibility(
-                                visible = true,
-                                enter   = fadeIn() + slideInVertically { it / 4 }
-                            ) {
-                                Column {
-                                    Text(
-                                        text  = "What's New in $currentVersion",
-                                        style = MaterialTheme.typography.titleLarge,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    Spacer(Modifier.height(16.dp))
-                                    Text(
-                                        text  = changelogText,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                                    )
-                                    Spacer(Modifier.height(24.dp))
-                                    Button(
-                                        onClick = {
-                                            showChangelogSheet = false
-                                            lifecycleScope.launch {
-                                                settingsStore.setLastSeenVersion(BuildConfig.VERSION_NAME)
-                                            }
-                                        },
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) { Text("Got it") }
-                                }
-                            }
-                        }
-                    }
-                }
-
                 Scaffold(
                     snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
                     bottomBar    = {
                         if (showBottomBar) {
                             BottomBar(
-                                currentRoute = currentRoute,
-                                onNavigate   = { route ->
+                                currentRoute     = currentRoute,
+                                onNavigate       = { route ->
                                     navController.navigate(route) {
                                         launchSingleTop = true
                                         restoreState    = true

@@ -1,17 +1,23 @@
-# 0.3.0
-🎨 Major UI Upgrade
-• Full light mode support across the app
-• Improved contrast and readability
-• Cleaner dashboard and financial summaries
-• More consistent Material 3 surfaces
-• Refined charts and legends
-• Improved bottom navigation clarity
-• Better typography hierarchy and spacing
+# 1.0.0
+[Repeat] Recurring Transactions :: Schedule automatic expenses, income, and transfers — daily, weekly, monthly, quarterly, or yearly.
+[Lightbulb] Financial Insights :: Spending vs last month, savings rate, recurring cost summary, and net worth direction on the dashboard.
+[PieChart] Spending Trends :: Category spend tracked across months with a line chart in Statistics.
+[TrendingUp] Transaction History :: Transactions now grouped by date with Today / Yesterday headers and an amount range filter.
+[Receipt] Transaction Detail :: Tap any transaction to view full details, edit, or delete directly from the detail sheet.
+[Savings] Budget Warnings :: Budget alerts now trigger at 75% (warning) and 90% (critical) — not just when exceeded.
+[Palette] Number Format :: Choose between Indian (1,00,000) and International (100,000) number formatting in Settings.
+[Star] Onboarding :: First-launch walkthrough introducing the app for new users.
 
+# 0.3.0
+[Palette] UI Upgrade :: Full light mode support with improved contrast and readability throughout the app.
+[BarChart] Dashboard :: Cleaner financial summaries and more consistent Material 3 surfaces.
+[PieChart] Charts :: Refined charts, legends, and improved visual hierarchy across statistics screens.
+[TrendingUp] Navigation :: Improved bottom navigation clarity and better typography spacing.
 
 # 0.2.0
-• Initial dashboard implementation
-• Accounts and transactions
-• Budgets module
-• Statistics and charts
-• JSON / CSV export & import
+[TrendingUp] Dashboard :: Initial dashboard with total balance, income, and expense summaries.
+[AccountBalance] Accounts :: Add and manage multiple accounts with balance tracking.
+[Receipt] Transactions :: Log expenses, income, and transfers between accounts.
+[Savings] Budgets :: Monthly budget limits per category.
+[BarChart] Statistics :: Expense and income breakdown charts.
+[ImportExport] Import / Export :: JSON and CSV data backup and restore.
