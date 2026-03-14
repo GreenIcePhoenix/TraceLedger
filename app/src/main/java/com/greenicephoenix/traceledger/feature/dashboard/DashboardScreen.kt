@@ -7,12 +7,14 @@ import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.greenicephoenix.traceledger.core.currency.CurrencyFormatter
@@ -33,26 +35,29 @@ import kotlin.math.min
 @Composable
 fun DashboardScreen(
     accounts: List<AccountUiModel>,
-    // Phase 2: uses DashboardViewModel instead of StatisticsViewModel
     dashboardViewModel: DashboardViewModel,
     budgetsViewModel: com.greenicephoenix.traceledger.feature.budgets.BudgetsViewModel,
-    categories: List<CategoryUiModel>,       // Phase 2: needed to resolve category names in recent tx
+    categories: List<CategoryUiModel>,
     onNavigate: (String) -> Unit,
     onAddAccount: () -> Unit,
     onAccountClick: (AccountUiModel) -> Unit,
-    onTransactionClick: (String) -> Unit     // Phase 2: tap recent transaction to edit
+    onTransactionClick: (String) -> Unit
 ) {
-    val currency       by CurrencyManager.currency.collectAsState()
-    val monthlyIncome  by dashboardViewModel.monthlyIncome.collectAsState()
-    val monthlyExpense by dashboardViewModel.monthlyExpense.collectAsState()
-    val monthlyNet     by dashboardViewModel.monthlyNet.collectAsState()
-    val recentTxs      by dashboardViewModel.recentTransactions.collectAsState()
+    val currency             by CurrencyManager.currency.collectAsState()
+    val monthlyIncome        by dashboardViewModel.monthlyIncome.collectAsState()
+    val monthlyExpense       by dashboardViewModel.monthlyExpense.collectAsState()
+    val monthlyNet           by dashboardViewModel.monthlyNet.collectAsState()
+    val recentTxs            by dashboardViewModel.recentTransactions.collectAsState()
+    val recurringCost        by dashboardViewModel.recurringMonthlyCost.collectAsState()
+    val spendingInsight      by dashboardViewModel.spendingChangeInsight.collectAsState()
+    val savingsSummary       by dashboardViewModel.savingsSummary.collectAsState()
+    val netWorthTrend        by dashboardViewModel.netWorthTrend.collectAsState()
 
-    val budgetStatuses       by budgetsViewModel.budgetStatuses.collectAsState()
-    val hasExceededBudgets   by budgetsViewModel.hasExceededBudgets.collectAsState()
-    val exceededBudgetsCount by budgetsViewModel.exceededBudgetsCount.collectAsState()
+    val budgetStatuses          by budgetsViewModel.budgetStatuses.collectAsState()
+    val hasExceededBudgets      by budgetsViewModel.hasExceededBudgets.collectAsState()
+    val exceededBudgetsCount    by budgetsViewModel.exceededBudgetsCount.collectAsState()
+    val warningBudgetsCount     by budgetsViewModel.warningBudgetsCount.collectAsState()
 
-    // Budget aggregate for the summary card
     val totalLimit = budgetStatuses.fold(BigDecimal.ZERO) { acc, b -> acc + b.limit }
     val totalUsed  = budgetStatuses.fold(BigDecimal.ZERO) { acc, b -> acc + b.used  }
 
@@ -61,23 +66,31 @@ fun DashboardScreen(
     else 0f
 
     val budgetState = when {
-        budgetProgress >= 1f    -> BudgetState.EXCEEDED
-        budgetProgress >= 0.90f -> BudgetState.EXCEEDED   // 90% treated as exceeded-warning
+        budgetProgress >= 0.90f -> BudgetState.EXCEEDED
         budgetProgress >= 0.75f -> BudgetState.WARNING
         else                    -> BudgetState.SAFE
     }
 
-    // Total balance across all accounts marked includeInTotal
     val totalBalance = accounts
         .filter { it.includeInTotal }
         .fold(BigDecimal.ZERO) { acc, a -> acc + a.balance }
 
-    // Show at most 4 account cards in the grid (+ add card)
     val dashboardAccounts = accounts.take(4)
 
+    // Collect all available insights into a list so we can render them in a loop
+    val insights = buildList {
+        spendingInsight?.let { add(InsightItem(icon = Icons.AutoMirrored.Filled.TrendingUp, text = it)) }
+        savingsSummary?.let  { add(InsightItem(icon = Icons.Default.Savings,    text = it)) }
+        netWorthTrend?.let   { add(InsightItem(icon = Icons.Default.AccountBalance, text = it)) }
+        recurringCost?.let   { add(InsightItem(
+            icon = Icons.Default.Repeat,
+            text = "Recurring expenses: ${CurrencyFormatter.format(it.toPlainString(), currency)}/mo"
+        ))}
+    }
+
     LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        modifier = Modifier
+        columns            = GridCells.Fixed(2),
+        modifier           = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 16.dp),
@@ -102,17 +115,18 @@ fun DashboardScreen(
             }
         }
 
-        // ── BUDGET WARNING BANNER (only when budgets exceeded) ────────────────
-        if (hasExceededBudgets) {
+        // ── BUDGET BANNER ─────────────────────────────────────────────────────
+        if (hasExceededBudgets || warningBudgetsCount > 0) {
             item(span = { GridItemSpan(2) }) {
                 BudgetWarningBanner(
                     exceededCount = exceededBudgetsCount,
+                    warningCount  = warningBudgetsCount,
                     onClick       = { onNavigate(Routes.BUDGETS) }
                 )
             }
         }
 
-        // ── TOTAL BALANCE CARD ────────────────────────────────────────────────
+        // ── TOTAL BALANCE ─────────────────────────────────────────────────────
         item(span = { GridItemSpan(2) }) {
             Card(
                 shape  = RoundedCornerShape(20.dp),
@@ -137,14 +151,13 @@ fun DashboardScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        // FIX: was Color(0xFF4CAF50) hardcoded
                         Text(
-                            text  = "Income  ${CurrencyFormatter.format(monthlyIncome.toPlainString(), currency)}",
+                            text  = "In  ${CurrencyFormatter.format(monthlyIncome.toPlainString(), currency)}",
                             style = MaterialTheme.typography.bodySmall,
                             color = SuccessGreen
                         )
                         Text(
-                            text  = "Expense  ${CurrencyFormatter.format(monthlyExpense.toPlainString(), currency)}",
+                            text  = "Out  ${CurrencyFormatter.format(monthlyExpense.toPlainString(), currency)}",
                             style = MaterialTheme.typography.bodySmall,
                             color = NothingRed
                         )
@@ -170,14 +183,13 @@ fun DashboardScreen(
                     Text(
                         text  = CurrencyFormatter.format(monthlyNet.toPlainString(), currency),
                         style = MaterialTheme.typography.titleLarge,
-                        // FIX: was Color(0xFF4CAF50) hardcoded
                         color = if (monthlyNet >= BigDecimal.ZERO) SuccessGreen else NothingRed
                     )
                 }
             }
         }
 
-        // ── MONTHLY BUDGET CARD ───────────────────────────────────────────────
+        // ── BUDGET CARD ───────────────────────────────────────────────────────
         item(span = { GridItemSpan(2) }) {
             if (budgetStatuses.isNotEmpty()) {
                 MonthlyBudgetCard(
@@ -187,26 +199,21 @@ fun DashboardScreen(
                     onClick = { onNavigate(Routes.BUDGETS) }
                 )
             } else {
-                // Empty state nudge — tap to set up budgets
                 Card(
                     shape  = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onNavigate(Routes.BUDGETS) }
+                    modifier = Modifier.fillMaxWidth().clickable { onNavigate(Routes.BUDGETS) }
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(20.dp),
+                        modifier = Modifier.fillMaxWidth().padding(20.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.AddCircleOutline,
+                            imageVector        = Icons.Default.AddCircleOutline,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                            modifier = Modifier.size(20.dp)
+                            tint               = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                            modifier           = Modifier.size(20.dp)
                         )
                         Text(
                             text  = "Set a monthly budget",
@@ -218,7 +225,43 @@ fun DashboardScreen(
             }
         }
 
-        // ── ACCOUNTS SECTION LABEL ────────────────────────────────────────────
+        // ── INSIGHTS SECTION ──────────────────────────────────────────────────
+        // Only shown when at least one insight is available
+        if (insights.isNotEmpty()) {
+            item(span = { GridItemSpan(2) }) {
+                Text(
+                    text  = "INSIGHTS",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                )
+            }
+
+            item(span = { GridItemSpan(2) }) {
+                Card(
+                    shape  = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(0.dp)
+                    ) {
+                        insights.forEachIndexed { index, insight ->
+                            InsightRow(icon = insight.icon, text = insight.text)
+                            if (index < insights.lastIndex) {
+                                HorizontalDivider(
+                                    modifier  = Modifier.padding(horizontal = 16.dp),
+                                    thickness = 0.5.dp,
+                                    color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── ACCOUNTS SECTION ──────────────────────────────────────────────────
         item(span = { GridItemSpan(2) }) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -241,23 +284,14 @@ fun DashboardScreen(
             }
         }
 
-        // ── ACCOUNT CARDS (2-column grid) ─────────────────────────────────────
         item { AddAccountCard(onClick = onAddAccount) }
 
         items(dashboardAccounts) { account ->
-            DashboardAccountCard(
-                account = account,
-                onClick = { onAccountClick(account) }
-            )
+            DashboardAccountCard(account = account, onClick = { onAccountClick(account) })
         }
 
-        // ── RECENT TRANSACTIONS SECTION ───────────────────────────────────────
-        // Phase 2: shows last 5 transactions directly on the dashboard
+        // ── RECENT TRANSACTIONS ───────────────────────────────────────────────
         if (recentTxs.isNotEmpty()) {
-            item(span = { GridItemSpan(2) }) {
-                Spacer(Modifier.height(4.dp))
-            }
-
             item(span = { GridItemSpan(2) }) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -286,8 +320,8 @@ fun DashboardScreen(
                 ) {
                     Column(modifier = Modifier.padding(vertical = 8.dp)) {
                         recentTxs.forEachIndexed { index, tx ->
-                            val category   = categories.firstOrNull { it.id == tx.categoryId }
-                            val account    = when (tx.type) {
+                            val category = categories.firstOrNull { it.id == tx.categoryId }
+                            val account  = when (tx.type) {
                                 TransactionType.EXPENSE,
                                 TransactionType.TRANSFER -> accounts.firstOrNull { it.id == tx.fromAccountId }
                                 TransactionType.INCOME   -> accounts.firstOrNull { it.id == tx.toAccountId }
@@ -301,20 +335,20 @@ fun DashboardScreen(
                                 TransactionType.EXPENSE  -> NothingRed
                                 TransactionType.TRANSFER -> MaterialTheme.colorScheme.onSurface
                             }
-                            val amountPrefix = when (tx.type) {
+                            val prefix = when (tx.type) {
                                 TransactionType.INCOME   -> "+"
                                 TransactionType.EXPENSE  -> "-"
                                 TransactionType.TRANSFER -> ""
                             }
 
                             RecentTransactionRow(
-                                title       = title,
-                                subtitle    = account?.name ?: "",
-                                date        = tx.date.format(DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())),
-                                amountText  = "$amountPrefix${CurrencyFormatter.format(tx.amount.toPlainString(), currency)}",
-                                amountColor = amountColor,
+                                title         = title,
+                                subtitle      = account?.name ?: "",
+                                date          = tx.date.format(DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())),
+                                amountText    = "$prefix${CurrencyFormatter.format(tx.amount.toPlainString(), currency)}",
+                                amountColor   = amountColor,
                                 categoryColor = Color(category?.color ?: 0xFF9E9E9E),
-                                onClick     = { onTransactionClick(tx.id) }
+                                onClick       = { onTransactionClick(tx.id) }
                             )
 
                             if (index < recentTxs.lastIndex) {
@@ -333,7 +367,43 @@ fun DashboardScreen(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// RecentTransactionRow — compact row inside the dashboard recent card
+// InsightItem — data holder for a single insight row
+// ─────────────────────────────────────────────────────────────────────────────
+private data class InsightItem(
+    val icon: ImageVector,
+    val text: String
+)
+
+// ─────────────────────────────────────────────────────────────────────────────
+// InsightRow — renders one insight inside the insights card
+// ─────────────────────────────────────────────────────────────────────────────
+@Composable
+private fun InsightRow(icon: ImageVector, text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Icon(
+            imageVector        = icon,
+            contentDescription = null,
+            tint               = MaterialTheme.colorScheme.primary,
+            modifier           = Modifier.size(18.dp)
+        )
+        Text(
+            text     = text,
+            style    = MaterialTheme.typography.bodyMedium,
+            color    = MaterialTheme.colorScheme.onSurface,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RecentTransactionRow
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun RecentTransactionRow(
@@ -350,17 +420,11 @@ private fun RecentTransactionRow(
             .fillMaxWidth()
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment     = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Category colour dot
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .background(categoryColor, CircleShape)
-        )
+        Box(modifier = Modifier.size(8.dp).background(categoryColor, CircleShape))
 
-        // Title + account
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text     = title,
@@ -378,18 +442,9 @@ private fun RecentTransactionRow(
             }
         }
 
-        // Date + amount (right-aligned)
         Column(horizontalAlignment = Alignment.End) {
-            Text(
-                text  = amountText,
-                style = MaterialTheme.typography.bodyMedium,
-                color = amountColor
-            )
-            Text(
-                text  = date,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
-            )
+            Text(text = amountText, style = MaterialTheme.typography.bodyMedium, color = amountColor)
+            Text(text = date, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
         }
     }
 }
@@ -400,23 +455,12 @@ private fun RecentTransactionRow(
 @Composable
 private fun AddAccountCard(onClick: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(92.dp)
-            .clickable { onClick() },
-        shape  = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        modifier = Modifier.fillMaxWidth().height(92.dp).clickable { onClick() },
+        shape    = RoundedCornerShape(18.dp),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Add Account",
-                tint = NothingRed,
-                modifier = Modifier.size(28.dp)
-            )
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Icon(Icons.Default.Add, null, tint = NothingRed, modifier = Modifier.size(28.dp))
         }
     }
 }
@@ -427,31 +471,21 @@ private fun AddAccountCard(onClick: () -> Unit) {
 @Composable
 fun DashboardAccountCard(account: AccountUiModel, onClick: () -> Unit) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(92.dp)
-            .clickable { onClick() },
-        shape  = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        modifier = Modifier.fillMaxWidth().height(92.dp).clickable { onClick() },
+        shape    = RoundedCornerShape(18.dp),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = account.type.icon(),
-                    contentDescription = null,
-                    tint = Color(account.color),
-                    modifier = Modifier.size(20.dp)
-                )
+                Icon(account.type.icon(), null, tint = Color(account.color), modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    text = account.name,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    style = MaterialTheme.typography.bodyMedium,
+                    text     = account.name,
+                    color    = MaterialTheme.colorScheme.onBackground,
+                    style    = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -466,60 +500,37 @@ fun DashboardAccountCard(account: AccountUiModel, onClick: () -> Unit) {
                 style = MaterialTheme.typography.bodyLarge
             )
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(0.8f)
-                    .height(2.dp)
-                    .background(Color(account.color), RoundedCornerShape(2.dp))
-            )
+            Box(modifier = Modifier.fillMaxWidth(0.8f).height(2.dp).background(Color(account.color), RoundedCornerShape(2.dp)))
         }
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// IncludedBadge
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun IncludedBadge(isIncluded: Boolean) {
-    // FIX: was Color(0xFF4CAF50) hardcoded
     val color = if (isIncluded) SuccessGreen else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
     val icon  = if (isIncluded) Icons.Default.Check else Icons.Default.VisibilityOff
     Box(
-        modifier = Modifier
-            .size(18.dp)
-            .background(color.copy(alpha = 0.15f), CircleShape),
+        modifier = Modifier.size(18.dp).background(color.copy(alpha = 0.15f), CircleShape),
         contentAlignment = Alignment.Center
     ) {
-        Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(12.dp))
+        Icon(icon, null, tint = color, modifier = Modifier.size(12.dp))
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MonthlyBudgetCard
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
-fun MonthlyBudgetCard(
-    used: Double,
-    limit: Double,
-    state: BudgetState,
-    onClick: () -> Unit
-) {
-    val currency       by CurrencyManager.currency.collectAsState()
-    val progress        = if (limit > 0.0) (used / limit).toFloat() else 0f
-    val clampedProgress = min(progress, 1f)
-    val accentColor     = BudgetColors.accent(state)
+fun MonthlyBudgetCard(used: Double, limit: Double, state: BudgetState, onClick: () -> Unit) {
+    val currency        by CurrencyManager.currency.collectAsState()
+    val progress         = if (limit > 0.0) (used / limit).toFloat() else 0f
+    val clampedProgress  = min(progress, 1f)
+    val accentColor      = BudgetColors.accent(state)
 
     Card(
-        shape  = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape    = RoundedCornerShape(20.dp),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier.fillMaxWidth().clickable { onClick() }
     ) {
         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text  = "MONTHLY BUDGET",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
-            )
+            Text("MONTHLY BUDGET", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f))
             Text(
                 text  = "${CurrencyFormatter.format(used.toBigDecimal().toPlainString(), currency)} / ${CurrencyFormatter.format(limit.toBigDecimal().toPlainString(), currency)}",
                 style = MaterialTheme.typography.titleMedium,
@@ -530,19 +541,10 @@ fun MonthlyBudgetCard(
                 style = MaterialTheme.typography.labelSmall,
                 color = accentColor
             )
-            // Progress bar
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(2.dp))
+                modifier = Modifier.fillMaxWidth().height(4.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(2.dp))
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(clampedProgress)
-                        .height(4.dp)
-                        .background(accentColor, RoundedCornerShape(2.dp))
-                )
+                Box(modifier = Modifier.fillMaxWidth(clampedProgress).height(4.dp).background(accentColor, RoundedCornerShape(2.dp)))
             }
         }
     }

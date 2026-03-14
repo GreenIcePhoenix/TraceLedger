@@ -24,8 +24,6 @@ class AppContainer(context: Context) {
 
     val settingsDataStore: SettingsDataStore = SettingsDataStore(context)
 
-    // ── Repositories ──────────────────────────────────────────────────────────
-
     val accountRepository: AccountRepository =
         AccountRepository(database.accountDao())
 
@@ -50,8 +48,6 @@ class AppContainer(context: Context) {
         )
     }
 
-    // ── Services ──────────────────────────────────────────────────────────────
-
     val exportService by lazy {
         ExportService(database = database, contentResolver = context.contentResolver)
     }
@@ -60,8 +56,6 @@ class AppContainer(context: Context) {
         ImportService(database = database, contentResolver = context.contentResolver)
     }
 
-    // ── Recurring generator ───────────────────────────────────────────────────
-
     val recurringGenerator: RecurringTransactionGenerator by lazy {
         RecurringTransactionGenerator(
             recurringRepository   = recurringTransactionRepository,
@@ -69,12 +63,15 @@ class AppContainer(context: Context) {
         )
     }
 
-    // ── ViewModel Factories ───────────────────────────────────────────────────
+    val accountsViewModelFactory   = AccountsViewModelFactory(accountRepository)
+    val categoriesViewModelFactory = CategoriesViewModelFactory(categoryRepository)
+    val statisticsViewModelFactory = StatisticsViewModelFactory(transactionRepository)
 
-    val accountsViewModelFactory    = AccountsViewModelFactory(accountRepository)
-    val categoriesViewModelFactory  = CategoriesViewModelFactory(categoryRepository)
-    val statisticsViewModelFactory  = StatisticsViewModelFactory(transactionRepository)
-    val dashboardViewModelFactory   = DashboardViewModelFactory(transactionRepository)  // Phase 2
-    val recurringViewModelFactory   = RecurringTransactionsViewModelFactory(recurringTransactionRepository)
-    val addEditRecurringFactory     = AddEditRecurringViewModelFactory(recurringTransactionRepository)
+    val dashboardViewModelFactory = DashboardViewModelFactory(
+        transactionRepository = transactionRepository,
+        recurringRepository   = recurringTransactionRepository
+    )
+
+    val recurringViewModelFactory  = RecurringTransactionsViewModelFactory(recurringTransactionRepository)
+    val addEditRecurringFactory    = AddEditRecurringViewModelFactory(recurringTransactionRepository)
 }

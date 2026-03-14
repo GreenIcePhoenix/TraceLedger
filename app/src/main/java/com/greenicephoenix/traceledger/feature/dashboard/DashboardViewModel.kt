@@ -3,6 +3,7 @@ package com.greenicephoenix.traceledger.feature.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.greenicephoenix.traceledger.core.repository.RecurringTransactionRepository
 import com.greenicephoenix.traceledger.core.repository.TransactionRepository
 import com.greenicephoenix.traceledger.domain.model.TransactionType
 import com.greenicephoenix.traceledger.domain.model.TransactionUiModel
@@ -11,81 +12,92 @@ import kotlinx.coroutines.flow.*
 import java.math.BigDecimal
 import java.time.YearMonth
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DashboardViewModel
-//
-// NEW in Phase 2.
-//
-// Previously the Dashboard borrowed StatisticsViewModel for monthly figures.
-// That was an architecture violation — StatisticsViewModel owns the Statistics
-// screen's selected month, and if the user changed months in Statistics and
-// came back to Dashboard, the Dashboard would show the wrong month's numbers.
-//
-// DashboardViewModel always shows the CURRENT month and owns its own
-// transaction stream independently of Statistics.
-//
-// Responsibilities:
-//   - Current month income / expense / net
-//   - Last 5 transactions for the "Recent" section on Dashboard
-//   - Nothing else — keep this ViewModel minimal
-// ─────────────────────────────────────────────────────────────────────────────
 @OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModel(
-    private val transactionRepository: TransactionRepository
+    private val transactionRepository: TransactionRepository,
+    private val recurringRepository: RecurringTransactionRepository
 ) : ViewModel() {
 
-    // Always the current calendar month — Dashboard never navigates months
-    private val currentMonth = YearMonth.now()
+    private val currentMonth  = YearMonth.now()
+    private val previousMonth = currentMonth.minusMonths(1)
 
-    // Month-filtered stream — only loads current month's rows from DB
     private val currentMonthTransactions: Flow<List<TransactionUiModel>> =
         transactionRepository.observeTransactionsForMonth(currentMonth)
 
-    // ── Monthly aggregates ────────────────────────────────────────────────────
+    private val previousMonthTransactions: Flow<List<TransactionUiModel>> =
+        transactionRepository.observeTransactionsForMonth(previousMonth)
+
+    // ── Current month aggregates ──────────────────────────────────────────────
 
     val monthlyIncome: StateFlow<BigDecimal> =
-        currentMonthTransactions
-            .map { txs ->
-                txs.filter { it.type == TransactionType.INCOME }
-                    .fold(BigDecimal.ZERO) { acc, tx -> acc + tx.amount }
-            }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BigDecimal.ZERO)
+        currentMonthTransactions.map { txs ->
+            txs.filter { it.type == TransactionType.INCOME }
+                .fold(BigDecimal.ZERO) { acc, tx -> acc + tx.amount }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BigDecimal.ZERO)
 
     val monthlyExpense: StateFlow<BigDecimal> =
-        currentMonthTransactions
-            .map { txs ->
-                txs.filter { it.type == TransactionType.EXPENSE }
-                    .fold(BigDecimal.ZERO) { acc, tx -> acc + tx.amount }
-            }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BigDecimal.ZERO)
+        currentMonthTransactions.map { txs ->
+            txs.filter { it.type == TransactionType.EXPENSE }
+                .fold(BigDecimal.ZERO) { acc, tx -> acc + tx.amount }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BigDecimal.ZERO)
 
     val monthlyNet: StateFlow<BigDecimal> =
         combine(monthlyIncome, monthlyExpense) { income, expense ->
             income - expense
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BigDecimal.ZERO)
 
-    // ── Recent transactions (last 5 across all time, not just this month) ─────
-    // We use observeTransactions() here (not month-filtered) because "recent"
-    // means the 5 most recent regardless of month — e.g. if today is the 1st,
-    // the most recent transactions are from last month.
+    // ── Previous month expense (for comparison insight) ───────────────────────
+
+    private val lastMonthExpense: StateFlow<BigDecimal> =
+        previousMonthTransactions.map { txs ->
+            txs.filter { it.type == TransactionType.EXPENSE }
+                .fold(BigDecimal.ZERO) { acc, tx -> acc + tx.amount }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), BigDecimal.ZERO)
+
+    // ── Recent transactions (last 5, not month-filtered) ─────────────────────
+
     val recentTransactions: StateFlow<List<TransactionUiModel>> =
         transactionRepository.observeTransactions()
-            .map { txs ->
-                txs.sortedByDescending { it.date }
-                    .take(5)
-            }
+            .map { txs -> txs.sortedByDescending { it.date }.take(5) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    // ── Recurring monthly cost ────────────────────────────────────────────────
+
+    val recurringMonthlyCost: StateFlow<BigDecimal?> =
+        recurringRepository.getAllRecurring()
+            .map { rules ->
+                val items = rules
+                    .filter { it.isActive && it.type == TransactionType.EXPENSE.name }
+                    .map { InsightEngine.RecurringCostItem(it.amount, it.frequency) }
+                InsightEngine.recurringMonthlyCost(items)
+            }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    // ── Derived insight strings ───────────────────────────────────────────────
+
+    val spendingChangeInsight: StateFlow<String?> =
+        combine(monthlyExpense, lastMonthExpense) { current, last ->
+            InsightEngine.spendingChangeInsight(current, last)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val savingsSummary: StateFlow<String?> =
+        combine(monthlyIncome, monthlyExpense) { income, expense ->
+            InsightEngine.savingsSummary(income, expense)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val netWorthTrend: StateFlow<String?> =
+        monthlyNet.map { net ->
+            InsightEngine.netWorthTrend(net)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DashboardViewModelFactory
-// ─────────────────────────────────────────────────────────────────────────────
 class DashboardViewModelFactory(
-    private val transactionRepository: TransactionRepository
+    private val transactionRepository: TransactionRepository,
+    private val recurringRepository: RecurringTransactionRepository
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         require(modelClass == DashboardViewModel::class.java)
-        return DashboardViewModel(transactionRepository) as T
+        return DashboardViewModel(transactionRepository, recurringRepository) as T
     }
 }
