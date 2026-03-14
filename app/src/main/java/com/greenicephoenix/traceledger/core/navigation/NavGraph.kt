@@ -505,6 +505,7 @@ fun TraceLedgerNavGraph(
             )
         }
 
+        /* ── EDIT RECURRING ────────────────────────────────────────────────── */
         composable(
             route = Routes.EDIT_RECURRING,
             arguments = listOf(navArgument("recurringId") { type = NavType.StringType })
@@ -515,21 +516,34 @@ fun TraceLedgerNavGraph(
             val viewModel: AddEditRecurringViewModel =
                 viewModel(factory = app.container.addEditRecurringFactory)
 
+            // FIX: Call load() so the ViewModel fetches the rule from the DB.
+            // LaunchedEffect(recurringId) runs once when this screen enters
+            // composition. The guard inside load() prevents double-loading.
+            LaunchedEffect(recurringId) {
+                viewModel.load(recurringId)
+            }
+
+            // FIX: Observe currentRecurring as a StateFlow so this composable
+            // recomposes when the data arrives from the suspend load() call.
+            // Previously currentRecurring was a plain var — not observable —
+            // so the screen always rendered with existing = null (blank form).
+            val existing by viewModel.currentRecurring.collectAsState()
+
             AddEditRecurringScreen(
-                accounts = accounts,
+                accounts   = accounts,
                 categories = categories,
-                existing = null, // TODO: load existing recurring by ID for true edit mode
-                onSave = { type, amount, fromId, toId, categoryId, frequency, start, end, note ->
+                existing   = existing,   // FIX: was hardcoded null
+                onSave     = { type, amount, fromId, toId, categoryId, frequency, start, end, note ->
                     viewModel.saveRecurring(
-                        type = type,
-                        amount = amount,
+                        type          = type,
+                        amount        = amount,
                         fromAccountId = fromId,
-                        toAccountId = toId,
-                        categoryId = categoryId,
-                        frequency = frequency,
-                        startDate = start,
-                        endDate = end,
-                        note = note
+                        toAccountId   = toId,
+                        categoryId    = categoryId,
+                        frequency     = frequency,
+                        startDate     = start,
+                        endDate       = end,
+                        note          = note
                     )
                     navController.popBackStack()
                 },

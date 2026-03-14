@@ -6,19 +6,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.SyncAlt
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.greenicephoenix.traceledger.core.currency.CurrencyFormatter
 import com.greenicephoenix.traceledger.core.currency.CurrencyManager
 import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
-import com.greenicephoenix.traceledger.core.ui.theme.SuccessGreen  // FIX: use named constant
+import com.greenicephoenix.traceledger.core.ui.theme.SuccessGreen
 import com.greenicephoenix.traceledger.domain.model.AccountUiModel
 import com.greenicephoenix.traceledger.domain.model.CategoryUiModel
 import com.greenicephoenix.traceledger.domain.model.TransactionType
@@ -26,6 +23,9 @@ import com.greenicephoenix.traceledger.domain.model.TransactionUiModel
 import com.greenicephoenix.traceledger.feature.categories.CategoryIcons
 import com.greenicephoenix.traceledger.feature.transactions.components.TransactionDetailSheet
 import com.greenicephoenix.traceledger.feature.transactions.components.TransactionRow
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun HistoryScreen(
@@ -35,33 +35,30 @@ fun HistoryScreen(
     onBack: () -> Unit,
     onEditTransaction: (String) -> Unit
 ) {
-    // FIX: selectedTransaction now actually gets set when a row is tapped.
-    // Previously it was never set so the detail sheet was dead code.
     var selectedTransaction by remember { mutableStateOf<TransactionUiModel?>(null) }
 
     val currency by CurrencyManager.currency.collectAsState()
     val month by viewModel.selectedMonth.collectAsState()
-    val transactions by viewModel.visibleTransactions.collectAsState()
+    val groupedTransactions by viewModel.groupedTransactions.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val typeFilter by viewModel.typeFilter.collectAsState()
-
-    // FIX: These were collected but never displayed. Now shown in the summary row.
     val totalIn by viewModel.totalIn.collectAsState()
     val totalOut by viewModel.totalOut.collectAsState()
 
-    LaunchedEffect(accounts) { viewModel.setAccounts(accounts) }
+    LaunchedEffect(accounts)   { viewModel.setAccounts(accounts) }
     LaunchedEffect(categories) { viewModel.setCategories(categories) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp)
+            .padding(horizontal = 16.dp)
+            .padding(top = 16.dp)
     ) {
 
         // ── HEADER ────────────────────────────────────────────────────────────
         Text(
-            text = "TRANSACTIONS",
+            text  = "TRANSACTIONS",
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.onBackground
         )
@@ -81,11 +78,11 @@ fun HistoryScreen(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                focusedBorderColor   = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                unfocusedTextColor = MaterialTheme.colorScheme.onSurface,
-                cursorColor = MaterialTheme.colorScheme.primary
+                focusedTextColor     = MaterialTheme.colorScheme.onSurface,
+                unfocusedTextColor   = MaterialTheme.colorScheme.onSurface,
+                cursorColor          = MaterialTheme.colorScheme.primary
             )
         )
 
@@ -94,16 +91,16 @@ fun HistoryScreen(
         // ── TYPE FILTER CHIPS ─────────────────────────────────────────────────
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(
-                null to "ALL",
-                TransactionType.EXPENSE to "EXPENSE",
-                TransactionType.INCOME to "INCOME",
+                null                    to "ALL",
+                TransactionType.EXPENSE  to "EXPENSE",
+                TransactionType.INCOME   to "INCOME",
                 TransactionType.TRANSFER to "TRANSFER"
             ).forEach { (type, label) ->
                 val selected = typeFilter == type
                 FilterChip(
                     selected = selected,
-                    onClick = { viewModel.updateTypeFilter(type) },
-                    label = {
+                    onClick  = { viewModel.updateTypeFilter(type) },
+                    label    = {
                         Text(
                             label,
                             style = MaterialTheme.typography.labelMedium,
@@ -121,27 +118,25 @@ fun HistoryScreen(
 
         // ── MONTH SELECTOR ────────────────────────────────────────────────────
         com.greenicephoenix.traceledger.core.ui.components.MonthSelector(
-            month = month,
+            month      = month,
             onPrevious = { viewModel.goToPreviousMonth() },
-            onNext = { viewModel.goToNextMonth() }
+            onNext     = { viewModel.goToNextMonth() }
         )
 
         Spacer(Modifier.height(8.dp))
 
-        // ── MONTHLY SUMMARY ROW ───────────────────────────────────────────────
-        // FIX: totalIn and totalOut were computed but never displayed.
-        // Now shown as a compact summary row below the month selector.
+        // ── MONTHLY TOTALS ────────────────────────────────────────────────────
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = "In  ${CurrencyFormatter.format(totalIn.toPlainString(), currency)}",
+                text  = "In  ${CurrencyFormatter.format(totalIn.toPlainString(), currency)}",
                 style = MaterialTheme.typography.bodySmall,
-                color = SuccessGreen  // FIX: was Color(0xFF4CAF50) hardcoded
+                color = SuccessGreen
             )
             Text(
-                text = "Out  ${CurrencyFormatter.format(totalOut.toPlainString(), currency)}",
+                text  = "Out  ${CurrencyFormatter.format(totalOut.toPlainString(), currency)}",
                 style = MaterialTheme.typography.bodySmall,
                 color = NothingRed
             )
@@ -149,75 +144,94 @@ fun HistoryScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        // ── TRANSACTION LIST ──────────────────────────────────────────────────
+        // ── GROUPED TRANSACTION LIST ──────────────────────────────────────────
+        // Renders date header + transactions for each day.
+        // Single LazyColumn keeps smooth scrolling — no nested scrolling.
+        // Each item has a stable unique key to prevent unnecessary recomposition.
         LazyColumn(
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(0.dp),
+            contentPadding = PaddingValues(bottom = 96.dp)
         ) {
-            // FIX: Added key = { it.id } for stable Compose recomposition.
-            // Without a key, Compose treats all items as potentially changed on
-            // every list update, causing all visible rows to redraw unnecessarily.
-            // With key, only actually changed/added/removed items recompose.
-            // Also switched from index-based items(size) to items(list) which
-            // is the correct modern Compose pattern.
-            items(
-                items = transactions,
-                key = { tx -> tx.id }  // FIX: stable key for efficient recomposition
-            ) { tx ->
 
-                val category = categories.firstOrNull { it.id == tx.categoryId }
-                val account = when (tx.type) {
-                    TransactionType.EXPENSE,
-                    TransactionType.TRANSFER -> accounts.firstOrNull { it.id == tx.fromAccountId }
-                    TransactionType.INCOME   -> accounts.firstOrNull { it.id == tx.toAccountId }
-                }
-
-                val displayTitle = if (tx.type == TransactionType.TRANSFER) {
-                    val toAccount = accounts.firstOrNull { it.id == tx.toAccountId }?.name ?: "Account"
-                    "Transfer to $toAccount"
-                } else {
-                    category?.name ?: "Category"
-                }
-
-                val categoryIcon = if (tx.type == TransactionType.TRANSFER) {
-                    Icons.Default.SyncAlt
-                } else {
-                    CategoryIcons.all[category?.icon] ?: CategoryIcons.all["default"]!!
-                }
-
-                val iconColor = if (tx.type == TransactionType.TRANSFER) {
-                    MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                } else {
-                    Color(category?.color ?: 0xFF9E9E9E)
-                }
-
-                TransactionRow(
-                    transaction = tx,
-                    categoryName = displayTitle,
-                    categoryIcon = categoryIcon,
-                    categoryColor = iconColor,
-                    accountName = account?.name ?: "Account",
-                    amountText = CurrencyFormatter.format(tx.amount.toPlainString(), currency),
-                    onClick = {
-                        // FIX: Previously this called onEditTransaction() directly,
-                        // making the detail sheet unreachable (selectedTransaction was
-                        // never set). Now tapping a row opens the detail sheet.
-                        // From the detail sheet, user can choose to Edit (navigates
-                        // to edit screen) or Delete.
-                        selectedTransaction = tx
+            // Empty state
+            if (groupedTransactions.isEmpty()) {
+                item(key = "empty_state") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 80.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text  = if (searchQuery.isBlank())
+                                "No transactions this month"
+                            else
+                                "No results for \"$searchQuery\"",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        )
                     }
-                )
+                }
+            }
+
+            groupedTransactions.forEach { group ->
+
+                // ── DATE HEADER ───────────────────────────────────────────────
+                // key prefixed with "header_" to avoid collision with tx IDs
+                item(key = "header_${group.date}") {
+                    DateSectionHeader(date = group.date)
+                }
+
+                // ── TRANSACTION ROWS FOR THIS DAY ─────────────────────────────
+                items(
+                    items = group.transactions,
+                    key   = { tx -> tx.id }
+                ) { tx ->
+                    val category = categories.firstOrNull { it.id == tx.categoryId }
+                    val account  = when (tx.type) {
+                        TransactionType.EXPENSE,
+                        TransactionType.TRANSFER -> accounts.firstOrNull { it.id == tx.fromAccountId }
+                        TransactionType.INCOME   -> accounts.firstOrNull { it.id == tx.toAccountId }
+                    }
+
+                    val displayTitle = if (tx.type == TransactionType.TRANSFER) {
+                        "Transfer → ${accounts.firstOrNull { it.id == tx.toAccountId }?.name ?: "Account"}"
+                    } else {
+                        category?.name ?: "Category"
+                    }
+
+                    val categoryIcon = if (tx.type == TransactionType.TRANSFER) {
+                        Icons.Default.SyncAlt
+                    } else {
+                        CategoryIcons.all[category?.icon] ?: CategoryIcons.all["default"]!!
+                    }
+
+                    val iconColor = if (tx.type == TransactionType.TRANSFER) {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    } else {
+                        Color(category?.color ?: 0xFF9E9E9E)
+                    }
+
+                    TransactionRow(
+                        transaction   = tx,
+                        categoryName  = displayTitle,
+                        categoryIcon  = categoryIcon,
+                        categoryColor = iconColor,
+                        accountName   = account?.name ?: "Account",
+                        amountText    = CurrencyFormatter.format(tx.amount.toPlainString(), currency),
+                        onClick       = { selectedTransaction = tx }
+                    )
+
+                    Spacer(Modifier.height(10.dp))
+                }
             }
         }
     }
 
     // ── TRANSACTION DETAIL SHEET ──────────────────────────────────────────────
-    // Rendered outside the Column so it overlays the full screen correctly.
-    // FIX: This was previously unreachable because selectedTransaction was never set.
     selectedTransaction?.let { tx ->
-
         val categoryName = if (tx.type == TransactionType.TRANSFER) {
-            val toAccount = accounts.firstOrNull { it.id == tx.toAccountId }?.name ?: "Account"
-            "Transfer to $toAccount"
+            "Transfer → ${accounts.firstOrNull { it.id == tx.toAccountId }?.name ?: "Account"}"
         } else {
             categories.firstOrNull { it.id == tx.categoryId }?.name ?: "Category"
         }
@@ -229,14 +243,46 @@ fun HistoryScreen(
         } ?: "Account"
 
         TransactionDetailSheet(
-            transaction = tx,
+            transaction  = tx,
             categoryName = categoryName,
-            accountName = accountName,
-            onDismiss = { selectedTransaction = null },
-            onEdit = {
-                selectedTransaction = null       // Close sheet first
-                onEditTransaction(tx.id)         // Then navigate to edit screen
+            accountName  = accountName,
+            onDismiss    = { selectedTransaction = null },
+            onEdit       = {
+                selectedTransaction = null
+                onEditTransaction(tx.id)
             }
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DateSectionHeader
+//
+// Renders the date label above each group.
+// "Today" and "Yesterday" for recent dates, formatted date otherwise.
+// ─────────────────────────────────────────────────────────────────────────────
+@Composable
+private fun DateSectionHeader(date: LocalDate) {
+    val today     = LocalDate.now()
+    val yesterday = today.minusDays(1)
+
+    val label = when (date) {
+        today     -> "Today"
+        yesterday -> "Yesterday"
+        else      -> date.format(
+            DateTimeFormatter.ofPattern("EEE, d MMM", Locale.getDefault())
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp, bottom = 6.dp)
+    ) {
+        Text(
+            text  = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f)
         )
     }
 }
