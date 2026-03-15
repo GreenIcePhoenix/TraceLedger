@@ -12,27 +12,34 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.greenicephoenix.traceledger.BuildConfig
 import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
 import com.greenicephoenix.traceledger.core.ui.theme.SuccessGreen
+import com.greenicephoenix.traceledger.core.util.AppLinks
 import com.greenicephoenix.traceledger.core.util.ChangelogIconMapper
 import com.greenicephoenix.traceledger.core.util.ChangelogParser
 import com.greenicephoenix.traceledger.core.util.VersionChangelog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AboutScreen(onBack: () -> Unit) {
+fun AboutScreen(
+    onBack: () -> Unit,
+    onPrivacyPolicy: () -> Unit,
+    onTerms: () -> Unit
+) {
     val context    = LocalContext.current
+    val uriHandler = LocalUriHandler.current
     val versions   = remember { ChangelogParser.loadVersioned(context) }
     val current    = versions.firstOrNull { it.version == BuildConfig.VERSION_NAME }
     val previous   = versions.filter { it.version != BuildConfig.VERSION_NAME }
@@ -72,19 +79,49 @@ fun AboutScreen(onBack: () -> Unit) {
         ) {
 
             // ── APP IDENTITY ──────────────────────────────────────────────────
+            item { AppIdentityCard() }
+
+            // ── CONNECT ───────────────────────────────────────────────────────
+            item { SectionLabel("CONNECT") }
+
             item {
-                AppIdentityCard()
+                ConnectCard {
+                    LinkRow(
+                        icon        = Icons.Default.Forum,
+                        iconTint    = NothingRed,
+                        title       = "Discord",
+                        subtitle    = "Join the community, share feedback",
+                        isExternal  = true,
+                        onClick     = { uriHandler.openUri(AppLinks.DISCORD) }
+                    )
+                    RowDivider()
+                    LinkRow(
+                        icon        = Icons.Default.Language,
+                        iconTint    = MaterialTheme.colorScheme.primary,
+                        title       = "Website",
+                        subtitle    = "traceledger.pages.dev",
+                        isExternal  = true,
+                        onClick     = { uriHandler.openUri(AppLinks.WEBSITE) }
+                    )
+                    RowDivider()
+                    LinkRow(
+                        icon        = Icons.Default.Code,
+                        iconTint    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        title       = "GitHub",
+                        subtitle    = "View source code and releases",
+                        isExternal  = true,
+                        onClick     = { uriHandler.openUri(AppLinks.GITHUB) }
+                    )
+                }
             }
 
-            // ── CURRENT VERSION WHATS NEW ─────────────────────────────────────
+            // ── WHAT'S NEW ────────────────────────────────────────────────────
             if (current != null) {
-                item {
-                    SectionLabel("WHAT'S NEW")
-                }
+                item { SectionLabel("WHAT'S NEW") }
                 item {
                     VersionCard(
-                        changelog  = current,
-                        isCurrent  = true,
+                        changelog         = current,
+                        isCurrent         = true,
                         expandedByDefault = true
                     )
                 }
@@ -92,9 +129,7 @@ fun AboutScreen(onBack: () -> Unit) {
 
             // ── PREVIOUS VERSIONS ─────────────────────────────────────────────
             if (previous.isNotEmpty()) {
-                item {
-                    SectionLabel("PREVIOUS VERSIONS")
-                }
+                item { SectionLabel("PREVIOUS VERSIONS") }
                 items(previous) { changelog ->
                     VersionCard(
                         changelog         = changelog,
@@ -105,11 +140,32 @@ fun AboutScreen(onBack: () -> Unit) {
             }
 
             // ── PRIVACY PROMISE ───────────────────────────────────────────────
+            item { SectionLabel("PRIVACY") }
+            item { PrivacyCard() }
+
+            // ── LEGAL ─────────────────────────────────────────────────────────
+            item { SectionLabel("LEGAL") }
+
             item {
-                SectionLabel("PRIVACY")
-            }
-            item {
-                PrivacyCard()
+                ConnectCard {
+                    LinkRow(
+                        icon       = Icons.Default.PrivacyTip,
+                        iconTint   = SuccessGreen,
+                        title      = "Privacy Policy",
+                        subtitle   = "How your data is handled",
+                        isExternal = false,
+                        onClick    = onPrivacyPolicy
+                    )
+                    RowDivider()
+                    LinkRow(
+                        icon       = Icons.Default.Gavel,
+                        iconTint   = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        title      = "Terms of Use",
+                        subtitle   = "Rules for using TraceLedger",
+                        isExternal = false,
+                        onClick    = onTerms
+                    )
+                }
             }
 
             item { Spacer(Modifier.height(32.dp)) }
@@ -127,13 +183,8 @@ private fun AppIdentityCard() {
         colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier.fillMaxWidth()
     ) {
-        // FIX: Added modifier = Modifier.fillMaxWidth() to the Column.
-        // Without it the Column was only as wide as its widest child,
-        // so horizontalAlignment = CenterHorizontally had nothing to center against.
         Column(
-            modifier            = Modifier
-                .fillMaxWidth()
-                .padding(24.dp),
+            modifier            = Modifier.fillMaxWidth().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -149,25 +200,20 @@ private fun AppIdentityCard() {
                     color = NothingRed
                 )
             }
-
             Spacer(Modifier.height(4.dp))
-
             Text(
                 text      = "TRACELEDGER",
                 style     = MaterialTheme.typography.headlineMedium,
                 color     = MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center
             )
-
             Text(
                 text      = "Version ${BuildConfig.VERSION_NAME}  ·  Build ${BuildConfig.VERSION_CODE}",
                 style     = MaterialTheme.typography.labelSmall,
                 color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
                 textAlign = TextAlign.Center
             )
-
             Spacer(Modifier.height(4.dp))
-
             Text(
                 text      = "Private finance tracking, offline-first.",
                 style     = MaterialTheme.typography.bodyMedium,
@@ -179,7 +225,90 @@ private fun AppIdentityCard() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// VersionCard — collapsible card showing one version's changelog entries
+// ConnectCard — shared container for link rows
+// ─────────────────────────────────────────────────────────────────────────────
+@Composable
+private fun ConnectCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        shape  = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(content = content)
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LinkRow — one tappable row inside a ConnectCard
+// ─────────────────────────────────────────────────────────────────────────────
+@Composable
+private fun LinkRow(
+    icon: ImageVector,
+    iconTint: androidx.compose.ui.graphics.Color,
+    title: String,
+    subtitle: String,
+    isExternal: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // Icon box
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .background(iconTint.copy(alpha = 0.10f), RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector        = icon,
+                contentDescription = null,
+                tint               = iconTint,
+                modifier           = Modifier.size(18.dp)
+            )
+        }
+
+        // Text
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text  = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text  = subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+            )
+        }
+
+        // Chevron / external icon
+        Icon(
+            imageVector = if (isExternal) Icons.AutoMirrored.Filled.OpenInNew
+            else Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint               = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
+            modifier           = Modifier.size(16.dp)
+        )
+    }
+}
+
+@Composable
+private fun RowDivider() {
+    HorizontalDivider(
+        modifier  = Modifier.padding(start = 68.dp),
+        thickness = 0.5.dp,
+        color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.07f)
+    )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VersionCard
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun VersionCard(
@@ -190,12 +319,11 @@ private fun VersionCard(
     var expanded by remember { mutableStateOf(expandedByDefault) }
 
     Card(
-        shape  = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape    = RoundedCornerShape(20.dp),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column {
-            // Header row — version + expand toggle
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -227,33 +355,49 @@ private fun VersionCard(
                         }
                     }
                 }
-
                 Icon(
-                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    imageVector        = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
-                    modifier = Modifier.size(20.dp)
+                    tint               = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                    modifier           = Modifier.size(20.dp)
                 )
             }
 
-            // Feature entries — animated expand/collapse
-            AnimatedVisibility(
-                visible = expanded,
-                enter   = expandVertically(),
-                exit    = shrinkVertically()
-            ) {
+            AnimatedVisibility(visible = expanded, enter = expandVertically(), exit = shrinkVertically()) {
                 Column(modifier = Modifier.padding(bottom = 8.dp)) {
                     HorizontalDivider(
                         thickness = 0.5.dp,
                         color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
                     )
-
                     if (changelog.entries.isNotEmpty()) {
                         changelog.entries.forEach { entry ->
-                            ChangelogEntryRow(entry = entry)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                                verticalAlignment     = Alignment.Top,
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(NothingRed.copy(alpha = 0.08f), RoundedCornerShape(10.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector        = ChangelogIconMapper.get(entry.iconName),
+                                        contentDescription = null,
+                                        tint               = NothingRed,
+                                        modifier           = Modifier.size(18.dp)
+                                    )
+                                }
+                                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(entry.title,       style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(entry.description, style = MaterialTheme.typography.bodySmall,  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f))
+                                }
+                            }
                         }
                     } else {
-                        // Fallback: plain text for old-format entries
                         Text(
                             text     = changelog.rawText,
                             style    = MaterialTheme.typography.bodySmall,
@@ -268,60 +412,13 @@ private fun VersionCard(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ChangelogEntryRow — one feature line with icon, title, description
-// ─────────────────────────────────────────────────────────────────────────────
-@Composable
-private fun ChangelogEntryRow(
-    entry: com.greenicephoenix.traceledger.core.util.ChangelogEntry
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 10.dp),
-        verticalAlignment     = Alignment.Top,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        // Icon in subtle tinted box
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .background(
-                    NothingRed.copy(alpha = 0.08f),
-                    RoundedCornerShape(10.dp)
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector        = ChangelogIconMapper.get(entry.iconName),
-                contentDescription = null,
-                tint               = NothingRed,
-                modifier           = Modifier.size(18.dp)
-            )
-        }
-
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(
-                text  = entry.title,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text  = entry.description,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
-            )
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PrivacyCard — four promise badges in a 2x2 grid
+// PrivacyCard
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun PrivacyCard() {
     Card(
-        shape  = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape    = RoundedCornerShape(20.dp),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -333,30 +430,34 @@ private fun PrivacyCard() {
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
-
-            // 2x2 grid of privacy badges
             val badges = listOf(
-                Triple(Icons.Default.WifiOff,      "Offline only",   "No internet required"),
-                Triple(Icons.Default.VisibilityOff, "No tracking",    "Zero analytics"),
-                Triple(Icons.Default.Block,         "No ads",         "Ever"),
-                Triple(Icons.Default.Cloud,         "No cloud sync",  "Local storage only")
+                Triple(Icons.Default.WifiOff,        "Offline only",  "No internet required"),
+                Triple(Icons.Default.VisibilityOff,  "No tracking",   "Zero analytics"),
+                Triple(Icons.Default.Block,           "No ads",        "Ever"),
+                Triple(Icons.Default.Cloud,           "No cloud sync", "Local storage only")
             )
-
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 badges.chunked(2).forEach { row ->
                     Row(
                         modifier              = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         row.forEach { (icon, title, subtitle) ->
-                            PrivacyBadge(
-                                icon     = icon,
-                                title    = title,
-                                subtitle = subtitle,
-                                modifier = Modifier.weight(1f)
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .background(SuccessGreen.copy(alpha = 0.06f), RoundedCornerShape(10.dp))
+                                    .padding(12.dp),
+                                verticalAlignment     = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(icon, null, tint = SuccessGreen, modifier = Modifier.size(16.dp))
+                                Column {
+                                    Text(title,    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface)
+                                    Text(subtitle, style = MaterialTheme.typography.labelSmall,  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f))
+                                }
+                            }
                         }
-                        // If odd number, fill remaining space
                         if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
@@ -365,47 +466,6 @@ private fun PrivacyCard() {
     }
 }
 
-@Composable
-private fun PrivacyBadge(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    subtitle: String,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier              = modifier
-            .background(
-                SuccessGreen.copy(alpha = 0.06f),
-                RoundedCornerShape(12.dp)
-            )
-            .padding(12.dp),
-        verticalAlignment     = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Icon(
-            imageVector        = icon,
-            contentDescription = null,
-            tint               = SuccessGreen,
-            modifier           = Modifier.size(18.dp)
-        )
-        Column {
-            Text(
-                text  = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text  = subtitle,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
-            )
-        }
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SectionLabel — small uppercase section divider
-// ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun SectionLabel(text: String) {
     Text(

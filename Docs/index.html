@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="TraceLedger — Private, offline-first finance tracking for Android. No cloud. No ads. No tracking.">
+    <meta name="theme-color" content="#000000">
+    <title>TraceLedger — Private Finance Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Space+Mono:wght@400;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+          --black:#000;--g950:#060606;--g900:#0c0c0c;--g850:#111;--g800:#181818;
+          --g700:#252525;--g600:#333;--g500:#4a4a4a;--g400:#6b6b6b;--g300:#999;
+          --g200:#c8c8c8;--white:#fff;--red:#e53935;
+          --red-a10:rgba(229,57,53,.10);--red-a18:rgba(229,57,53,.18);--red-a30:rgba(229,57,53,.30);
+          --f-dot:'Share Tech Mono',monospace;--f-mono:'Space Mono',monospace;--f-body:'DM Sans',sans-serif;
+          --ease-out:cubic-bezier(.22,.68,0,1.2);--ease-std:cubic-bezier(.4,0,.2,1);
+        }
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+        html{scroll-behavior:smooth;}
+        a{text-decoration:none;color:inherit;}
+        body{background:var(--black);color:var(--white);font-family:var(--f-body);font-weight:300;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
+        body::before{content:'';position:fixed;inset:0;z-index:9000;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,.04) 3px,rgba(0,0,0,.04) 4px);pointer-events:none;}
+
+        /* BOOT */
+        #boot{position:fixed;inset:0;z-index:8000;background:var(--black);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px;transition:opacity .5s ease,visibility .5s ease;}
+        #boot.done{opacity:0;visibility:hidden;pointer-events:none;}
+        .boot-logo{font-family:var(--f-dot);font-size:clamp(24px,5vw,48px);color:var(--white);letter-spacing:.1em;}
+        .boot-logo em{color:var(--red);font-style:normal;}
+        .boot-lines{font-family:var(--f-mono);font-size:11px;color:var(--g400);letter-spacing:.12em;display:flex;flex-direction:column;gap:6px;min-width:320px;}
+        .boot-line{opacity:0;}.boot-line.show{animation:bootFade .22s ease forwards;}
+        .boot-line .ok{color:var(--red);margin-right:8px;}.boot-line .skip{color:var(--g500);margin-right:8px;}
+        .boot-bar-wrap{width:280px;height:2px;background:var(--g800);border-radius:2px;overflow:hidden;}
+        .boot-bar{height:100%;background:var(--red);width:0%;transition:width .1s linear;}
+        @keyframes bootFade{from{opacity:0;transform:translateX(-6px);}to{opacity:1;transform:translateX(0);}}
+
+        /* LAYOUT */
+        .wrap{max-width:1120px;margin:0 auto;padding:0 28px;}
+        section{padding:104px 0;}
+        .dot-font{font-family:var(--f-dot);}.mono-font{font-family:var(--f-mono);}
+        .eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:var(--f-mono);font-size:10px;color:var(--red);letter-spacing:.22em;text-transform:uppercase;margin-bottom:20px;}
+        .eyebrow::before{content:'';display:block;width:28px;height:1px;background:var(--red);}
+        .section-h{font-family:var(--f-dot);font-size:clamp(26px,4vw,46px);color:var(--white);line-height:1.18;margin-bottom:18px;}
+        .section-h .r{color:var(--red);}
+        .section-p{font-size:16px;color:var(--g300);line-height:1.75;max-width:500px;}
+
+        /* REVEAL */
+        .rv{opacity:0;transform:translateY(24px);transition:opacity .65s var(--ease-std),transform .65s var(--ease-std);}
+        .rv.in{opacity:1;transform:translateY(0);}
+        .rv-d1{transition-delay:.08s;}.rv-d2{transition-delay:.16s;}.rv-d3{transition-delay:.24s;}
+        .rv-d4{transition-delay:.32s;}.rv-d5{transition-delay:.40s;}.rv-d6{transition-delay:.48s;}
+
+        /* NAV */
+        nav{position:fixed;top:0;left:0;right:0;z-index:500;height:60px;background:rgba(0,0,0,.88);backdrop-filter:blur(16px);border-bottom:1px solid var(--g800);display:flex;align-items:center;}
+        .nav-inner{display:flex;align-items:center;justify-content:space-between;width:100%;max-width:1120px;margin:0 auto;padding:0 28px;}
+        .nav-brand{font-family:var(--f-dot);font-size:13px;color:var(--white);letter-spacing:.1em;}
+        .nav-brand span{color:var(--red);}
+        .nav-menu{display:flex;align-items:center;gap:8px;list-style:none;}
+        .nav-menu a{font-family:var(--f-mono);font-size:10px;color:var(--g400);letter-spacing:.14em;text-transform:uppercase;padding:8px 12px;border-radius:4px;transition:color .2s,background .2s;}
+        .nav-menu a:hover{color:var(--white);background:var(--g800);}
+        .nav-menu .cta{color:var(--red);border:1px solid var(--red-a30);}
+        .nav-menu .cta:hover{background:var(--red);color:var(--white);}
+
+        /* HERO */
+        #hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-top:60px;position:relative;overflow:hidden;}
+        .hero-grid-bg{position:absolute;inset:0;z-index:0;background-image:radial-gradient(circle,var(--g800) 1px,transparent 1px);background-size:30px 30px;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 40%,transparent 100%);}
+        .hero-glow{position:absolute;z-index:0;bottom:-280px;left:-140px;width:700px;height:700px;background:radial-gradient(circle,rgba(229,57,53,.07) 0%,transparent 65%);pointer-events:none;}
+        .hero-inner{position:relative;z-index:1;}
+        .hero-tag{display:inline-flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:10px;color:var(--g400);letter-spacing:.2em;text-transform:uppercase;border:1px solid var(--g700);border-radius:3px;padding:6px 12px;margin-bottom:36px;opacity:0;animation:fadeUp .5s ease forwards .3s;}
+        .hero-tag-dot{width:6px;height:6px;border-radius:50%;background:var(--red);animation:pulse 2s ease infinite;}
+        @keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--red-a30);}50%{box-shadow:0 0 0 5px transparent;}}
+        .hero-title{font-family:var(--f-dot);font-size:clamp(42px,9vw,100px);line-height:1.07;color:var(--white);opacity:0;animation:fadeUp .65s ease forwards .45s;}
+        .hero-title .red{color:var(--red);}.hero-title .dim{color:var(--g500);}
+        .hero-rule{width:64px;height:2px;background:var(--red);margin:28px 0;opacity:0;animation:fadeUp .5s ease forwards .6s;}
+        .hero-sub{font-size:18px;color:var(--g300);line-height:1.7;max-width:540px;font-weight:300;opacity:0;animation:fadeUp .6s ease forwards .72s;}
+        .hero-btns{display:flex;gap:14px;flex-wrap:wrap;margin-top:44px;opacity:0;animation:fadeUp .6s ease forwards .88s;}
+        .btn{display:inline-flex;align-items:center;gap:9px;font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:14px 26px;border-radius:6px;transition:transform .18s var(--ease-out),box-shadow .18s ease;cursor:pointer;border:none;}
+        .btn-red{background:var(--red);color:var(--white);}
+        .btn-red:hover{transform:translateY(-3px);box-shadow:0 12px 36px rgba(229,57,53,.38);}
+        .btn-ghost{background:transparent;color:var(--g200);border:1px solid var(--g700);}
+        .btn-ghost:hover{border-color:var(--g500);color:var(--white);transform:translateY(-2px);}
+        .btn-loading{position:relative;overflow:hidden;pointer-events:none;opacity:.7;}
+        .btn-loading::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);animation:shimmer 1.2s infinite;}
+        @keyframes shimmer{from{transform:translateX(-100%);}to{transform:translateX(100%);}}
+        .hero-stats{display:flex;gap:0;border:1px solid var(--g800);border-radius:10px;overflow:hidden;margin-top:72px;opacity:0;animation:fadeUp .6s ease forwards 1.05s;}
+        .hstat{flex:1;padding:20px 24px;border-right:1px solid var(--g800);}
+        .hstat:last-child{border-right:none;}
+        .hstat-n{font-family:var(--f-dot);font-size:26px;color:var(--white);display:block;margin-bottom:4px;}
+        .hstat-n .r{color:var(--red);}
+        .hstat-l{font-family:var(--f-mono);font-size:9px;color:var(--g500);letter-spacing:.16em;text-transform:uppercase;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+        @keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+
+        /* TICKER */
+        .ticker{position:absolute;bottom:0;left:0;right:0;border-top:1px solid var(--g800);padding:9px 0;overflow:hidden;opacity:0;animation:fadeIn .5s ease forwards 1.3s;}
+        .ticker-track{display:flex;gap:56px;animation:tickerMove 36s linear infinite;width:max-content;white-space:nowrap;}
+        .ticker-item{font-family:var(--f-mono);font-size:10px;color:var(--g600);letter-spacing:.18em;text-transform:uppercase;}
+        .ticker-sep{color:var(--red);margin:0 8px;}
+        @keyframes tickerMove{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+
+        /* FEATURES */
+        #features{background:var(--black);}
+        .features-header{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:end;margin-bottom:64px;}
+        .features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--g700);border:1px solid var(--g700);border-radius:16px;overflow:hidden;}
+        .fc{background:var(--g900);padding:32px 28px;position:relative;overflow:hidden;transition:background .2s;}
+        .fc::after{content:'';position:absolute;top:0;left:0;width:100%;height:3px;background:var(--red);transform:scaleX(0);transform-origin:left;transition:transform .35s var(--ease-std);}
+        .fc:hover{background:var(--g850);}.fc:hover::after{transform:scaleX(1);}
+        .fc-wide{grid-column:span 2;}
+        .fc-icon{width:46px;height:46px;background:var(--red-a10);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:21px;margin-bottom:22px;border:1px solid var(--red-a18);}
+        .fc-title{font-family:var(--f-dot);font-size:13px;color:var(--white);letter-spacing:.06em;margin-bottom:10px;}
+        .fc-desc{font-size:13.5px;color:var(--g400);line-height:1.65;}
+        .fc-idx{position:absolute;top:14px;right:18px;font-family:var(--f-mono);font-size:10px;color:var(--g700);letter-spacing:.1em;}
+
+        /* PRIVACY */
+        #privacy{background:var(--g950);position:relative;overflow:hidden;}
+        .privacy-glow{position:absolute;z-index:0;top:-300px;right:-300px;width:800px;height:800px;background:radial-gradient(circle,rgba(229,57,53,.05) 0%,transparent 65%);pointer-events:none;}
+        .privacy-layout{position:relative;z-index:1;display:grid;grid-template-columns:5fr 7fr;gap:96px;align-items:center;}
+        .privacy-manifesto{font-family:var(--f-dot);font-size:clamp(18px,2.6vw,30px);color:var(--white);line-height:1.6;}
+        .privacy-manifesto .r{color:var(--red);}.privacy-manifesto .m{color:var(--g400);}
+        .privacy-badges{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+        .pb{background:var(--g900);border:1px solid var(--g800);border-radius:12px;padding:20px 18px;transition:border-color .2s,transform .2s var(--ease-out);}
+        .pb:hover{border-color:var(--g600);transform:translateY(-3px);}
+        .pb-icon{font-size:20px;margin-bottom:10px;}
+        .pb-title{font-family:var(--f-mono);font-size:11px;color:var(--white);letter-spacing:.06em;margin-bottom:4px;}
+        .pb-sub{font-size:12px;color:var(--g500);}
+
+        /* HOW */
+        #how{background:var(--black);}
+        .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--g700);border:1px solid var(--g700);border-radius:16px;overflow:hidden;margin-top:56px;}
+        .step{background:var(--g900);padding:36px 26px;transition:background .2s;}.step:hover{background:var(--g850);}
+        .step-num{font-family:var(--f-dot);font-size:36px;color:var(--red-a30);margin-bottom:16px;display:block;}
+        .step-title{font-family:var(--f-mono);font-size:12px;color:var(--white);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;}
+        .step-desc{font-size:13.5px;color:var(--g400);line-height:1.65;}
+
+        /* DOWNLOAD */
+        #download{background:var(--g950);}
+        .dl-card{background:var(--g900);border:1px solid var(--g800);border-radius:24px;padding:88px 56px;text-align:center;position:relative;overflow:hidden;max-width:760px;margin:0 auto;}
+        .dl-card::before{content:'';position:absolute;bottom:-240px;left:50%;transform:translateX(-50%);width:600px;height:480px;background:radial-gradient(ellipse,rgba(229,57,53,.09) 0%,transparent 70%);pointer-events:none;}
+        .dl-card::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:repeating-linear-gradient(90deg,var(--red) 0,var(--red) 4px,transparent 4px,transparent 10px);}
+        .dl-title{font-family:var(--f-dot);font-size:clamp(26px,5vw,52px);line-height:1.15;margin-bottom:18px;position:relative;}
+        .dl-sub{font-size:16px;color:var(--g400);line-height:1.7;margin-bottom:44px;position:relative;}
+        .dl-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;position:relative;}
+        .dl-meta{font-family:var(--f-mono);font-size:10px;color:var(--g600);letter-spacing:.14em;margin-top:28px;position:relative;}
+
+        /* FOOTER */
+        footer{background:var(--black);border-top:1px solid var(--g800);padding:44px 0;}
+        .foot-inner{display:flex;align-items:center;justify-content:space-between;max-width:1120px;margin:0 auto;padding:0 28px;flex-wrap:wrap;gap:20px;}
+        .foot-brand{font-family:var(--f-dot);font-size:13px;color:var(--g400);letter-spacing:.08em;}
+        .foot-brand span{color:var(--red);}
+        .foot-tagline{font-family:var(--f-mono);font-size:10px;color:var(--g600);letter-spacing:.16em;}
+        .foot-links{display:flex;gap:24px;list-style:none;}
+        .foot-links a{font-family:var(--f-mono);font-size:10px;color:var(--g500);letter-spacing:.14em;text-transform:uppercase;transition:color .2s;}
+        .foot-links a:hover{color:var(--g200);}
+
+        /* RESPONSIVE */
+        @media(max-width:900px){
+          .nav-menu li:not(:last-child):not(:nth-last-child(2)){display:none;}
+          .features-header{grid-template-columns:1fr;gap:24px;}
+          .features-grid{grid-template-columns:1fr 1fr;}
+          .fc-wide{grid-column:span 2;}
+          .privacy-layout{grid-template-columns:1fr;gap:52px;}
+          .steps{grid-template-columns:1fr 1fr;}
+        }
+        @media(max-width:600px){
+          section{padding:72px 0;}.wrap{padding:0 20px;}
+          .features-grid{grid-template-columns:1fr;}.fc-wide{grid-column:span 1;}
+          .steps{grid-template-columns:1fr;}.privacy-badges{grid-template-columns:1fr;}
+          .dl-card{padding:56px 28px;}.hero-title{font-size:38px;}.hero-stats{display:none;}
+        }
+    </style>
+</head>
+<body>
+
+<div id="boot">
+    <div class="boot-logo dot-font">TRACE<em>LEDGER</em></div>
+    <div class="boot-lines" id="bootLines"></div>
+    <div class="boot-bar-wrap"><div class="boot-bar" id="bootBar"></div></div>
+</div>
+
+<nav>
+    <div class="nav-inner">
+        <a href="#" class="nav-brand dot-font">TRACE<span>LEDGER</span></a>
+        <ul class="nav-menu">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#privacy">Privacy</a></li>
+            <li><a href="#how">How It Works</a></li>
+            <li><a href="#download" class="cta">Download</a></li>
+        </ul>
+    </div>
+</nav>
+
+<section id="hero">
+    <div class="hero-grid-bg"></div>
+    <div class="hero-glow"></div>
+    <div class="wrap hero-inner">
+        <div class="hero-tag mono-font">
+            <span class="hero-tag-dot"></span>
+            <span id="heroVersion">Fetching latest release&hellip;</span>
+        </div>
+        <h1 class="hero-title">MONEY<br><span class="dim">TRACKED.</span><br><span class="red">PRIVATE.</span></h1>
+        <div class="hero-rule"></div>
+        <p class="hero-sub">A fast, minimal finance tracker for Android. Log every rupee, understand your spending — with zero data leaving your device. No accounts. No cloud. No compromise.</p>
+        <div class="hero-btns">
+            <a href="#" id="btnDownloadHero" class="btn btn-red btn-loading">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span id="btnHeroLabel">Loading&hellip;</span>
+            </a>
+            <a href="https://github.com/NRoy9/TraceLedger/releases" class="btn btn-ghost" target="_blank" rel="noopener">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                All Releases
+            </a>
+        </div>
+        <div class="hero-stats">
+            <div class="hstat"><span class="hstat-n dot-font">0<span class="r">B</span></span><span class="hstat-l mono-font">Data sent to servers</span></div>
+            <div class="hstat"><span class="hstat-n dot-font"><span class="r">&#8734;</span></span><span class="hstat-l mono-font">Transactions stored</span></div>
+            <div class="hstat"><span class="hstat-n dot-font">100<span class="r">%</span></span><span class="hstat-l mono-font">Offline capable</span></div>
+            <div class="hstat"><span class="hstat-n dot-font">0<span class="r">&#8377;</span></span><span class="hstat-l mono-font">Cost, forever</span></div>
+        </div>
+    </div>
+    <div class="ticker">
+        <div class="ticker-track">
+            <span class="ticker-item">No Cloud<span class="ticker-sep">&#9670;</span></span>
+            <span class="ticker-item">No Ads<span class="ticker-sep">&#9670;</span></span>
+            <span class="ticker-item">Offline First<span class="ticker-sep">&#9670;</span></span>
+            <span class="ticker-item">No Tracking<span class="ticker-sep">&#9670;</span></span>
+            <span class="ticker-item">Open Source<span class="ticker-sep">&#9670;</span></span>
+            <span class="ticker-item">Privacy First<span class="ticker-sep">&#9670;</span></span>
+            <span class="ticker-item">Android App<span class="ticker-sep">&#9670;</span></span>
+            <span class="ticker-item">Free Forever<span class="ticker-sep">&#9670;</span></span>
+            <span class="ticker-item">No Cloud<span class="ticker-sep">&#9670;</span></span>
+            <span class="ticker-item">No Ads<span class="ticker-sep">&#9670;</span></span>
+            <span class="ticker-item">Offline First<span class="ticker-sep">&#9670;</span></span>
+            <span class="ticker-item">No Tracking<span class="ticker-sep">&#9670;</span></span>
+            <span class="ticker-item">Open Source<span class="ticker-sep">&#9670;</span></span>
+            <span class="ticker-item">Privacy First<span class="ticker-sep">&#9670;</span></span>
+            <span class="ticker-item">Android App<span class="ticker-sep">&#9670;</span></span>
+            <span class="ticker-item">Free Forever<span class="ticker-sep">&#9670;</span></span>
+        </div>
+    </div>
+</section>
+
+<section id="features">
+    <div class="wrap">
+        <div class="features-header">
+            <div><p class="eyebrow rv">Features</p><h2 class="section-h rv rv-d1">EVERYTHING<br>YOU NEED<span class="r">.</span><br>NOTHING<br>YOU DON'T<span class="r">.</span></h2></div>
+            <p class="section-p rv rv-d2">A complete personal finance toolkit. Accounts, budgets, statistics, recurring rules, and smart insights — all running locally on your device.</p>
+        </div>
+        <div class="features-grid">
+            <div class="fc fc-wide rv rv-d1"><span class="fc-idx mono-font">01</span><div class="fc-icon">&#127974;</div><h3 class="fc-title">Accounts &amp; Transactions</h3><p class="fc-desc">Bank, Cash, Wallet, and Credit Card accounts. Log expenses, income, and transfers in seconds. Balances update automatically. Transactions grouped by date with search and amount filter.</p></div>
+            <div class="fc rv rv-d2"><span class="fc-idx mono-font">02</span><div class="fc-icon">&#129383;</div><h3 class="fc-title">Statistics</h3><p class="fc-desc">Animated donut charts for expense and income breakdowns. Daily cashflow bar chart. Category spending trends across months.</p></div>
+            <div class="fc rv rv-d1"><span class="fc-idx mono-font">03</span><div class="fc-icon">&#127919;</div><h3 class="fc-title">Budgets</h3><p class="fc-desc">Monthly limits per category. Early warnings at 75%. Alerts at 90%. Never overspend by surprise again.</p></div>
+            <div class="fc rv rv-d2"><span class="fc-idx mono-font">04</span><div class="fc-icon">&#128257;</div><h3 class="fc-title">Recurring</h3><p class="fc-desc">Schedule subscriptions, EMIs, and salary automatically. Daily, weekly, monthly, quarterly, or yearly.</p></div>
+            <div class="fc rv rv-d3"><span class="fc-idx mono-font">05</span><div class="fc-icon">&#128161;</div><h3 class="fc-title">Insights</h3><p class="fc-desc">Spending vs last month, savings rate, recurring cost, and net worth direction — smart cards on your dashboard.</p></div>
+            <div class="fc rv rv-d4"><span class="fc-idx mono-font">06</span><div class="fc-icon">&#128230;</div><h3 class="fc-title">Import / Export</h3><p class="fc-desc">Full JSON backup and restore. CSV export for spreadsheets. Your data is always yours to take anywhere.</p></div>
+        </div>
+    </div>
+</section>
+
+<section id="privacy">
+    <div class="privacy-glow"></div>
+    <div class="wrap">
+        <div class="privacy-layout">
+            <div>
+                <p class="eyebrow rv">Privacy</p>
+                <div class="privacy-manifesto rv rv-d1">YOUR DATA<span class="r">.</span><br>YOUR DEVICE<span class="r">.</span><br><span class="m">YOUR RULES.</span></div>
+                <p class="section-p rv rv-d2" style="margin-top:28px;">Most finance apps sync your data to servers you don't control. TraceLedger doesn't connect to the internet at all. No accounts to create. No passwords to forget. No data to sell.</p>
+            </div>
+            <div class="privacy-badges">
+                <div class="pb rv rv-d1"><div class="pb-icon">&#128225;</div><div class="pb-title mono-font">Offline Only</div><div class="pb-sub">Zero internet required</div></div>
+                <div class="pb rv rv-d2"><div class="pb-icon">&#128683;</div><div class="pb-title mono-font">No Analytics</div><div class="pb-sub">We don't track usage</div></div>
+                <div class="pb rv rv-d3"><div class="pb-icon">&#128274;</div><div class="pb-title mono-font">Local Storage</div><div class="pb-sub">SQLite on your device only</div></div>
+                <div class="pb rv rv-d4"><div class="pb-icon">&#128100;</div><div class="pb-title mono-font">No Account</div><div class="pb-sub">Open the app. Start tracking.</div></div>
+                <div class="pb rv rv-d3"><div class="pb-icon">&#127358;</div><div class="pb-title mono-font">Free Forever</div><div class="pb-sub">No subscription. No paywalls.</div></div>
+                <div class="pb rv rv-d4"><div class="pb-icon">&#128194;</div><div class="pb-title mono-font">Open Source</div><div class="pb-sub">Source on GitHub</div></div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="how">
+    <div class="wrap">
+        <p class="eyebrow rv">How It Works</p>
+        <h2 class="section-h rv rv-d1">UP AND RUNNING<br>IN SECONDS<span class="r">.</span></h2>
+        <div class="steps">
+            <div class="step rv rv-d1"><span class="step-num dot-font">01</span><div class="step-title mono-font">Install</div><p class="step-desc">Download the APK from GitHub. No Play Store required — sideload in under a minute.</p></div>
+            <div class="step rv rv-d2"><span class="step-num dot-font">02</span><div class="step-title mono-font">Add Accounts</div><p class="step-desc">Create your bank accounts, wallets, and cash balances. Each tracks its own balance automatically.</p></div>
+            <div class="step rv rv-d3"><span class="step-num dot-font">03</span><div class="step-title mono-font">Log Transactions</div><p class="step-desc">Tap the + button. Pick a category, amount, and account. Done in under 5 seconds.</p></div>
+            <div class="step rv rv-d4"><span class="step-num dot-font">04</span><div class="step-title mono-font">Understand</div><p class="step-desc">Watch the dashboard, charts, and insights update in real time. Know exactly where your money goes.</p></div>
+        </div>
+    </div>
+</section>
+
+<section id="download">
+    <div class="wrap">
+        <div class="dl-card rv">
+            <h2 class="dl-title dot-font">START TRACKING<br>YOUR MONEY<span style="color:var(--red)">.</span></h2>
+            <p class="dl-sub">Free download. No subscription. No catch.<br>Install it and start in under a minute.</p>
+            <div class="dl-btns">
+                <a href="#" id="btnDownloadMain" class="btn btn-red btn-loading">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    <span id="btnMainLabel">Loading&hellip;</span>
+                </a>
+                <a href="https://github.com/NRoy9/TraceLedger/releases" class="btn btn-ghost" target="_blank" rel="noopener">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+                    All Releases
+                </a>
+            </div>
+            <p class="dl-meta mono-font" id="dlMeta">Android 8.0+ &nbsp;&middot;&nbsp; No permissions required</p>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <div class="foot-inner">
+        <span class="foot-brand dot-font">TRACE<span>LEDGER</span></span>
+        <span class="foot-tagline mono-font">No cloud. No ads. No tracking. Ever.</span>
+        <ul class="foot-links">
+            <li><a href="https://github.com/NRoy9/TraceLedger" target="_blank" rel="noopener">GitHub</a></li>
+            <li><a href="/privacy">Privacy</a></li>
+            <li><a href="/terms">Terms</a></li>
+            <li><a href="#download">Download</a></li>
+        </ul>
+    </div>
+</footer>
+
+<script>
+    // ─────────────────────────────────────────────────────────────────────────────
+    // GitHub Release Fetcher
+    //
+    // Endpoint: https://api.github.com/repos/NRoy9/TraceLedger/releases/latest
+    // Public API — no auth needed for public repos.
+    //
+    // What we use from the response:
+    //   release.tag_name                   → version string, e.g. "v1.0.0"
+    //   release.assets[].name              → filename, e.g. "TraceLedger-v1.0.0.apk"
+    //   release.assets[].browser_download_url → direct APK download URL
+    //   release.assets[].size              → bytes, converted to MB for display
+    //
+    // Fallback: if the API fails or no APK is found, all buttons link to
+    // the GitHub releases page instead of a dead href.
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    const API_URL      = 'https://api.github.com/repos/NRoy9/TraceLedger/releases/latest';
+    const RELEASES_URL = 'https://github.com/NRoy9/TraceLedger/releases';
+
+    const heroVersion     = document.getElementById('heroVersion');
+    const btnDownloadHero = document.getElementById('btnDownloadHero');
+    const btnHeroLabel    = document.getElementById('btnHeroLabel');
+    const btnDownloadMain = document.getElementById('btnDownloadMain');
+    const btnMainLabel    = document.getElementById('btnMainLabel');
+    const dlMeta          = document.getElementById('dlMeta');
+
+    function formatMB(bytes) {
+      return bytes ? (bytes / 1048576).toFixed(1) + ' MB' : null;
+    }
+
+    function applyRelease(apkUrl, version, size) {
+      const label = 'Download APK \u2014 ' + version;
+
+      btnDownloadHero.href = apkUrl;
+      btnDownloadHero.classList.remove('btn-loading');
+      btnHeroLabel.textContent = label;
+
+      btnDownloadMain.href = apkUrl;
+      btnDownloadMain.classList.remove('btn-loading');
+      btnMainLabel.textContent = label;
+
+      heroVersion.textContent = version + '  \u00B7  Latest Release';
+
+      const parts = [version, 'Android 8.0+'];
+      if (size) parts.push(size);
+      parts.push('No permissions required');
+      dlMeta.textContent = parts.join('  \u00B7  ');
+    }
+
+    function applyFallback() {
+      btnDownloadHero.href = RELEASES_URL;
+      btnDownloadHero.target = '_blank';
+      btnDownloadHero.classList.remove('btn-loading');
+      btnHeroLabel.textContent = 'Download on GitHub';
+
+      btnDownloadMain.href = RELEASES_URL;
+      btnDownloadMain.target = '_blank';
+      btnDownloadMain.classList.remove('btn-loading');
+      btnMainLabel.textContent = 'View Releases on GitHub';
+
+      heroVersion.textContent = 'Latest release on GitHub';
+      dlMeta.textContent = 'Android 8.0+  \u00B7  No permissions required';
+    }
+
+    fetch(API_URL, { headers: { Accept: 'application/vnd.github.v3+json' } })
+      .then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.json();
+      })
+      .then(function(release) {
+        var assets = release.assets || [];
+        var apk    = assets.find(function(a) { return a.name && a.name.endsWith('.apk'); });
+        if (!apk) throw new Error('No APK asset');
+        applyRelease(apk.browser_download_url, release.tag_name || 'latest', formatMB(apk.size));
+      })
+      .catch(function(err) {
+        console.warn('Release fetch failed:', err.message);
+        applyFallback();
+      });
+
+    // ── Boot ──────────────────────────────────────────────────────────────────
+    var msgs = [
+      {p:'OK  ', t:'LOADING KERNEL...'},
+      {p:'OK  ', t:'MOUNTING LOCAL STORAGE...'},
+      {p:'OK  ', t:'PRIVACY LAYER ACTIVE...'},
+      {p:'... ', t:'CHECKING CLOUD SYNC...'},
+      {p:'SKIP', t:'CLOUD SYNC DISABLED \u2014 BY DESIGN', s:true},
+      {p:'OK  ', t:'TRACELEDGER READY.'}
+    ];
+    var linesEl = document.getElementById('bootLines');
+    var barEl   = document.getElementById('bootBar');
+    var bootEl  = document.getElementById('boot');
+    var bi = 0;
+    var bootInt = setInterval(function() {
+      if (bi >= msgs.length) { clearInterval(bootInt); setTimeout(function(){ bootEl.classList.add('done'); }, 400); return; }
+      var m = msgs[bi];
+      var d = document.createElement('div');
+      d.className = 'boot-line';
+      d.innerHTML = '<span class="' + (m.s ? 'skip' : 'ok') + '">' + m.p + '</span>' + m.t;
+      linesEl.appendChild(d);
+      requestAnimationFrame(function(){ d.classList.add('show'); });
+      barEl.style.width = ((bi+1)/msgs.length*100) + '%';
+      bi++;
+    }, 280);
+
+    // ── Scroll reveal ────────────────────────────────────────────────────────
+    var rvObs = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); rvObs.unobserve(e.target); } });
+    }, { threshold: 0.08, rootMargin: '0px 0px -32px 0px' });
+    document.querySelectorAll('.rv').forEach(function(el){ rvObs.observe(el); });
+
+    // ── Nav active ────────────────────────────────────────────────────────────
+    var navLinks = document.querySelectorAll('.nav-menu a[href^="#"]');
+    var secObs   = new IntersectionObserver(function(entries) {
+      entries.forEach(function(e){
+        if(e.isIntersecting){
+          var id = e.target.id;
+          navLinks.forEach(function(a){ a.style.color = a.getAttribute('href')==='#'+id ? '#fff' : ''; });
+        }
+      });
+    }, { threshold: 0.4 });
+    document.querySelectorAll('section[id]').forEach(function(s){ secObs.observe(s); });
+
+    // ── Smooth scroll ─────────────────────────────────────────────────────────
+    document.querySelectorAll('a[href^="#"]').forEach(function(a){
+      a.addEventListener('click', function(e){
+        var t = document.querySelector(a.getAttribute('href'));
+        if(t){ e.preventDefault(); t.scrollIntoView({ behavior: 'smooth' }); }
+      });
+    });
+</script>
+</body>
+</html>

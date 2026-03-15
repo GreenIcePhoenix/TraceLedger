@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — TraceLedger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --black: #000;
+      --g900: #0c0c0c;
+      --g800: #181818;
+      --g400: #6b6b6b;
+      --g300: #999;
+      --white: #fff;
+      --red: #e53935;
+      --red-a10: rgba(229,57,53,.10);
+      --f-dot: 'Share Tech Mono', monospace;
+      --f-mono: 'Space Mono', monospace;
+      --f-body: 'DM Sans', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--black);
+      color: var(--white);
+      font-family: var(--f-body);
+      font-weight: 300;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.03) 3px, rgba(0,0,0,.03) 4px);
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    nav {
+      position: sticky; top: 0;
+      background: rgba(0,0,0,.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--g800);
+      height: 56px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 28px;
+      z-index: 100;
+    }
+
+    .brand {
+      font-family: var(--f-dot);
+      font-size: 13px;
+      color: var(--white);
+      text-decoration: none;
+      letter-spacing: .1em;
+    }
+    .brand span { color: var(--red); }
+
+    .back {
+      font-family: var(--f-mono);
+      font-size: 10px;
+      color: var(--g400);
+      text-decoration: none;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      transition: color .2s;
+    }
+    .back:hover { color: var(--white); }
+
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 72px 28px 96px;
+    }
+
+    .page-tag {
+      font-family: var(--f-mono);
+      font-size: 10px;
+      color: var(--red);
+      letter-spacing: .22em;
+      text-transform: uppercase;
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 20px;
+    }
+    .page-tag::before {
+      content: '';
+      display: block;
+      width: 24px; height: 1px;
+      background: var(--red);
+    }
+
+    h1 {
+      font-family: var(--f-dot);
+      font-size: clamp(32px, 6vw, 56px);
+      color: var(--white);
+      line-height: 1.1;
+      margin-bottom: 12px;
+    }
+
+    .updated {
+      font-family: var(--f-mono);
+      font-size: 11px;
+      color: var(--g400);
+      letter-spacing: .12em;
+      margin-bottom: 48px;
+    }
+
+    .lead {
+      font-size: 17px;
+      color: var(--g300);
+      line-height: 1.75;
+      margin-bottom: 56px;
+      padding: 24px;
+      background: var(--red-a10);
+      border-left: 3px solid var(--red);
+      border-radius: 0 8px 8px 0;
+    }
+
+    section {
+      margin-bottom: 44px;
+      padding-bottom: 44px;
+      border-bottom: 1px solid var(--g800);
+    }
+    section:last-of-type { border-bottom: none; }
+
+    h2 {
+      font-family: var(--f-mono);
+      font-size: 11px;
+      color: var(--red);
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    p {
+      font-size: 15px;
+      color: var(--g300);
+      line-height: 1.8;
+      margin-bottom: 14px;
+    }
+    p:last-child { margin-bottom: 0; }
+
+    footer {
+      border-top: 1px solid var(--g800);
+      padding: 32px 28px;
+      text-align: center;
+    }
+    .foot-note {
+      font-family: var(--f-mono);
+      font-size: 10px;
+      color: var(--g400);
+      letter-spacing: .14em;
+    }
+    .foot-note a { color: var(--red); text-decoration: none; }
+    .foot-note a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a href="/" class="brand">TRACE<span>LEDGER</span></a>
+    <a href="/" class="back">← Back to home</a>
+  </nav>
+
+  <main>
+    <p class="page-tag">Legal</p>
+    <h1>PRIVACY<br>POLICY</h1>
+    <p class="updated">Last updated: March 2026</p>
+
+    <div class="lead">
+      TraceLedger is a privacy-first application. The short version: we collect nothing,
+      because the app never connects to the internet. Your financial data stays on your
+      device, always.
+    </div>
+
+    <section>
+      <h2>1. Data Collection</h2>
+      <p>TraceLedger does not collect, transmit, or store any personal data on external
+      servers. All information you enter — accounts, transactions, categories, budgets —
+      is stored exclusively in a local SQLite database on your device.</p>
+      <p>We collect nothing. There are no analytics, no crash reporting, no usage
+      tracking, and no telemetry of any kind.</p>
+    </section>
+
+    <section>
+      <h2>2. Internet Access</h2>
+      <p>TraceLedger does not request the INTERNET permission on Android. The app is
+      entirely offline. No network requests are made at any time during normal use
+      of the app.</p>
+      <p>Links to external pages such as Discord, the website, and GitHub open in your
+      device's browser — outside of the app — using Android's standard intent system.</p>
+    </section>
+
+    <section>
+      <h2>3. Data Storage</h2>
+      <p>All data is stored locally on your device using Room (SQLite). The database is
+      stored in the app's private storage area and is not accessible to other apps.</p>
+      <p>If you uninstall TraceLedger, all data is permanently deleted from your device.</p>
+    </section>
+
+    <section>
+      <h2>4. Backups</h2>
+      <p>TraceLedger supports manual JSON and CSV export. These files are created only
+      when you explicitly request an export and are saved to a location of your choosing
+      on your device.</p>
+      <p>Android's Auto Backup may include app data in your Google account backup
+      depending on your device settings. You can disable this in your Android backup
+      settings.</p>
+    </section>
+
+    <section>
+      <h2>5. Third-Party Services</h2>
+      <p>TraceLedger does not integrate with any third-party services, SDKs, or APIs.
+      There are no advertising networks, analytics platforms, or social media integrations
+      within the app.</p>
+    </section>
+
+    <section>
+      <h2>6. Children</h2>
+      <p>TraceLedger does not knowingly collect any information from anyone, including
+      children under 13. Since we collect no data at all, this app complies with COPPA
+      by design.</p>
+    </section>
+
+    <section>
+      <h2>7. Changes to This Policy</h2>
+      <p>If this policy changes, the updated version will be included in the app update
+      and noted in the changelog. The effective date at the top of this document will be
+      updated accordingly.</p>
+    </section>
+
+    <section>
+      <h2>8. Contact</h2>
+      <p>If you have questions about this privacy policy, open an issue on
+      <a href="https://github.com/NRoy9/TraceLedger" style="color:var(--red);">GitHub</a>
+      or reach out on our Discord server.</p>
+    </section>
+  </main>
+
+  <footer>
+    <p class="foot-note">
+      <a href="/">TraceLedger</a>
+      &nbsp;·&nbsp;
+      <a href="/terms">Terms of Use</a>
+      &nbsp;·&nbsp;
+      No data collected. Ever.
+    </p>
+  </footer>
+
+</body>
+</html>

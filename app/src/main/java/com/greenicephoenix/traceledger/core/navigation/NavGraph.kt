@@ -37,6 +37,8 @@ import com.greenicephoenix.traceledger.feature.transactions.HistoryScreen
 import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewModel
 import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewModelFactory
 import kotlinx.coroutines.launch
+import com.greenicephoenix.traceledger.feature.about.PrivacyPolicyScreen
+import com.greenicephoenix.traceledger.feature.about.TermsScreen
 
 @Composable
 fun TraceLedgerNavGraph(
@@ -382,9 +384,27 @@ fun TraceLedgerNavGraph(
             )
         }
 
-        /* ── ABOUT ─────────────────────────────────────────────────────────── */
+        /* ── ABOUT ─────────────────────────────────────────────────────────────── */
         composable(Routes.ABOUT) {
-            AboutScreen(onBack = { navController.popBackStack() })
+            AboutScreen(
+                onBack          = { navController.popBackStack() },
+                onPrivacyPolicy = { navController.navigate(Routes.PRIVACY_POLICY) },
+                onTerms         = { navController.navigate(Routes.TERMS) }
+            )
+        }
+
+        /* ── PRIVACY POLICY ────────────────────────────────────────────────────── */
+        composable(Routes.PRIVACY_POLICY) {
+            PrivacyPolicyScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        /* ── TERMS OF USE ──────────────────────────────────────────────────────── */
+        composable(Routes.TERMS) {
+            TermsScreen(
+                onBack = { navController.popBackStack() }
+            )
         }
 
         /* ── RECURRING ─────────────────────────────────────────────────────── */
