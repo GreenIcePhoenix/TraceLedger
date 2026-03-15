@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    FileProvider path configuration for TraceLedger.
+
+    This tells FileProvider which filesystem directories it is allowed to create
+    content:// URIs for. We only expose the public Downloads directory because
+    that is the only place DownloadManager saves the update APK.
+
+    <external-path> → maps to Environment.getExternalStorageDirectory()
+    name="downloads" → a label used in the URI (can be anything)
+    path="Download/" → the specific subfolder within external storage
+
+    The resulting URI looks like:
+    content://com.greenicephoenix.traceledger.provider/downloads/TraceLedger-1.1.0.apk
+
+    IMPORTANT: Never add path="." here to expose the entire external storage root —
+    only expose the minimum directories the app needs.
+-->
+<paths>
+    <external-path
+        name="downloads"
+        path="Download/" />
+</paths>

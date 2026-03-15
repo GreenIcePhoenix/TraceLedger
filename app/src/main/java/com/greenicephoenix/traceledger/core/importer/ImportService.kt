@@ -16,11 +16,15 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 
-// FIX: Removed two bad imports that caused compile errors:
-//   import kotlin.text.contains  — not needed, String.contains() is available by default
-//   import kotlin.text.insert    — this does not exist in Kotlin stdlib. It was a ghost
-//                                  import that the IDE auto-added and never got removed.
-// Both caused "None of the following candidates is applicable" errors on StringBuilder.
+/**
+ * Result returned by [ImportService.importCsvTransactions].
+ * Previously the function returned Unit, so callers had no way to show a
+ * completion message. Now they can display "X imported, Y skipped."
+ */
+data class ImportResult(
+    val imported: Int,
+    val skipped: Int
+)
 
 class ImportService(
     private val database: TraceLedgerDatabase,
@@ -66,13 +70,13 @@ class ImportService(
             envelope.accounts.forEach {
                 database.accountDao().insert(
                     AccountEntity(
-                        id = it.id,
-                        name = it.name,
-                        balance = BigDecimal(it.balance),
-                        type = it.type,
+                        id             = it.id,
+                        name           = it.name,
+                        balance        = BigDecimal(it.balance),
+                        type           = it.type,
                         includeInTotal = it.includeInTotal,
-                        details = null,
-                        color = it.color
+                        details        = null,
+                        color          = it.color
                     )
                 )
                 step()
@@ -81,11 +85,11 @@ class ImportService(
             envelope.categories.forEach {
                 database.categoryDao().insert(
                     CategoryEntity(
-                        id = it.id,
-                        name = it.name,
-                        type = it.type,
+                        id    = it.id,
+                        name  = it.name,
+                        type  = it.type,
                         color = it.color,
-                        icon = it.icon
+                        icon  = it.icon
                     )
                 )
                 step()
@@ -94,33 +98,30 @@ class ImportService(
             envelope.budgets.forEach {
                 database.budgetDao().insert(
                     BudgetEntity(
-                        id = it.id,
-                        categoryId = it.categoryId,
+                        id          = it.id,
+                        categoryId  = it.categoryId,
                         limitAmount = BigDecimal(it.limitAmount),
-                        month = YearMonth.parse(it.month),
-                        isActive = it.isActive
+                        month       = YearMonth.parse(it.month),
+                        isActive    = it.isActive
                     )
                 )
                 step()
             }
 
             envelope.transactions.forEach {
-                // FIX: was transactionDao().insert() — that method was removed
-                // from TransactionDao because it lacked OnConflictStrategy and
-                // bypassed balance logic. For import we use insertTransaction()
-                // directly (not the WithBalance variant) because import is a
-                // raw data restore — balances are already encoded in AccountEntity.
+                // For import we use insertTransaction() directly (not the WithBalance variant)
+                // because this is a raw data restore — balances are already encoded in AccountEntity.
                 database.transactionDao().insertTransaction(
                     TransactionEntity(
-                        id = it.id,
-                        type = it.type,
-                        amount = BigDecimal(it.amount),
-                        date = LocalDate.parse(it.date),
+                        id            = it.id,
+                        type          = it.type,
+                        amount        = BigDecimal(it.amount),
+                        date          = LocalDate.parse(it.date),
                         fromAccountId = it.fromAccountId,
-                        toAccountId = it.toAccountId,
-                        categoryId = it.categoryId,
-                        note = it.note,
-                        createdAt = Instant.ofEpochSecond(it.createdAtEpoch)
+                        toAccountId   = it.toAccountId,
+                        categoryId    = it.categoryId,
+                        note          = it.note,
+                        createdAt     = Instant.ofEpochSecond(it.createdAtEpoch)
                     )
                 )
                 step()
@@ -132,7 +133,10 @@ class ImportService(
 
     /**
      * Additive CSV import — transactions only, does not wipe existing data.
-     * Rows referencing unknown account/category IDs are silently skipped.
+     *
+     * Returns [ImportResult] with counts of imported and skipped rows so the
+     * caller can show a completion message to the user.
+     * Previously returned Unit and silently dropped skipped rows.
      *
      * Expected CSV columns (9 minimum):
      *   id, type, amount, date, fromAccountId, toAccountId, categoryId, note, createdAt
@@ -140,7 +144,7 @@ class ImportService(
     suspend fun importCsvTransactions(
         uri: Uri,
         onProgress: (Int) -> Unit
-    ) {
+    ): ImportResult {
         val stream = contentResolver.openInputStream(uri)
             ?: error("Unable to open CSV file")
 
@@ -150,11 +154,14 @@ class ImportService(
             database.categoryDao().getAllOnce().map { it.id }.toSet()
 
         val lines = stream.bufferedReader().readLines()
-        if (lines.size <= 1) return  // Empty or header-only file
+        // Return an empty result (not an error) for header-only files
+        if (lines.size <= 1) return ImportResult(imported = 0, skipped = 0)
 
-        val rows = lines.drop(1)  // Skip header row
+        val rows  = lines.drop(1)   // Skip header row
         val total = rows.size
         var processed = 0
+        var imported  = 0
+        var skipped   = 0
 
         database.withTransaction {
             rows.forEach { line ->
@@ -162,7 +169,10 @@ class ImportService(
                 onProgress((processed * 100) / total)
 
                 val cols = parseCsvLine(line)
-                if (cols.size < 9) return@forEach  // Skip malformed rows
+                if (cols.size < 9) {
+                    skipped++
+                    return@forEach
+                }
 
                 val fromAccountId = cols[4].ifBlank { null }
                 val toAccountId   = cols[5].ifBlank { null }
@@ -176,24 +186,29 @@ class ImportService(
                 val hasUnknownCategory =
                     categoryId != null && categoryId !in existingCategoryIds
 
-                if (hasUnknownAccount || hasUnknownCategory) return@forEach
+                if (hasUnknownAccount || hasUnknownCategory) {
+                    skipped++
+                    return@forEach
+                }
 
-                // FIX: was transactionDao().insert() — replaced with insertTransaction()
                 database.transactionDao().insertTransaction(
                     TransactionEntity(
-                        id           = cols[0],
-                        type         = cols[1],
-                        amount       = BigDecimal(cols[2]),
-                        date         = LocalDate.parse(cols[3]),
+                        id            = cols[0],
+                        type          = cols[1],
+                        amount        = BigDecimal(cols[2]),
+                        date          = LocalDate.parse(cols[3]),
                         fromAccountId = fromAccountId,
-                        toAccountId  = toAccountId,
-                        categoryId   = categoryId,
-                        note         = cols[7].ifBlank { null },
-                        createdAt    = Instant.ofEpochSecond(cols[8].toLong())
+                        toAccountId   = toAccountId,
+                        categoryId    = categoryId,
+                        note          = cols[7].ifBlank { null },
+                        createdAt     = Instant.ofEpochSecond(cols[8].toLong())
                     )
                 )
+                imported++
             }
         }
+
+        return ImportResult(imported = imported, skipped = skipped)
     }
 
     // ── PREVIEW ───────────────────────────────────────────────────────────────
@@ -215,8 +230,8 @@ class ImportService(
         val existingCategoryIds =
             database.categoryDao().getAllOnce().map { it.id }.toSet()
 
-        var total = 0
-        var valid = 0
+        var total   = 0
+        var valid   = 0
         val skipped = mutableMapOf<SkipReason, Int>()
 
         val stream = contentResolver.openInputStream(uri)
@@ -258,9 +273,9 @@ class ImportService(
         }
 
         return ImportPreview(
-            totalRows      = total,
-            validRows      = valid,
-            skippedRows    = total - valid,
+            totalRows       = total,
+            validRows       = valid,
+            skippedRows     = total - valid,
             skippedByReason = skipped
         )
     }
@@ -289,13 +304,9 @@ class ImportService(
      * Transactions first (they reference accounts + categories via FK).
      * Budgets next (they reference categories).
      * Then categories and accounts.
-     *
-     * FIX: transactionDao().deleteAll() renamed to deleteAllTransactions()
-     * to match our updated TransactionDao. Other DAOs (account, category,
-     * budget) still use deleteAll() — those weren't changed.
      */
     private suspend fun wipeAll() {
-        database.transactionDao().deleteAllTransactions()  // FIX: was deleteAll()
+        database.transactionDao().deleteAllTransactions()
         database.budgetDao().deleteAll()
         database.categoryDao().deleteAll()
         database.accountDao().deleteAll()
@@ -306,18 +317,18 @@ class ImportService(
      * Example: 'hello,"world, with comma",test' → ["hello", "world, with comma", "test"]
      */
     private fun parseCsvLine(line: String): List<String> {
-        val result = mutableListOf<String>()
+        val result  = mutableListOf<String>()
         var current = StringBuilder()
         var inQuotes = false
 
         for (c in line) {
             when {
-                c == '"'            -> inQuotes = !inQuotes
+                c == '"'              -> inQuotes = !inQuotes
                 c == ',' && !inQuotes -> {
                     result.add(current.toString())
                     current = StringBuilder()
                 }
-                else                -> current.append(c)
+                else                  -> current.append(c)
             }
         }
         result.add(current.toString())

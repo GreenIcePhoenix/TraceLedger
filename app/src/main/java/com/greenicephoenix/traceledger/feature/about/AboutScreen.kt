@@ -30,6 +30,12 @@ import com.greenicephoenix.traceledger.core.util.AppLinks
 import com.greenicephoenix.traceledger.core.util.ChangelogIconMapper
 import com.greenicephoenix.traceledger.core.util.ChangelogParser
 import com.greenicephoenix.traceledger.core.util.VersionChangelog
+import com.greenicephoenix.traceledger.feature.update.UpdateDialog
+import com.greenicephoenix.traceledger.feature.update.UpdateInfo
+import com.greenicephoenix.traceledger.feature.update.checkForUpdate
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,11 +44,28 @@ fun AboutScreen(
     onPrivacyPolicy: () -> Unit,
     onTerms: () -> Unit
 ) {
-    val context    = LocalContext.current
-    val uriHandler = LocalUriHandler.current
-    val versions   = remember { ChangelogParser.loadVersioned(context) }
-    val current    = versions.firstOrNull { it.version == BuildConfig.VERSION_NAME }
-    val previous   = versions.filter { it.version != BuildConfig.VERSION_NAME }
+    val context        = LocalContext.current
+    val uriHandler     = LocalUriHandler.current
+    val coroutineScope = rememberCoroutineScope()
+    val versions       = remember { ChangelogParser.loadVersioned(context) }
+    val current        = versions.firstOrNull { it.version == BuildConfig.VERSION_NAME }
+    val previous       = versions.filter { it.version != BuildConfig.VERSION_NAME }
+
+    // ── Update check state ────────────────────────────────────────────────────
+    // checkingUpdate  → true while the network call is in-flight (shows spinner)
+    // pendingUpdate   → non-null when a newer version was found (shows UpdateDialog)
+    // showUpToDate    → true when check completed and app is already current
+    var checkingUpdate  by remember { mutableStateOf(false) }
+    var pendingUpdate   by remember { mutableStateOf<UpdateInfo?>(null) }
+    var showUpToDate    by remember { mutableStateOf(false) }
+
+    // Show UpdateDialog if a new version was found via the manual check
+    pendingUpdate?.let { update ->
+        UpdateDialog(
+            updateInfo = update,
+            onDismiss  = { pendingUpdate = null }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -112,6 +135,29 @@ fun AboutScreen(
                         isExternal  = true,
                         onClick     = { uriHandler.openUri(AppLinks.GITHUB) }
                     )
+                    RowDivider()
+                    // ── Check for updates row ─────────────────────────────────
+                    // Tapping starts a network call to GitHub releases API.
+                    // A spinner replaces the chevron while the check is in-flight.
+                    // Result: UpdateDialog (new version) or "Up to date" subtitle.
+                    CheckForUpdatesRow(
+                        isChecking  = checkingUpdate,
+                        isUpToDate  = showUpToDate,
+                        onClick     = {
+                            if (checkingUpdate) return@CheckForUpdatesRow  // debounce
+                            checkingUpdate = true
+                            showUpToDate   = false
+                            coroutineScope.launch {
+                                val result = withContext(Dispatchers.IO) { checkForUpdate() }
+                                checkingUpdate = false
+                                if (result != null) {
+                                    pendingUpdate = result   // show UpdateDialog
+                                } else {
+                                    showUpToDate = true      // show "Up to date" feedback
+                                }
+                            }
+                        }
+                    )
                 }
             }
 
@@ -174,6 +220,87 @@ fun AboutScreen(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// CheckForUpdatesRow
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * A specialised row in the CONNECT card that handles three visual states:
+ *   1. Idle     — shows "Check for updates" with a chevron
+ *   2. Checking — shows a CircularProgressIndicator instead of the chevron
+ *   3. UpToDate — subtitle changes to "You're up to date ✓" (green)
+ *
+ * The UpdateDialog is shown by the parent when pendingUpdate] is non-null —
+ * this row only handles the pre-result UI states.
+ */
+@Composable
+private fun CheckForUpdatesRow(
+    isChecking: Boolean,
+    isUpToDate: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = !isChecking) { onClick() }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // Icon box — SystemUpdate icon
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .background(NothingRed.copy(alpha = 0.10f), RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector        = Icons.Default.SystemUpdate,
+                contentDescription = null,
+                tint               = NothingRed,
+                modifier           = Modifier.size(18.dp)
+            )
+        }
+
+        // Text column
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text  = "Check for updates",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text  = when {
+                    isChecking  -> "Checking…"
+                    isUpToDate  -> "You're up to date  ✓"
+                    else        -> "v${BuildConfig.VERSION_NAME} installed"
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = when {
+                    isUpToDate -> SuccessGreen
+                    else       -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
+                }
+            )
+        }
+
+        // Trailing: spinner while checking, chevron otherwise
+        if (isChecking) {
+            CircularProgressIndicator(
+                modifier  = Modifier.size(16.dp),
+                color     = NothingRed,
+                strokeWidth = 2.dp
+            )
+        } else {
+            Icon(
+                imageVector        = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint               = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
+                modifier           = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // AppIdentityCard
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
@@ -208,7 +335,7 @@ private fun AppIdentityCard() {
                 textAlign = TextAlign.Center
             )
             Text(
-                text      = "Version ${BuildConfig.VERSION_NAME}  ·  Build ${BuildConfig.VERSION_CODE}",
+                text      = "Version ${BuildConfig.VERSION_NAME}",
                 style     = MaterialTheme.typography.labelSmall,
                 color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f),
                 textAlign = TextAlign.Center
@@ -230,8 +357,8 @@ private fun AppIdentityCard() {
 @Composable
 private fun ConnectCard(content: @Composable ColumnScope.() -> Unit) {
     Card(
-        shape  = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        shape    = RoundedCornerShape(20.dp),
+        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(content = content)
@@ -258,7 +385,6 @@ private fun LinkRow(
         verticalAlignment     = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Icon box
         Box(
             modifier = Modifier
                 .size(38.dp)
@@ -273,7 +399,6 @@ private fun LinkRow(
             )
         }
 
-        // Text
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text  = title,
@@ -287,9 +412,8 @@ private fun LinkRow(
             )
         }
 
-        // Chevron / external icon
         Icon(
-            imageVector = if (isExternal) Icons.AutoMirrored.Filled.OpenInNew
+            imageVector        = if (isExternal) Icons.AutoMirrored.Filled.OpenInNew
             else Icons.Default.ChevronRight,
             contentDescription = null,
             tint               = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f),
@@ -431,10 +555,10 @@ private fun PrivacyCard() {
                 color = MaterialTheme.colorScheme.onSurface
             )
             val badges = listOf(
-                Triple(Icons.Default.WifiOff,        "Offline only",  "No internet required"),
-                Triple(Icons.Default.VisibilityOff,  "No tracking",   "Zero analytics"),
-                Triple(Icons.Default.Block,           "No ads",        "Ever"),
-                Triple(Icons.Default.Cloud,           "No cloud sync", "Local storage only")
+                Triple(Icons.Default.WifiOff,       "Offline only",  "No internet required"),
+                Triple(Icons.Default.VisibilityOff, "No tracking",   "Zero analytics"),
+                Triple(Icons.Default.Block,          "No ads",        "Ever"),
+                Triple(Icons.Default.Cloud,          "No cloud sync", "Local storage only")
             )
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 badges.chunked(2).forEach { row ->

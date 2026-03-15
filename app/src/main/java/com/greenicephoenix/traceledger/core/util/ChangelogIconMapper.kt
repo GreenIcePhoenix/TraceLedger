@@ -10,9 +10,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
  * Fallback is Info if the name isn't recognised.
  *
  * To add a new icon: add an entry here and use the same name in changelog.txt.
+ * Icon names must be the exact Material Icons name (no spaces).
  */
 object ChangelogIconMapper {
     fun get(name: String): ImageVector = when (name) {
+        // Existing icons
         "AccountBalance"  -> Icons.Default.AccountBalance
         "TrendingUp"      -> Icons.AutoMirrored.Filled.TrendingUp
         "PieChart"        -> Icons.Default.PieChart
@@ -29,6 +31,15 @@ object ChangelogIconMapper {
         "Speed"           -> Icons.Default.Speed
         "Palette"         -> Icons.Default.Palette
         "Star"            -> Icons.Default.Star
+
+        // v1.1.0 additions
+        "Notifications"         -> Icons.Default.Notifications
+        "NotificationsActive"   -> Icons.Default.NotificationsActive
+        "SystemUpdate"          -> Icons.Default.SystemUpdate
+        "Favorite"              -> Icons.Default.Favorite
+        "BugFixed"              -> Icons.Default.CheckCircle   // no BugFixed icon; CheckCircle is semantically correct for "bug fixed"
+        "FormatListNumbered"    -> Icons.Default.FormatListNumbered
+
         else              -> Icons.Default.Info
     }
 }

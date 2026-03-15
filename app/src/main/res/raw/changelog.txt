@@ -1,3 +1,10 @@
+# 1.1.0
+[NotificationsActive] Daily Reminder :: Set a daily notification to remind you to log your transactions. Choose any time from Settings → Notifications.
+[SystemUpdate] Auto Update Checker :: TraceLedger now checks for new releases on launch and lets you download and install updates directly.
+[Favorite] Support the Developer :: Added a tip jar in Settings. TraceLedger is free and always will be — but a coffee helps.
+[FormatListNumbered] Number Format Applied :: Indian and International number grouping is now applied everywhere in the app, not just as a display label.
+[BugFixed] CSV Import Feedback :: Importing a CSV now shows exactly how many transactions were added and how many rows were skipped, and why.
+
 # 1.0.0
 [Repeat] Recurring Transactions :: Schedule automatic expenses, income, and transfers — daily, weekly, monthly, quarterly, or yearly.
 [Lightbulb] Financial Insights :: Spending vs last month, savings rate, recurring cost summary, and net worth direction on the dashboard.

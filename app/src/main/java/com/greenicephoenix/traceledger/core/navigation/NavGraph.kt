@@ -39,6 +39,7 @@ import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewMode
 import kotlinx.coroutines.launch
 import com.greenicephoenix.traceledger.feature.about.PrivacyPolicyScreen
 import com.greenicephoenix.traceledger.feature.about.TermsScreen
+import com.greenicephoenix.traceledger.feature.support.SupportScreen
 
 @Composable
 fun TraceLedgerNavGraph(
@@ -295,8 +296,14 @@ fun TraceLedgerNavGraph(
                 onImportPreviewRequested = { uri -> app.container.importService.previewCsv(uri) },
                 onImportConfirmed = { uri, onProgress ->
                     scope.launch {
-                        app.container.importService.importCsvTransactions(uri = uri, onProgress = onProgress)
-                        snackbarHostState.showSnackbar("CSV import completed")
+                        val result = app.container.importService.importCsvTransactions(
+                            uri = uri, onProgress = onProgress
+                        )
+                        val msg = buildString {
+                            append("${result.imported} transaction(s) imported")
+                            if (result.skipped > 0) append(", ${result.skipped} row(s) skipped")
+                        }
+                        snackbarHostState.showSnackbar(msg)
                     }
                 },
                 onImportError = { message ->
@@ -451,6 +458,11 @@ fun TraceLedgerNavGraph(
                 },
                 onBack = { navController.popBackStack() }
             )
+        }
+
+        /* ── SUPPORT ──────────────────────────────────────────────────────────── */
+        composable(Routes.SUPPORT) {
+            SupportScreen(onBack = { navController.popBackStack() })
         }
     }
 }
