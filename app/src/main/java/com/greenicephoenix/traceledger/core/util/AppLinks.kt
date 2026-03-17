@@ -23,5 +23,5 @@ object AppLinks {
     const val UPI_ID  = "greenicephoenix@axisb"
 
     /** Your PayPal.me profile URL. e.g. "https://paypal.me/yourprofile" */
-    const val PAYPAL_ME = "paypal.me/GreenIcePhoenix"
+    const val PAYPAL_ME = "https://paypal.me/GreenIcePhoenix"
 }

@@ -262,7 +262,7 @@ fun SettingsScreen(
 
         SettingsItem(
             title    = "Support the Developer",
-            subtitle = "Buy me a coffee — tip jar",
+            subtitle = "Paypal/UPI — tip jar",
             onClick  = { onNavigate(Routes.SUPPORT) }
         )
 

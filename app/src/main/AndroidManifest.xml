@@ -2,36 +2,30 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!--
-        v1.1.0 permission additions:
-
-        INTERNET — needed for the Update Checker to call the GitHub releases API.
-        This is a "normal" permission — no runtime prompt is shown to the user.
-        The user opted in to update checking from Settings; we never call the API
-        without that intent.
-
-        POST_NOTIFICATIONS — Android 13+ requires this to show any notification.
-        "normal" permission on API < 33, runtime on API 33+. We prompt at runtime
-        when the user enables the Daily Reminder in Settings.
-
-        RECEIVE_BOOT_COMPLETED — lets DailyReminderReceiver re-schedule the alarm
-        after a device reboot. No runtime prompt — declared here is sufficient.
-
-        SCHEDULE_EXACT_ALARM — required on Android 12+ (API 31+) to use
-        setExactAndAllowWhileIdle(). On Android 13+ the user may need to grant
-        this from the Special App Access settings. We handle this gracefully in
-        ReminderScheduler — if exact alarm is not granted, the reminder simply
-        won't fire (no crash).
-
-        REQUEST_INSTALL_PACKAGES — required to trigger the install intent after the
-        APK is downloaded by DownloadManager. Only used in non-Play Store builds.
-        Prompted at runtime when the user taps "Download & Install" in UpdateDialog.
-    -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!--
+        Android 11+ (API 30+) Package Visibility fix.
+        Without this block, startActivity() for https:// or upi:// is silently
+        dropped on Android 11+ — no crash, no exception, just nothing happening.
+        This is why the PayPal button appeared to do nothing.
+    -->
+    <queries>
+        <!-- Browsers — required for PayPal and all other https:// links -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <!-- UPI apps — GPay, PhonePe, Paytm, BHIM etc. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="upi" />
+        </intent>
+    </queries>
 
     <application
         android:name=".TraceLedgerApp"
@@ -56,13 +50,10 @@
         </activity>
 
         <!--
-            DailyReminderReceiver:
-            Handles two intents:
-              1. DAILY_REMINDER — our AlarmManager alarm fires at the scheduled time
-              2. BOOT_COMPLETED — re-schedule after device reboot (AlarmManager loses
-                 its alarms on reboot, so we must re-register)
-
-            exported="true" is required for BOOT_COMPLETED to reach this receiver.
+            DailyReminderReceiver handles two intents:
+              1. DAILY_REMINDER — AlarmManager fires at the scheduled time
+              2. BOOT_COMPLETED — re-schedule after device reboot
+            exported="true" is required for BOOT_COMPLETED.
         -->
         <receiver
             android:name=".core.notifications.DailyReminderReceiver"
@@ -74,21 +65,9 @@
         </receiver>
 
         <!--
-            FileProvider:
-            Converts a raw file path (e.g. the downloaded APK in the Downloads folder)
-            into a content:// URI that the package installer can safely read.
-
-            Required on Android 7+ (API 24+) — passing a file:// URI to another app
-            causes a FileUriExposedException crash on modern Android.
-
-            android:authorities must match the string used in FileProvider.getUriForFile()
-            in MainActivity.kt: "${packageName}.provider"
-
-            android:exported="false" — FileProvider should never be exported directly.
-            android:grantUriPermissions="true" — allows the install intent to read the APK.
-
-            The file_provider_paths.xml resource defines which directories FileProvider
-            is allowed to share files from (the public Downloads folder in our case).
+            FileProvider converts a raw file path into a content:// URI so the
+            package installer can safely read the downloaded update APK.
+            Required on Android 7+ — file:// URIs cause FileUriExposedException.
         -->
         <provider
             android:name="androidx.core.content.FileProvider"

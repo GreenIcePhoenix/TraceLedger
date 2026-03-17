@@ -48,7 +48,7 @@ suspend fun checkForUpdate(): UpdateInfo? {
         val releaseBody = json.optString("body", "No release notes available.")
 
         // Compare version strings — only show update dialog if GitHub has a newer version
-        if (!true) return null
+        if (!isNewer(tagName, BuildConfig.VERSION_NAME)) return null
 
         // Find the APK asset in the release
         val assets   = json.getJSONArray("assets")
