@@ -37,9 +37,13 @@ import com.greenicephoenix.traceledger.feature.transactions.HistoryScreen
 import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewModel
 import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewModelFactory
 import kotlinx.coroutines.launch
-import com.greenicephoenix.traceledger.feature.about.PrivacyPolicyScreen
-import com.greenicephoenix.traceledger.feature.about.TermsScreen
 import com.greenicephoenix.traceledger.feature.support.SupportScreen
+
+// REMOVED imports — no longer needed:
+// import com.greenicephoenix.traceledger.feature.about.PrivacyPolicyScreen
+// import com.greenicephoenix.traceledger.feature.about.TermsScreen
+// Both screens have been deleted. Privacy Policy and Terms of Use are now
+// served from the website only. AboutScreen opens them via LocalUriHandler.
 
 @Composable
 fun TraceLedgerNavGraph(
@@ -71,22 +75,21 @@ fun TraceLedgerNavGraph(
 
         /* ── DASHBOARD ─────────────────────────────────────────────────────── */
         composable(Routes.DASHBOARD) {
-            // Phase 2: DashboardViewModel replaces StatisticsViewModel on Dashboard
             val dashboardViewModel: DashboardViewModel =
                 viewModel(factory = app.container.dashboardViewModelFactory)
 
-            val warningBudgetsCount by budgetsViewModel.warningBudgetsCount.collectAsState()
-            val hasExceededBudgets  by budgetsViewModel.hasExceededBudgets.collectAsState()
+            val warningBudgetsCount  by budgetsViewModel.warningBudgetsCount.collectAsState()
+            val hasExceededBudgets   by budgetsViewModel.hasExceededBudgets.collectAsState()
             val exceededBudgetsCount by budgetsViewModel.exceededBudgetsCount.collectAsState()
 
             DashboardScreen(
-                accounts          = accounts,
+                accounts           = accounts,
                 dashboardViewModel = dashboardViewModel,
-                budgetsViewModel  = budgetsViewModel,
-                categories        = categories,
-                onNavigate        = { route -> navController.navigate(route) },
-                onAddAccount      = { navController.navigate(Routes.ADD_ACCOUNT) },
-                onAccountClick    = { account ->
+                budgetsViewModel   = budgetsViewModel,
+                categories         = categories,
+                onNavigate         = { route -> navController.navigate(route) },
+                onAddAccount       = { navController.navigate(Routes.ADD_ACCOUNT) },
+                onAccountClick     = { account ->
                     navController.navigate(Routes.EDIT_ACCOUNT.replace("{accountId}", account.id))
                 },
                 onTransactionClick = { transactionId ->
@@ -97,8 +100,6 @@ fun TraceLedgerNavGraph(
 
         /* ── ACCOUNTS ──────────────────────────────────────────────────────── */
         composable(Routes.ACCOUNTS) {
-            // Phase 2: AccountsScreen now receives the ViewModel directly
-            // so it can observe deleteError without a callback chain
             AccountsScreen(
                 accounts       = accounts,
                 viewModel      = accountsViewModel,
@@ -110,7 +111,6 @@ fun TraceLedgerNavGraph(
             )
         }
 
-        /* ── ADD ACCOUNT ───────────────────────────────────────────────────── */
         composable(Routes.ADD_ACCOUNT) {
             AddEditAccountScreen(
                 existingAccount = null,
@@ -122,12 +122,11 @@ fun TraceLedgerNavGraph(
             )
         }
 
-        /* ── EDIT ACCOUNT ──────────────────────────────────────────────────── */
         composable(
             route     = Routes.EDIT_ACCOUNT,
             arguments = listOf(navArgument("accountId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val accountId    = backStackEntry.arguments?.getString("accountId")
+            val accountId     = backStackEntry.arguments?.getString("accountId")
             val accountToEdit = accounts.firstOrNull { it.id == accountId }
             AddEditAccountScreen(
                 existingAccount = accountToEdit,
@@ -147,11 +146,11 @@ fun TraceLedgerNavGraph(
                 )
             )
             HistoryScreen(
-                viewModel          = transactionsViewModel,
-                accounts           = accounts,
-                categories         = categories,
-                onBack             = { navController.popBackStack() },
-                onEditTransaction  = { transactionId ->
+                viewModel         = transactionsViewModel,
+                accounts          = accounts,
+                categories        = categories,
+                onBack            = { navController.popBackStack() },
+                onEditTransaction = { transactionId ->
                     navController.navigate(Routes.EDIT_TRANSACTION.replace("{transactionId}", transactionId))
                 }
             )
@@ -244,13 +243,8 @@ fun TraceLedgerNavGraph(
                 )
             }
             composable(Routes.STATISTICS_TRENDS) { backStackEntry ->
-                val parentEntry = remember(backStackEntry) {
-                    navController.getBackStackEntry(Routes.STATISTICS)
-                }
-                val statisticsViewModel = viewModel<StatisticsViewModel>(
-                    parentEntry,
-                    factory = app.container.statisticsViewModelFactory
-                )
+                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
+                val statisticsViewModel = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
                 CategoryTrendScreen(
                     viewModel   = statisticsViewModel,
                     categoryMap = categories.associateBy { it.id },
@@ -269,8 +263,8 @@ fun TraceLedgerNavGraph(
         composable(Routes.SETTINGS) {
             val scope = rememberCoroutineScope()
             SettingsScreen(
-                onBudgetsClick = { navController.navigate(Routes.BUDGETS) },
-                onNavigate     = { route -> navController.navigate(route) },
+                onBudgetsClick   = { navController.navigate(Routes.BUDGETS) },
+                onNavigate       = { route -> navController.navigate(route) },
                 onExportSelected = { },
                 onExportUriReady = { format, uri ->
                     scope.launch {
@@ -282,8 +276,8 @@ fun TraceLedgerNavGraph(
                         }
                     }
                 },
-                onImportContinue = { },
-                onImportUriReady = { uri ->
+                onImportContinue         = { },
+                onImportUriReady         = { uri ->
                     scope.launch {
                         try {
                             app.container.importService.importJson(uri = uri, onProgress = { })
@@ -294,7 +288,7 @@ fun TraceLedgerNavGraph(
                     }
                 },
                 onImportPreviewRequested = { uri -> app.container.importService.previewCsv(uri) },
-                onImportConfirmed = { uri, onProgress ->
+                onImportConfirmed        = { uri, onProgress ->
                     scope.launch {
                         val result = app.container.importService.importCsvTransactions(
                             uri = uri, onProgress = onProgress
@@ -314,7 +308,6 @@ fun TraceLedgerNavGraph(
 
         /* ── CATEGORIES ────────────────────────────────────────────────────── */
         composable(Routes.CATEGORIES) {
-            // Phase 2: pass viewModel so CategoriesScreen can observe deleteError
             CategoriesScreen(
                 categories      = categories,
                 isLightTheme    = isLightTheme,
@@ -342,7 +335,7 @@ fun TraceLedgerNavGraph(
             route     = Routes.EDIT_CATEGORY,
             arguments = listOf(navArgument("categoryId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val categoryId    = backStackEntry.arguments?.getString("categoryId")
+            val categoryId     = backStackEntry.arguments?.getString("categoryId")
             val categoryToEdit = categories.firstOrNull { it.id == categoryId }
             AddEditCategoryScreen(
                 existingCategory = categoryToEdit,
@@ -391,28 +384,17 @@ fun TraceLedgerNavGraph(
             )
         }
 
-        /* ── ABOUT ─────────────────────────────────────────────────────────────── */
+        /* ── ABOUT ─────────────────────────────────────────────────────────── */
+        // onPrivacyPolicy and onTerms callbacks removed — AboutScreen now opens
+        // website URLs directly via LocalUriHandler. No internal routes needed.
         composable(Routes.ABOUT) {
             AboutScreen(
-                onBack          = { navController.popBackStack() },
-                onPrivacyPolicy = { navController.navigate(Routes.PRIVACY_POLICY) },
-                onTerms         = { navController.navigate(Routes.TERMS) }
-            )
-        }
-
-        /* ── PRIVACY POLICY ────────────────────────────────────────────────────── */
-        composable(Routes.PRIVACY_POLICY) {
-            PrivacyPolicyScreen(
                 onBack = { navController.popBackStack() }
             )
         }
 
-        /* ── TERMS OF USE ──────────────────────────────────────────────────────── */
-        composable(Routes.TERMS) {
-            TermsScreen(
-                onBack = { navController.popBackStack() }
-            )
-        }
+        // REMOVED: Routes.PRIVACY_POLICY composable (PrivacyPolicyScreen deleted)
+        // REMOVED: Routes.TERMS composable (TermsScreen deleted)
 
         /* ── RECURRING ─────────────────────────────────────────────────────── */
         composable(Routes.RECURRING) {
@@ -460,7 +442,7 @@ fun TraceLedgerNavGraph(
             )
         }
 
-        /* ── SUPPORT ──────────────────────────────────────────────────────────── */
+        /* ── SUPPORT ──────────────────────────────────────────────────────── */
         composable(Routes.SUPPORT) {
             SupportScreen(onBack = { navController.popBackStack() })
         }

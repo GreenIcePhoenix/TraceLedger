@@ -81,9 +81,6 @@
         .btn-red:hover{transform:translateY(-3px);box-shadow:0 12px 36px rgba(229,57,53,.38);}
         .btn-ghost{background:transparent;color:var(--g200);border:1px solid var(--g700);}
         .btn-ghost:hover{border-color:var(--g500);color:var(--white);transform:translateY(-2px);}
-        .btn-loading{position:relative;overflow:hidden;pointer-events:none;opacity:.7;}
-        .btn-loading::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.08),transparent);animation:shimmer 1.2s infinite;}
-        @keyframes shimmer{from{transform:translateX(-100%);}to{transform:translateX(100%);}}
         .hero-stats{display:flex;gap:0;border:1px solid var(--g800);border-radius:10px;overflow:hidden;margin-top:72px;opacity:0;animation:fadeUp .6s ease forwards 1.05s;}
         .hstat{flex:1;padding:20px 24px;border-right:1px solid var(--g800);}
         .hstat:last-child{border-right:none;}
@@ -195,21 +192,32 @@
     <div class="hero-grid-bg"></div>
     <div class="hero-glow"></div>
     <div class="wrap hero-inner">
+        <!--
+            Version tag — statically set to current release.
+            Update this manually whenever a new version is released.
+            Format: "v1.1.0  ·  Latest Release"
+        -->
         <div class="hero-tag mono-font">
             <span class="hero-tag-dot"></span>
-            <span id="heroVersion">Fetching latest release&hellip;</span>
+            <span>v1.1.0 &nbsp;&middot;&nbsp; Latest Release</span>
         </div>
         <h1 class="hero-title">MONEY<br><span class="dim">TRACKED.</span><br><span class="red">PRIVATE.</span></h1>
         <div class="hero-rule"></div>
         <p class="hero-sub">A fast, minimal finance tracker for Android. Log every rupee, understand your spending — with zero data leaving your device. No accounts. No cloud. No compromise.</p>
         <div class="hero-btns">
-            <a href="#" id="btnDownloadHero" class="btn btn-red btn-loading">
+            <!--
+                APK download link — points directly to the Cloudflare-hosted APK.
+                Update the href whenever a new version is uploaded to Cloudflare Pages.
+            -->
+            <a href="https://traceledger.pages.dev/TraceLedger-1.1.0.apk"
+               class="btn btn-red"
+               download>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                <span id="btnHeroLabel">Loading&hellip;</span>
+                Download v1.1.0 APK
             </a>
-            <a href="https://github.com/NRoy9/TraceLedger/releases" class="btn btn-ghost" target="_blank" rel="noopener">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-                All Releases
+            <a href="/changelog" class="btn btn-ghost">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                Changelog
             </a>
         </div>
         <div class="hero-stats">
@@ -225,7 +233,6 @@
             <span class="ticker-item">No Ads<span class="ticker-sep">&#9670;</span></span>
             <span class="ticker-item">Offline First<span class="ticker-sep">&#9670;</span></span>
             <span class="ticker-item">No Tracking<span class="ticker-sep">&#9670;</span></span>
-            <span class="ticker-item">Open Source<span class="ticker-sep">&#9670;</span></span>
             <span class="ticker-item">Privacy First<span class="ticker-sep">&#9670;</span></span>
             <span class="ticker-item">Android App<span class="ticker-sep">&#9670;</span></span>
             <span class="ticker-item">Free Forever<span class="ticker-sep">&#9670;</span></span>
@@ -233,7 +240,6 @@
             <span class="ticker-item">No Ads<span class="ticker-sep">&#9670;</span></span>
             <span class="ticker-item">Offline First<span class="ticker-sep">&#9670;</span></span>
             <span class="ticker-item">No Tracking<span class="ticker-sep">&#9670;</span></span>
-            <span class="ticker-item">Open Source<span class="ticker-sep">&#9670;</span></span>
             <span class="ticker-item">Privacy First<span class="ticker-sep">&#9670;</span></span>
             <span class="ticker-item">Android App<span class="ticker-sep">&#9670;</span></span>
             <span class="ticker-item">Free Forever<span class="ticker-sep">&#9670;</span></span>
@@ -265,15 +271,15 @@
             <div>
                 <p class="eyebrow rv">Privacy</p>
                 <div class="privacy-manifesto rv rv-d1">YOUR DATA<span class="r">.</span><br>YOUR DEVICE<span class="r">.</span><br><span class="m">YOUR RULES.</span></div>
-                <p class="section-p rv rv-d2" style="margin-top:28px;">Most finance apps sync your data to servers you don't control. TraceLedger doesn't connect to the internet at all. No accounts to create. No passwords to forget. No data to sell.</p>
+                <p class="section-p rv rv-d2" style="margin-top:28px;">Most finance apps sync your data to servers you don't control. TraceLedger stores nothing outside your phone. No accounts to create. No passwords to forget. No data to sell.</p>
             </div>
             <div class="privacy-badges">
-                <div class="pb rv rv-d1"><div class="pb-icon">&#128225;</div><div class="pb-title mono-font">Offline Only</div><div class="pb-sub">Zero internet required</div></div>
+                <div class="pb rv rv-d1"><div class="pb-icon">&#128225;</div><div class="pb-title mono-font">Offline First</div><div class="pb-sub">All data stays on your device</div></div>
                 <div class="pb rv rv-d2"><div class="pb-icon">&#128683;</div><div class="pb-title mono-font">No Analytics</div><div class="pb-sub">We don't track usage</div></div>
                 <div class="pb rv rv-d3"><div class="pb-icon">&#128274;</div><div class="pb-title mono-font">Local Storage</div><div class="pb-sub">SQLite on your device only</div></div>
                 <div class="pb rv rv-d4"><div class="pb-icon">&#128100;</div><div class="pb-title mono-font">No Account</div><div class="pb-sub">Open the app. Start tracking.</div></div>
                 <div class="pb rv rv-d3"><div class="pb-icon">&#127358;</div><div class="pb-title mono-font">Free Forever</div><div class="pb-sub">No subscription. No paywalls.</div></div>
-                <div class="pb rv rv-d4"><div class="pb-icon">&#128194;</div><div class="pb-title mono-font">Open Source</div><div class="pb-sub">Source on GitHub</div></div>
+                <div class="pb rv rv-d4"><div class="pb-icon">&#128274;</div><div class="pb-title mono-font">No Third Parties</div><div class="pb-sub">No SDKs. No ad networks.</div></div>
             </div>
         </div>
     </div>
@@ -284,7 +290,7 @@
         <p class="eyebrow rv">How It Works</p>
         <h2 class="section-h rv rv-d1">UP AND RUNNING<br>IN SECONDS<span class="r">.</span></h2>
         <div class="steps">
-            <div class="step rv rv-d1"><span class="step-num dot-font">01</span><div class="step-title mono-font">Install</div><p class="step-desc">Download the APK from GitHub. No Play Store required — sideload in under a minute.</p></div>
+            <div class="step rv rv-d1"><span class="step-num dot-font">01</span><div class="step-title mono-font">Install</div><p class="step-desc">Download the APK directly from this page. No Play Store required — sideload in under a minute.</p></div>
             <div class="step rv rv-d2"><span class="step-num dot-font">02</span><div class="step-title mono-font">Add Accounts</div><p class="step-desc">Create your bank accounts, wallets, and cash balances. Each tracks its own balance automatically.</p></div>
             <div class="step rv rv-d3"><span class="step-num dot-font">03</span><div class="step-title mono-font">Log Transactions</div><p class="step-desc">Tap the + button. Pick a category, amount, and account. Done in under 5 seconds.</p></div>
             <div class="step rv rv-d4"><span class="step-num dot-font">04</span><div class="step-title mono-font">Understand</div><p class="step-desc">Watch the dashboard, charts, and insights update in real time. Know exactly where your money goes.</p></div>
@@ -298,16 +304,26 @@
             <h2 class="dl-title dot-font">START TRACKING<br>YOUR MONEY<span style="color:var(--red)">.</span></h2>
             <p class="dl-sub">Free download. No subscription. No catch.<br>Install it and start in under a minute.</p>
             <div class="dl-btns">
-                <a href="#" id="btnDownloadMain" class="btn btn-red btn-loading">
+                <!--
+                    Primary download button — direct link to Cloudflare-hosted APK.
+                    Update the href and label version number for each new release.
+                -->
+                <a href="https://traceledger.pages.dev/TraceLedger-1.1.0.apk"
+                   class="btn btn-red"
+                   download>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                    <span id="btnMainLabel">Loading&hellip;</span>
+                    Download v1.1.0 APK
                 </a>
-                <a href="https://github.com/NRoy9/TraceLedger/releases" class="btn btn-ghost" target="_blank" rel="noopener">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
-                    All Releases
+                <a href="/privacy" class="btn btn-ghost">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Privacy Policy
                 </a>
             </div>
-            <p class="dl-meta mono-font" id="dlMeta">Android 8.0+ &nbsp;&middot;&nbsp; No permissions required</p>
+            <!--
+                Meta line — update version and size manually for each release.
+                Get the exact file size from the APK file properties after building.
+            -->
+            <p class="dl-meta mono-font">v1.1.0 &nbsp;&middot;&nbsp; Android 8.0+ &nbsp;&middot;&nbsp; ~XX MB &nbsp;&middot;&nbsp; No sign-up required</p>
         </div>
     </div>
 </section>
@@ -317,96 +333,16 @@
         <span class="foot-brand dot-font">TRACE<span>LEDGER</span></span>
         <span class="foot-tagline mono-font">No cloud. No ads. No tracking. Ever.</span>
         <ul class="foot-links">
-            <li><a href="https://github.com/NRoy9/TraceLedger" target="_blank" rel="noopener">GitHub</a></li>
             <li><a href="/privacy">Privacy</a></li>
             <li><a href="/terms">Terms</a></li>
             <li><a href="#download">Download</a></li>
+            <li><a href="https://discord.gg/MYFfxqvKCQ" target="_blank" rel="noopener">Discord</a></li>
         </ul>
     </div>
 </footer>
 
 <script>
-    // ─────────────────────────────────────────────────────────────────────────────
-    // GitHub Release Fetcher
-    //
-    // Endpoint: https://api.github.com/repos/NRoy9/TraceLedger/releases/latest
-    // Public API — no auth needed for public repos.
-    //
-    // What we use from the response:
-    //   release.tag_name                   → version string, e.g. "v1.0.0"
-    //   release.assets[].name              → filename, e.g. "TraceLedger-v1.0.0.apk"
-    //   release.assets[].browser_download_url → direct APK download URL
-    //   release.assets[].size              → bytes, converted to MB for display
-    //
-    // Fallback: if the API fails or no APK is found, all buttons link to
-    // the GitHub releases page instead of a dead href.
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    const API_URL      = 'https://api.github.com/repos/NRoy9/TraceLedger/releases/latest';
-    const RELEASES_URL = 'https://github.com/NRoy9/TraceLedger/releases';
-
-    const heroVersion     = document.getElementById('heroVersion');
-    const btnDownloadHero = document.getElementById('btnDownloadHero');
-    const btnHeroLabel    = document.getElementById('btnHeroLabel');
-    const btnDownloadMain = document.getElementById('btnDownloadMain');
-    const btnMainLabel    = document.getElementById('btnMainLabel');
-    const dlMeta          = document.getElementById('dlMeta');
-
-    function formatMB(bytes) {
-      return bytes ? (bytes / 1048576).toFixed(1) + ' MB' : null;
-    }
-
-    function applyRelease(apkUrl, version, size) {
-      const label = 'Download APK \u2014 ' + version;
-
-      btnDownloadHero.href = apkUrl;
-      btnDownloadHero.classList.remove('btn-loading');
-      btnHeroLabel.textContent = label;
-
-      btnDownloadMain.href = apkUrl;
-      btnDownloadMain.classList.remove('btn-loading');
-      btnMainLabel.textContent = label;
-
-      heroVersion.textContent = version + '  \u00B7  Latest Release';
-
-      const parts = [version, 'Android 8.0+'];
-      if (size) parts.push(size);
-      parts.push('No permissions required');
-      dlMeta.textContent = parts.join('  \u00B7  ');
-    }
-
-    function applyFallback() {
-      btnDownloadHero.href = RELEASES_URL;
-      btnDownloadHero.target = '_blank';
-      btnDownloadHero.classList.remove('btn-loading');
-      btnHeroLabel.textContent = 'Download on GitHub';
-
-      btnDownloadMain.href = RELEASES_URL;
-      btnDownloadMain.target = '_blank';
-      btnDownloadMain.classList.remove('btn-loading');
-      btnMainLabel.textContent = 'View Releases on GitHub';
-
-      heroVersion.textContent = 'Latest release on GitHub';
-      dlMeta.textContent = 'Android 8.0+  \u00B7  No permissions required';
-    }
-
-    fetch(API_URL, { headers: { Accept: 'application/vnd.github.v3+json' } })
-      .then(function(res) {
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        return res.json();
-      })
-      .then(function(release) {
-        var assets = release.assets || [];
-        var apk    = assets.find(function(a) { return a.name && a.name.endsWith('.apk'); });
-        if (!apk) throw new Error('No APK asset');
-        applyRelease(apk.browser_download_url, release.tag_name || 'latest', formatMB(apk.size));
-      })
-      .catch(function(err) {
-        console.warn('Release fetch failed:', err.message);
-        applyFallback();
-      });
-
-    // ── Boot ──────────────────────────────────────────────────────────────────
+    // ── Boot sequence ─────────────────────────────────────────────────────────
     var msgs = [
       {p:'OK  ', t:'LOADING KERNEL...'},
       {p:'OK  ', t:'MOUNTING LOCAL STORAGE...'},
@@ -431,13 +367,13 @@
       bi++;
     }, 280);
 
-    // ── Scroll reveal ────────────────────────────────────────────────────────
+    // ── Scroll reveal ─────────────────────────────────────────────────────────
     var rvObs = new IntersectionObserver(function(entries) {
       entries.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); rvObs.unobserve(e.target); } });
     }, { threshold: 0.08, rootMargin: '0px 0px -32px 0px' });
     document.querySelectorAll('.rv').forEach(function(el){ rvObs.observe(el); });
 
-    // ── Nav active ────────────────────────────────────────────────────────────
+    // ── Nav active highlight ──────────────────────────────────────────────────
     var navLinks = document.querySelectorAll('.nav-menu a[href^="#"]');
     var secObs   = new IntersectionObserver(function(entries) {
       entries.forEach(function(e){

@@ -162,95 +162,112 @@
 </head>
 <body>
 
-  <nav>
-    <a href="/" class="brand">TRACE<span>LEDGER</span></a>
-    <a href="/" class="back">← Back to home</a>
-  </nav>
+<nav>
+  <a href="/" class="brand">TRACE<span>LEDGER</span></a>
+  <a href="/" class="back">← Back to home</a>
+</nav>
 
-  <main>
-    <p class="page-tag">Legal</p>
-    <h1>PRIVACY<br>POLICY</h1>
-    <p class="updated">Last updated: March 2026</p>
+<main>
+  <p class="page-tag">Legal</p>
+  <h1>PRIVACY<br>POLICY</h1>
+  <p class="updated">Last updated: March 2026</p>
 
-    <div class="lead">
-      TraceLedger is a privacy-first application. The short version: we collect nothing,
-      because the app never connects to the internet. Your financial data stays on your
-      device, always.
-    </div>
+  <div class="lead">
+    TraceLedger is a privacy-first application. The short version: your financial data
+    stays on your device. No personal data is ever uploaded to any server.
+  </div>
 
-    <section>
-      <h2>1. Data Collection</h2>
-      <p>TraceLedger does not collect, transmit, or store any personal data on external
+  <section>
+    <h2>1. Data Collection</h2>
+    <p>TraceLedger does not collect, transmit, or store any personal data on external
       servers. All information you enter — accounts, transactions, categories, budgets —
       is stored exclusively in a local SQLite database on your device.</p>
-      <p>We collect nothing. There are no analytics, no crash reporting, no usage
+    <p>We collect nothing. There are no analytics, no crash reporting, no usage
       tracking, and no telemetry of any kind.</p>
-    </section>
+  </section>
 
-    <section>
-      <h2>2. Internet Access</h2>
-      <p>TraceLedger does not request the INTERNET permission on Android. The app is
-      entirely offline. No network requests are made at any time during normal use
-      of the app.</p>
-      <p>Links to external pages such as Discord, the website, and GitHub open in your
-      device's browser — outside of the app — using Android's standard intent system.</p>
-    </section>
+  <!--
+    Section 2 — updated in v1.1.0:
+    The original text stated "TraceLedger does not request the INTERNET permission."
+    This is no longer accurate. INTERNET permission was added in v1.1.0 for two
+    limited, user-initiated purposes only:
+      1. Checking for app updates (fetches a JSON file from our own server).
+      2. Opening external links (Discord, website) via the system browser.
+    No personal data is transmitted in either case.
+  -->
+  <section>
+    <h2>2. Internet Access</h2>
+    <p>TraceLedger requests the INTERNET permission for two limited purposes only:</p>
+    <p><strong style="color:var(--white);">Update checks</strong> — When you open the app, it may fetch a small JSON file
+      from our server (traceledger.pages.dev) to check whether a newer version is
+      available. This request contains only your app version number in the User-Agent
+      header. No account information, device identifiers, or financial data are ever
+      sent.</p>
+    <p><strong style="color:var(--white);">External links</strong> — Links to external pages (Discord, website) open in
+      your device's browser using Android's standard intent system. TraceLedger itself
+      does not make these requests.</p>
+    <p>All financial data — transactions, accounts, budgets, categories — is processed
+      entirely on-device and is never transmitted over the internet under any
+      circumstances.</p>
+  </section>
 
-    <section>
-      <h2>3. Data Storage</h2>
-      <p>All data is stored locally on your device using Room (SQLite). The database is
+  <section>
+    <h2>3. Data Storage</h2>
+    <p>All data is stored locally on your device using Room (SQLite). The database is
       stored in the app's private storage area and is not accessible to other apps.</p>
-      <p>If you uninstall TraceLedger, all data is permanently deleted from your device.</p>
-    </section>
+    <p>If you uninstall TraceLedger, all data is permanently deleted from your device.</p>
+  </section>
 
-    <section>
-      <h2>4. Backups</h2>
-      <p>TraceLedger supports manual JSON and CSV export. These files are created only
+  <section>
+    <h2>4. Backups</h2>
+    <p>TraceLedger supports manual JSON and CSV export. These files are created only
       when you explicitly request an export and are saved to a location of your choosing
       on your device.</p>
-      <p>Android's Auto Backup may include app data in your Google account backup
+    <p>Android's Auto Backup may include app data in your Google account backup
       depending on your device settings. You can disable this in your Android backup
       settings.</p>
-    </section>
+  </section>
 
-    <section>
-      <h2>5. Third-Party Services</h2>
-      <p>TraceLedger does not integrate with any third-party services, SDKs, or APIs.
-      There are no advertising networks, analytics platforms, or social media integrations
-      within the app.</p>
-    </section>
+  <section>
+    <h2>5. Third-Party Services</h2>
+    <p>TraceLedger does not integrate with any third-party analytics, advertising, or
+      social media SDKs. There are no ad networks and no tracking libraries inside
+      the app.</p>
+    <p>The optional tip jar feature opens PayPal or a UPI app on your device. These
+      are standard Android intents — TraceLedger does not process or store any payment
+      information.</p>
+  </section>
 
-    <section>
-      <h2>6. Children</h2>
-      <p>TraceLedger does not knowingly collect any information from anyone, including
-      children under 13. Since we collect no data at all, this app complies with COPPA
-      by design.</p>
-    </section>
+  <section>
+    <h2>6. Children</h2>
+    <p>TraceLedger does not knowingly collect any information from anyone, including
+      children under 13. Since we collect no personal data at all, this app complies
+      with COPPA by design.</p>
+  </section>
 
-    <section>
-      <h2>7. Changes to This Policy</h2>
-      <p>If this policy changes, the updated version will be included in the app update
+  <section>
+    <h2>7. Changes to This Policy</h2>
+    <p>If this policy changes, the updated version will be included in the app update
       and noted in the changelog. The effective date at the top of this document will be
       updated accordingly.</p>
-    </section>
+  </section>
 
-    <section>
-      <h2>8. Contact</h2>
-      <p>If you have questions about this privacy policy, open an issue on
-      <a href="https://github.com/NRoy9/TraceLedger" style="color:var(--red);">GitHub</a>
-      or reach out on our Discord server.</p>
-    </section>
-  </main>
+  <section>
+    <h2>8. Contact</h2>
+    <p>If you have questions about this privacy policy, reach out via our
+      <a href="https://discord.gg/MYFfxqvKCQ" style="color:var(--red);">Discord server</a>.</p>
+  </section>
+</main>
 
-  <footer>
-    <p class="foot-note">
-      <a href="/">TraceLedger</a>
-      &nbsp;·&nbsp;
-      <a href="/terms">Terms of Use</a>
-      &nbsp;·&nbsp;
-      No data collected. Ever.
-    </p>
-  </footer>
+<footer>
+  <p class="foot-note">
+    <a href="/">TraceLedger</a>
+    &nbsp;·&nbsp;
+    <a href="/terms">Terms of Use</a>
+    &nbsp;·&nbsp;
+    No personal data collected. Ever.
+  </p>
+</footer>
 
 </body>
 </html>

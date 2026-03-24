@@ -37,12 +37,25 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/**
+ * About screen.
+ *
+ * CHANGE: onPrivacyPolicy and onTerms callback parameters have been removed.
+ * Privacy Policy and Terms of Use are now served from the website only
+ * (traceledger.pages.dev/privacy and traceledger.pages.dev/terms).
+ * Tapping either row opens the URL in the system browser via LocalUriHandler.
+ * This eliminates the duplicate in-app copies and ensures the website version
+ * is always the canonical, up-to-date source.
+ *
+ * CHANGE: Legal section icon tints are now both NothingRed (consistent).
+ * Previously Privacy Policy was SuccessGreen and Terms was grey — inconsistent
+ * with each other and with the rest of the screen.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AboutScreen(
-    onBack: () -> Unit,
-    onPrivacyPolicy: () -> Unit,
-    onTerms: () -> Unit
+    onBack: () -> Unit
+    // onPrivacyPolicy and onTerms removed — URLs opened directly via uriHandler
 ) {
     val context        = LocalContext.current
     val uriHandler     = LocalUriHandler.current
@@ -52,14 +65,10 @@ fun AboutScreen(
     val previous       = versions.filter { it.version != BuildConfig.VERSION_NAME }
 
     // ── Update check state ────────────────────────────────────────────────────
-    // checkingUpdate  → true while the network call is in-flight (shows spinner)
-    // pendingUpdate   → non-null when a newer version was found (shows UpdateDialog)
-    // showUpToDate    → true when check completed and app is already current
-    var checkingUpdate  by remember { mutableStateOf(false) }
-    var pendingUpdate   by remember { mutableStateOf<UpdateInfo?>(null) }
-    var showUpToDate    by remember { mutableStateOf(false) }
+    var checkingUpdate by remember { mutableStateOf(false) }
+    var pendingUpdate  by remember { mutableStateOf<UpdateInfo?>(null) }
+    var showUpToDate   by remember { mutableStateOf(false) }
 
-    // Show UpdateDialog if a new version was found via the manual check
     pendingUpdate?.let { update ->
         UpdateDialog(
             updateInfo = update,
@@ -110,51 +119,36 @@ fun AboutScreen(
             item {
                 ConnectCard {
                     LinkRow(
-                        icon        = Icons.Default.Forum,
-                        iconTint    = NothingRed,
-                        title       = "Discord",
-                        subtitle    = "Join the community, share feedback",
-                        isExternal  = true,
-                        onClick     = { uriHandler.openUri(AppLinks.DISCORD) }
+                        icon       = Icons.Default.Forum,
+                        iconTint   = NothingRed,
+                        title      = "Discord",
+                        subtitle   = "Join the community, share feedback",
+                        isExternal = true,
+                        onClick    = { uriHandler.openUri(AppLinks.DISCORD) }
                     )
                     RowDivider()
                     LinkRow(
-                        icon        = Icons.Default.Language,
-                        iconTint    = MaterialTheme.colorScheme.primary,
-                        title       = "Website",
-                        subtitle    = "traceledger.pages.dev",
-                        isExternal  = true,
-                        onClick     = { uriHandler.openUri(AppLinks.WEBSITE) }
-                    )
-                    RowDivider()
-                    LinkRow(
-                        icon        = Icons.Default.Code,
-                        iconTint    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                        title       = "GitHub",
-                        subtitle    = "View source code and releases",
-                        isExternal  = true,
-                        onClick     = { uriHandler.openUri(AppLinks.GITHUB) }
+                        icon       = Icons.Default.Language,
+                        iconTint   = MaterialTheme.colorScheme.primary,
+                        title      = "Website",
+                        subtitle   = "traceledger.pages.dev",
+                        isExternal = true,
+                        onClick    = { uriHandler.openUri(AppLinks.WEBSITE) }
                     )
                     RowDivider()
                     // ── Check for updates row ─────────────────────────────────
-                    // Tapping starts a network call to GitHub releases API.
-                    // A spinner replaces the chevron while the check is in-flight.
-                    // Result: UpdateDialog (new version) or "Up to date" subtitle.
                     CheckForUpdatesRow(
-                        isChecking  = checkingUpdate,
-                        isUpToDate  = showUpToDate,
-                        onClick     = {
-                            if (checkingUpdate) return@CheckForUpdatesRow  // debounce
+                        isChecking = checkingUpdate,
+                        isUpToDate = showUpToDate,
+                        onClick    = {
+                            if (checkingUpdate) return@CheckForUpdatesRow
                             checkingUpdate = true
                             showUpToDate   = false
                             coroutineScope.launch {
                                 val result = withContext(Dispatchers.IO) { checkForUpdate() }
                                 checkingUpdate = false
-                                if (result != null) {
-                                    pendingUpdate = result   // show UpdateDialog
-                                } else {
-                                    showUpToDate = true      // show "Up to date" feedback
-                                }
+                                if (result != null) pendingUpdate = result
+                                else showUpToDate = true
                             }
                         }
                     )
@@ -190,26 +184,29 @@ fun AboutScreen(
             item { PrivacyCard() }
 
             // ── LEGAL ─────────────────────────────────────────────────────────
+            // Both rows open the canonical website pages in the system browser.
+            // There are no longer separate in-app screens for these documents —
+            // the website versions are always current and avoid duplication.
             item { SectionLabel("LEGAL") }
 
             item {
                 ConnectCard {
                     LinkRow(
                         icon       = Icons.Default.PrivacyTip,
-                        iconTint   = SuccessGreen,
+                        iconTint   = NothingRed,           // was SuccessGreen — now consistent
                         title      = "Privacy Policy",
                         subtitle   = "How your data is handled",
-                        isExternal = false,
-                        onClick    = onPrivacyPolicy
+                        isExternal = true,                 // opens browser, not internal screen
+                        onClick    = { uriHandler.openUri(AppLinks.PRIVACY_POLICY) }
                     )
                     RowDivider()
                     LinkRow(
                         icon       = Icons.Default.Gavel,
-                        iconTint   = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        iconTint   = NothingRed,           // was grey — now consistent with Privacy row
                         title      = "Terms of Use",
                         subtitle   = "Rules for using TraceLedger",
-                        isExternal = false,
-                        onClick    = onTerms
+                        isExternal = true,                 // opens browser, not internal screen
+                        onClick    = { uriHandler.openUri(AppLinks.TERMS) }
                     )
                 }
             }
@@ -222,16 +219,6 @@ fun AboutScreen(
 // ─────────────────────────────────────────────────────────────────────────────
 // CheckForUpdatesRow
 // ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * A specialised row in the CONNECT card that handles three visual states:
- *   1. Idle     — shows "Check for updates" with a chevron
- *   2. Checking — shows a CircularProgressIndicator instead of the chevron
- *   3. UpToDate — subtitle changes to "You're up to date ✓" (green)
- *
- * The UpdateDialog is shown by the parent when pendingUpdate] is non-null —
- * this row only handles the pre-result UI states.
- */
 @Composable
 private fun CheckForUpdatesRow(
     isChecking: Boolean,
@@ -246,7 +233,6 @@ private fun CheckForUpdatesRow(
         verticalAlignment     = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // Icon box — SystemUpdate icon
         Box(
             modifier = Modifier
                 .size(38.dp)
@@ -261,7 +247,6 @@ private fun CheckForUpdatesRow(
             )
         }
 
-        // Text column
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text  = "Check for updates",
@@ -270,9 +255,9 @@ private fun CheckForUpdatesRow(
             )
             Text(
                 text  = when {
-                    isChecking  -> "Checking…"
-                    isUpToDate  -> "You're up to date  ✓"
-                    else        -> "v${BuildConfig.VERSION_NAME} installed"
+                    isChecking -> "Checking\u2026"
+                    isUpToDate -> "You\u2019re up to date  \u2713"
+                    else       -> "v${BuildConfig.VERSION_NAME} installed"
                 },
                 style = MaterialTheme.typography.labelSmall,
                 color = when {
@@ -282,11 +267,10 @@ private fun CheckForUpdatesRow(
             )
         }
 
-        // Trailing: spinner while checking, chevron otherwise
         if (isChecking) {
             CircularProgressIndicator(
-                modifier  = Modifier.size(16.dp),
-                color     = NothingRed,
+                modifier    = Modifier.size(16.dp),
+                color       = NothingRed,
                 strokeWidth = 2.dp
             )
         } else {
@@ -352,7 +336,7 @@ private fun AppIdentityCard() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ConnectCard — shared container for link rows
+// ConnectCard
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun ConnectCard(content: @Composable ColumnScope.() -> Unit) {
@@ -366,7 +350,7 @@ private fun ConnectCard(content: @Composable ColumnScope.() -> Unit) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LinkRow — one tappable row inside a ConnectCard
+// LinkRow
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun LinkRow(
@@ -412,6 +396,7 @@ private fun LinkRow(
             )
         }
 
+        // External link icon for browser-opening rows, chevron for internal navigation
         Icon(
             imageVector        = if (isExternal) Icons.AutoMirrored.Filled.OpenInNew
             else Icons.Default.ChevronRight,
@@ -555,10 +540,10 @@ private fun PrivacyCard() {
                 color = MaterialTheme.colorScheme.onSurface
             )
             val badges = listOf(
-                Triple(Icons.Default.WifiOff,       "Offline only",  "No internet required"),
-                Triple(Icons.Default.VisibilityOff, "No tracking",   "Zero analytics"),
-                Triple(Icons.Default.Block,          "No ads",        "Ever"),
-                Triple(Icons.Default.Cloud,          "No cloud sync", "Local storage only")
+                Triple(Icons.Default.WifiOff,        "Offline only",  "No internet required"),
+                Triple(Icons.Default.VisibilityOff,  "No tracking",   "Zero analytics"),
+                Triple(Icons.Default.Block,           "No ads",        "Ever"),
+                Triple(Icons.Default.Cloud,           "No cloud sync", "Local storage only")
             )
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 badges.chunked(2).forEach { row ->

@@ -22,12 +22,13 @@ object Routes {
     const val BUDGETS              = "budgets"
     const val ADD_EDIT_BUDGET      = "add-edit-budget"
     const val ABOUT                = "about"
-    const val PRIVACY_POLICY       = "privacy_policy"
-    const val TERMS                = "terms"
+
+    // REMOVED: PRIVACY_POLICY and TERMS no longer exist as in-app screens.
+    // Both pages are served from the website (traceledger.pages.dev).
+    // AboutScreen opens them via LocalUriHandler — no navigation routes needed.
+
     const val RECURRING            = "recurring"
     const val ADD_RECURRING        = "add_recurring"
     const val EDIT_RECURRING       = "edit_recurring/{recurringId}"
-
-    // ── v1.1.0 additions ──────────────────────────────────────────────────────
-    const val SUPPORT              = "support"  // Tip jar / Support the Developer
+    const val SUPPORT              = "support"
 }
