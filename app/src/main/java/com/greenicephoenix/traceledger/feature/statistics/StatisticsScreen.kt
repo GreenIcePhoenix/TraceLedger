@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Remove
@@ -144,7 +144,7 @@ private fun StatCard(
     val arrowIcon: ImageVector = when {
         isFlat -> Icons.Default.Remove
         isUp   -> Icons.Default.ArrowDropUp
-        else   -> Icons.Default.ArrowDropDown
+        else   -> Icons.AutoMirrored.Filled.KeyboardArrowRight
     }
     val arrowColor = when {
         isFlat      -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)

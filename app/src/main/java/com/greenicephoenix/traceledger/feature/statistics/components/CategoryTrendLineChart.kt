@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.greenicephoenix.traceledger.feature.statistics.StatisticsViewModel.CategoryMonthlyTrend
+import com.greenicephoenix.traceledger.core.util.formatCompactMagnitude
 import java.math.BigDecimal
 
 @Composable
@@ -253,26 +254,5 @@ fun CategoryTrendLineChart(
 
             }
         }
-    }
-}
-
-private fun formatCompactMagnitude(value: BigDecimal): String {
-    // Round to 2 decimal places first to avoid high-precision BigDecimal strings
-    // (e.g. BigDecimal(doubleValue) multiplication gives "166.66667163372039794921875")
-    val rounded = value.abs().setScale(2, java.math.RoundingMode.HALF_UP)
-
-    return when {
-        rounded >= BigDecimal("100000") ->
-            rounded.divide(BigDecimal("100000"), 1, java.math.RoundingMode.HALF_UP)
-                .stripTrailingZeros().toPlainString() + "L"
-
-        rounded >= BigDecimal("1000") ->
-            rounded.divide(BigDecimal("1000"), 1, java.math.RoundingMode.HALF_UP)
-                .stripTrailingZeros().toPlainString() + "k"
-
-        rounded >= BigDecimal("1") ->
-            rounded.setScale(0, java.math.RoundingMode.HALF_UP).toPlainString()
-
-        else -> "0"
     }
 }

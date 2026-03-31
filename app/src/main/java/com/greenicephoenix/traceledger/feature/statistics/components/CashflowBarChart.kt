@@ -18,6 +18,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.greenicephoenix.traceledger.feature.statistics.StatisticsViewModel
+import com.greenicephoenix.traceledger.core.util.formatCompactMagnitude
 import java.math.BigDecimal
 import java.math.RoundingMode
 
@@ -172,20 +173,5 @@ fun CashflowBarChart(
                 canvas.nativeCanvas.drawText(entry.day.toString(), groupCenterX, labelY, paint)
             }
         }
-    }
-}
-
-private fun formatCompactMagnitude(value: BigDecimal): String {
-    val rounded = value.abs().setScale(2, RoundingMode.HALF_UP)
-    return when {
-        rounded >= BigDecimal("100000") ->
-            rounded.divide(BigDecimal("100000"), 1, RoundingMode.HALF_UP)
-                .stripTrailingZeros().toPlainString() + "L"
-        rounded >= BigDecimal("1000") ->
-            rounded.divide(BigDecimal("1000"), 1, RoundingMode.HALF_UP)
-                .stripTrailingZeros().toPlainString() + "k"
-        rounded >= BigDecimal("1") ->
-            rounded.setScale(0, RoundingMode.HALF_UP).toPlainString()
-        else -> "0"
     }
 }
