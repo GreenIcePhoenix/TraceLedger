@@ -26,6 +26,7 @@ import com.greenicephoenix.traceledger.domain.model.*
 import com.greenicephoenix.traceledger.feature.budgets.domain.BudgetState
 import com.greenicephoenix.traceledger.feature.budgets.ui.BudgetColors
 import com.greenicephoenix.traceledger.feature.dashboard.components.BudgetWarningBanner
+import com.greenicephoenix.traceledger.core.ui.theme.DotMatrixFont
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.format.DateTimeFormatter
@@ -52,6 +53,7 @@ fun DashboardScreen(
     val spendingInsight      by dashboardViewModel.spendingChangeInsight.collectAsState()
     val savingsSummary       by dashboardViewModel.savingsSummary.collectAsState()
     val netWorthTrend        by dashboardViewModel.netWorthTrend.collectAsState()
+    val forecast             by dashboardViewModel.spendingForecast.collectAsState()
 
     val budgetStatuses          by budgetsViewModel.budgetStatuses.collectAsState()
     val hasExceededBudgets      by budgetsViewModel.hasExceededBudgets.collectAsState()
@@ -240,6 +242,14 @@ fun DashboardScreen(
                         )
                     }
                 }
+            }
+        }
+
+        // ── SPENDING FORECAST ─────────────────────────────────────────────────────
+        // Only visible day 3–25 of the current month when spend > 0
+        forecast?.let { fc ->
+            item(span = { GridItemSpan(2) }) {
+                SpendingForecastCard(forecast = fc)
             }
         }
 
@@ -564,6 +574,111 @@ fun MonthlyBudgetCard(used: Double, limit: Double, state: BudgetState, onClick: 
                 modifier = Modifier.fillMaxWidth().height(4.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(2.dp))
             ) {
                 Box(modifier = Modifier.fillMaxWidth(clampedProgress).height(4.dp).background(accentColor, RoundedCornerShape(2.dp)))
+            }
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SpendingForecastCard
+// ─────────────────────────────────────────────────────────────────────────────
+@Composable
+fun SpendingForecastCard(
+    forecast: InsightEngine.SpendingForecast,
+    modifier: Modifier = Modifier
+) {
+    val currency     by CurrencyManager.currency.collectAsState()
+    val accentColor  = if (forecast.isHighSpend) NothingRed else SuccessGreen
+    val accentLabel  = if (forecast.isHighSpend) "Trending High" else "On Track"
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape    = RoundedCornerShape(20.dp),
+        colors   = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp, accentColor.copy(alpha = 0.35f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+
+            // Header: icon + title + status pill
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector        = Icons.Default.QueryStats,
+                        contentDescription = null,
+                        tint               = accentColor,
+                        modifier           = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text  = "SPENDING FORECAST",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                    )
+                }
+                // Status pill
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = accentColor.copy(alpha = 0.12f)
+                ) {
+                    Text(
+                        text     = accentLabel,
+                        style    = MaterialTheme.typography.labelSmall,
+                        color    = accentColor,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Projected total in dot-matrix font — matches the balance card style
+            Text(
+                text  = CurrencyFormatter.format(
+                    forecast.forecastTotal.toPlainString(), currency
+                ),
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontFamily = DotMatrixFont
+                ),
+                color = accentColor
+            )
+            Text(
+                text  = "projected this month",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+            )
+
+            Spacer(Modifier.height(10.dp))
+            HorizontalDivider(
+                thickness = 0.5.dp,
+                color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+            )
+            Spacer(Modifier.height(10.dp))
+
+            // Daily average detail row
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text  = "Daily average",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                )
+                Text(
+                    text  = CurrencyFormatter.format(
+                        forecast.dailyAverage.toPlainString(), currency
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
     }

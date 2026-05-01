@@ -2,6 +2,7 @@ package com.greenicephoenix.traceledger.feature.dashboard
 
 import java.math.BigDecimal
 import java.math.RoundingMode
+import java.time.LocalDate
 
 /**
  * Stateless engine that computes human-readable financial insights
@@ -111,5 +112,67 @@ object InsightEngine {
             "YEARLY"      -> amount.divide(BigDecimal("12"), 2, RoundingMode.HALF_UP)
             else          -> amount
         }
+    }
+
+    // ─── Spending Forecast ────────────────────────────────────────────────────────
+
+    /**
+     * Holds the result of a spending forecast calculation.
+     *
+     * @param forecastTotal      Projected total spend for the full month (BigDecimal)
+     * @param dailyAverage       Average spend per day so far this month
+     * @param remainingForecast  Projected spend for the remaining days of the month
+     * @param isHighSpend        True if forecast exceeds last month's total spend
+     */
+    data class SpendingForecast(
+        val forecastTotal: BigDecimal,
+        val dailyAverage: BigDecimal,
+        val remainingForecast: BigDecimal,
+        val isHighSpend: Boolean
+    )
+
+    /**
+     * Computes a spending forecast for the current month.
+     *
+     * Only returns a result between day 3 and day 25 — outside this window
+     * the forecast is either too early to be meaningful or too close to month
+     * end to be useful.
+     *
+     * @param totalSpentSoFar   Sum of all expenses recorded so far this month
+     * @param lastMonthTotal    Total expenses from the previous month (used for isHighSpend)
+     * @param today             The current date (injected so this stays unit-testable)
+     */
+    fun spendingForecast(
+        totalSpentSoFar: BigDecimal,
+        lastMonthTotal: BigDecimal,
+        today: LocalDate = LocalDate.now()
+    ): SpendingForecast? {
+        val dayOfMonth = today.dayOfMonth
+        val daysInMonth = today.lengthOfMonth()
+
+        // Only show forecast between day 3 and day 25
+        if (dayOfMonth !in 3..25) return null
+        // Avoid division by zero
+        if (totalSpentSoFar <= BigDecimal.ZERO) return null
+
+        val dailyAverage = totalSpentSoFar.divide(
+            BigDecimal(dayOfMonth),
+            2,
+            RoundingMode.HALF_UP
+        )
+        val remainingDays = BigDecimal(daysInMonth - dayOfMonth)
+        val remainingForecast = dailyAverage.multiply(remainingDays)
+        val forecastTotal = totalSpentSoFar.add(remainingForecast)
+
+        // Flag as high spend if forecast exceeds last month's total
+        val isHighSpend = lastMonthTotal > BigDecimal.ZERO &&
+                forecastTotal > lastMonthTotal
+
+        return SpendingForecast(
+            forecastTotal = forecastTotal,
+            dailyAverage = dailyAverage,
+            remainingForecast = remainingForecast,
+            isHighSpend = isHighSpend
+        )
     }
 }

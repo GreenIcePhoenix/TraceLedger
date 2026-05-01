@@ -199,6 +199,12 @@ fun SettingsScreen(
             onClick  = { onNavigate(Routes.RECURRING) }
         )
 
+        SettingsItem(
+            title    = "Transaction Templates",
+            subtitle = "Save and reuse frequent transactions",
+            onClick  = { onNavigate(Routes.TEMPLATES) }
+        )
+
         Spacer(Modifier.height(4.dp))
 
         // ── NOTIFICATIONS ─────────────────────────────────────────────────────

@@ -48,10 +48,14 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.text.TextStyle
 import com.greenicephoenix.traceledger.core.currency.CurrencyFormatter
 import com.greenicephoenix.traceledger.core.currency.CurrencyManager
+import com.greenicephoenix.traceledger.core.ui.theme.SuccessGreen
+import com.greenicephoenix.traceledger.feature.templates.domain.TransactionTemplateUiModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,12 +63,17 @@ fun AddTransactionScreen(
     state: AddTransactionState,
     accounts: List<AccountUiModel>,
     categories: List<CategoryUiModel>,
+    templates: List<TransactionTemplateUiModel> = emptyList(),
     isEditMode: Boolean,
     onEvent: (AddTransactionEvent) -> Unit,
     onCancel: () -> Unit
 ) {
 
     var showDeleteConfirm by remember { mutableStateOf(false) }
+
+    var showTemplatePicker     by remember { mutableStateOf(false) }
+    var showSaveAsTemplateDialog by remember { mutableStateOf(false) }
+    var templateNameInput      by remember { mutableStateOf("") }
 
     Scaffold { padding ->
 
@@ -125,11 +134,15 @@ fun AddTransactionScreen(
                     .padding(16.dp)
             ) {
                 TransactionForm(
-                    state = state,
-                    accounts = accounts,
-                    categories = categories,
-                    onEvent = onEvent,
-                    onDeleteClick = { showDeleteConfirm = true }
+                    state         = state,
+                    accounts      = accounts,
+                    categories    = categories,
+                    templates     = templates,        // ADD
+                    isEditMode    = isEditMode,       // ADD (pass through)
+                    onEvent       = onEvent,
+                    onDeleteClick = { showDeleteConfirm = true },
+                    onUseTemplate = { showTemplatePicker = true },          // ADD
+                    onSaveAsTemplate = { showSaveAsTemplateDialog = true }  // ADD
                 )
             }
         }
@@ -176,6 +189,110 @@ fun AddTransactionScreen(
             containerColor = MaterialTheme.colorScheme.surface
         )
     }
+
+    // ── Template Picker Sheet ─────────────────────────────────────────────────
+    if (showTemplatePicker && templates.isNotEmpty()) {
+        ModalBottomSheet(
+            onDismissRequest = { showTemplatePicker = false }
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 32.dp)
+            ) {
+                Text(
+                    text     = "USE TEMPLATE",
+                    style    = MaterialTheme.typography.labelSmall,
+                    color    = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+                templates.forEach { template ->
+                    val typeColor = when (template.type) {
+                        TransactionType.EXPENSE  -> NothingRed
+                        TransactionType.INCOME   -> SuccessGreen
+                        TransactionType.TRANSFER ->
+                            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onEvent(AddTransactionEvent.ApplyTemplate(template))
+                                showTemplatePicker = false
+                            }
+                            .padding(vertical = 14.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(typeColor, RoundedCornerShape(50))
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text  = template.name,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            template.amount?.let {
+                                val currency by CurrencyManager.currency.collectAsState()
+                                Text(
+                                    text  = CurrencyFormatter.format(it.toPlainString(), currency),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = typeColor
+                                )
+                            }
+                        }
+                    }
+                    HorizontalDivider(
+                        thickness = 0.5.dp,
+                        color     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                    )
+                }
+            }
+        }
+    }
+
+// ── Save as Template Dialog ───────────────────────────────────────────────
+    if (showSaveAsTemplateDialog) {
+        AlertDialog(
+            onDismissRequest = { showSaveAsTemplateDialog = false; templateNameInput = "" },
+            title = { Text("Save as Template", color = MaterialTheme.colorScheme.onSurface) },
+            text = {
+                OutlinedTextField(
+                    value         = templateNameInput,
+                    onValueChange = { templateNameInput = it },
+                    label         = { Text("Template Name") },
+                    placeholder   = { Text("e.g. Monthly Rent") },
+                    singleLine    = true
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick  = {
+                        if (templateNameInput.isNotBlank()) {
+                            onEvent(AddTransactionEvent.SaveAsTemplate(templateNameInput))
+                            showSaveAsTemplateDialog = false
+                            templateNameInput = ""
+                        }
+                    },
+                    enabled = templateNameInput.isNotBlank()
+                ) {
+                    Text("Save", color = NothingRed)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showSaveAsTemplateDialog = false
+                    templateNameInput = ""
+                }) {
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurface)
+                }
+            },
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    }
 }
 
 @Composable
@@ -183,14 +300,41 @@ private fun TransactionForm(
     state: AddTransactionState,
     accounts: List<AccountUiModel>,
     categories: List<CategoryUiModel>,
+    templates: List<TransactionTemplateUiModel>,
+    isEditMode: Boolean,
     onEvent: (AddTransactionEvent) -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    onUseTemplate: () -> Unit,
+    onSaveAsTemplate: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
+
+        // "Use Template" button — only shown in add mode when templates exist
+        if (!isEditMode && templates.isNotEmpty()) {
+            item {
+                TextButton(
+                    onClick  = onUseTemplate,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector        = Icons.Default.ContentCopy,
+                        contentDescription = null,
+                        modifier           = Modifier.size(16.dp),
+                        tint               = NothingRed
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text  = "Use Template",
+                        color = NothingRed,
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+            }
+        }
 
         item {
             TransactionTypeSelector(
@@ -416,11 +560,35 @@ private fun TransactionForm(
                 }
             }
         }
+
+        // "Save as Template" — only in add mode
+        if (!isEditMode) {
+            item {
+                Spacer(Modifier.height(4.dp))
+                TextButton(
+                    onClick  = onSaveAsTemplate,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector        = Icons.Default.BookmarkBorder,
+                        contentDescription = null,
+                        modifier           = Modifier.size(16.dp),
+                        tint               = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text  = "Save as Template",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun TransactionTypeSelector(
+fun TransactionTypeSelector(
     selected: TransactionType,
     onSelected: (TransactionType) -> Unit
 ) {

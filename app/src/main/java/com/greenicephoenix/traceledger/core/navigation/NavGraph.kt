@@ -13,7 +13,6 @@ import com.greenicephoenix.traceledger.feature.accounts.AccountsViewModel
 import com.greenicephoenix.traceledger.feature.accounts.AddEditAccountScreen
 import com.greenicephoenix.traceledger.feature.addtransaction.AddTransactionScreen
 import com.greenicephoenix.traceledger.feature.addtransaction.AddTransactionViewModel
-import com.greenicephoenix.traceledger.feature.addtransaction.AddTransactionViewModelFactory
 import com.greenicephoenix.traceledger.feature.budgets.AddEditBudgetScreen
 import com.greenicephoenix.traceledger.feature.budgets.BudgetsScreen
 import com.greenicephoenix.traceledger.feature.budgets.BudgetsViewModel
@@ -38,12 +37,11 @@ import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewMode
 import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewModelFactory
 import kotlinx.coroutines.launch
 import com.greenicephoenix.traceledger.feature.support.SupportScreen
-
-// REMOVED imports — no longer needed:
-// import com.greenicephoenix.traceledger.feature.about.PrivacyPolicyScreen
-// import com.greenicephoenix.traceledger.feature.about.TermsScreen
-// Both screens have been deleted. Privacy Policy and Terms of Use are now
-// served from the website only. AboutScreen opens them via LocalUriHandler.
+import com.greenicephoenix.traceledger.feature.templates.AddEditTemplateScreen
+import com.greenicephoenix.traceledger.feature.templates.TemplatesScreen
+import com.greenicephoenix.traceledger.feature.templates.TemplatesViewModel
+import com.greenicephoenix.traceledger.feature.addtransaction.AddTransactionEvent
+import com.greenicephoenix.traceledger.feature.addtransaction.AddTransactionViewModelFactory
 
 @Composable
 fun TraceLedgerNavGraph(
@@ -161,14 +159,17 @@ fun TraceLedgerNavGraph(
             val scope = rememberCoroutineScope()
             val addTransactionViewModel: AddTransactionViewModel = viewModel(
                 factory = AddTransactionViewModelFactory(
-                    transactionRepository = app.container.transactionRepository
+                    transactionRepository = app.container.transactionRepository,
+                    templateRepository    = app.container.templateRepository
                 )
             )
             val state by addTransactionViewModel.state.collectAsState()
+            val templates by addTransactionViewModel.templates.collectAsState()
             AddTransactionScreen(
                 state      = state,
                 accounts   = accounts,
                 categories = categories,
+                templates  = templates,
                 isEditMode = false,
                 onEvent    = addTransactionViewModel::onEvent,
                 onCancel   = { navController.popBackStack() }
@@ -178,6 +179,13 @@ fun TraceLedgerNavGraph(
                     navController.popBackStack()
                     scope.launch { snackbarHostState.showSnackbar("Transaction added") }
                     addTransactionViewModel.consumeSaveCompleted()
+                }
+            }
+            // Show snackbar when a template is saved from this screen
+            LaunchedEffect(state.templateSaved) {
+                if (state.templateSaved) {
+                    scope.launch { snackbarHostState.showSnackbar("Template saved") }
+                    addTransactionViewModel.onEvent(AddTransactionEvent.ConsumeTemplateSaved)
                 }
             }
         }
@@ -191,7 +199,8 @@ fun TraceLedgerNavGraph(
             val scope = rememberCoroutineScope()
             val viewModel: AddTransactionViewModel = viewModel(
                 factory = AddTransactionViewModelFactory(
-                    transactionRepository = app.container.transactionRepository
+                    transactionRepository = app.container.transactionRepository,
+                    templateRepository    = app.container.templateRepository
                 )
             )
             LaunchedEffect(transactionId) { viewModel.initEdit(transactionId) }
@@ -445,6 +454,58 @@ fun TraceLedgerNavGraph(
         /* ── SUPPORT ──────────────────────────────────────────────────────── */
         composable(Routes.SUPPORT) {
             SupportScreen(onBack = { navController.popBackStack() })
+        }
+
+        /* ── TEMPLATES ─────────────────────────────────────────────────────────── */
+        composable(Routes.TEMPLATES) {
+            val vm: TemplatesViewModel = viewModel(factory = app.container.templatesViewModelFactory)
+            val templates by vm.templates.collectAsState()
+            TemplatesScreen(
+                templates      = templates,
+                accounts       = accounts,
+                categories     = categories,
+                onAddTemplate  = { navController.navigate(Routes.ADD_TEMPLATE) },
+                onEditTemplate = { id ->
+                    navController.navigate(Routes.EDIT_TEMPLATE.replace("{templateId}", id))
+                },
+                onDelete       = { id -> vm.deleteTemplate(id) },
+                onBack         = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.ADD_TEMPLATE) {
+            val vm: TemplatesViewModel = viewModel(factory = app.container.templatesViewModelFactory)
+            AddEditTemplateScreen(
+                existingTemplate = null,
+                accounts         = accounts,
+                categories       = categories,
+                onSave           = { template -> vm.saveTemplate(template); navController.popBackStack() },
+                onCancel         = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            route     = Routes.EDIT_TEMPLATE,
+            arguments = listOf(navArgument("templateId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val templateId = backStackEntry.arguments?.getString("templateId") ?: return@composable
+            val vm: TemplatesViewModel = viewModel(factory = app.container.templatesViewModelFactory)
+            val templates by vm.templates.collectAsState()
+            val existing = templates.firstOrNull { it.id == templateId }
+
+            // key(existing) forces AddEditTemplateScreen to fully reinitialise
+            // its remember{} state when the template loads from DB.
+            // Without this, the screen renders once with null (empty fields)
+            // and never re-runs the remember blocks when data arrives.
+            key(existing) {
+                AddEditTemplateScreen(
+                    existingTemplate = existing,
+                    accounts         = accounts,
+                    categories       = categories,
+                    onSave           = { template -> vm.saveTemplate(template); navController.popBackStack() },
+                    onCancel         = { navController.popBackStack() }
+                )
+            }
         }
     }
 }

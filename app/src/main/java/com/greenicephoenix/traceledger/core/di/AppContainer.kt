@@ -17,6 +17,8 @@ import com.greenicephoenix.traceledger.feature.dashboard.DashboardViewModelFacto
 import com.greenicephoenix.traceledger.feature.recurring.AddEditRecurringViewModelFactory
 import com.greenicephoenix.traceledger.feature.recurring.RecurringTransactionsViewModelFactory
 import com.greenicephoenix.traceledger.feature.statistics.StatisticsViewModelFactory
+import com.greenicephoenix.traceledger.feature.templates.data.TemplateRepository
+import com.greenicephoenix.traceledger.feature.templates.TemplatesViewModelFactory
 
 class AppContainer(context: Context) {
 
@@ -48,6 +50,10 @@ class AppContainer(context: Context) {
         )
     }
 
+    val templateRepository: TemplateRepository by lazy {
+        TemplateRepository(database.transactionTemplateDao())
+    }
+
     val exportService by lazy {
         ExportService(database = database, contentResolver = context.contentResolver)
     }
@@ -74,4 +80,8 @@ class AppContainer(context: Context) {
 
     val recurringViewModelFactory  = RecurringTransactionsViewModelFactory(recurringTransactionRepository)
     val addEditRecurringFactory    = AddEditRecurringViewModelFactory(recurringTransactionRepository)
+
+    val templatesViewModelFactory by lazy {
+        TemplatesViewModelFactory(templateRepository)
+    }
 }

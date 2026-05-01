@@ -31,4 +31,8 @@ object Routes {
     const val ADD_RECURRING        = "add_recurring"
     const val EDIT_RECURRING       = "edit_recurring/{recurringId}"
     const val SUPPORT              = "support"
+
+    const val TEMPLATES       = "templates"
+    const val ADD_TEMPLATE    = "add_template"
+    const val EDIT_TEMPLATE   = "edit_template/{templateId}"
 }

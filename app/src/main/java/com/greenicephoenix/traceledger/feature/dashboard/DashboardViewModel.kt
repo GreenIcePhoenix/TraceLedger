@@ -48,7 +48,7 @@ class DashboardViewModel(
 
     // ── Previous month expense (for comparison insight) ───────────────────────
 
-    private val lastMonthExpense: StateFlow<BigDecimal> =
+    val lastMonthExpense: StateFlow<BigDecimal> =
         previousMonthTransactions.map { txs ->
             txs.filter { it.type == TransactionType.EXPENSE }
                 .fold(BigDecimal.ZERO) { acc, tx -> acc + tx.amount }
@@ -88,6 +88,22 @@ class DashboardViewModel(
     val netWorthTrend: StateFlow<String?> =
         monthlyNet.map { net ->
             InsightEngine.netWorthTrend(net)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    // ─── Spending Forecast ────────────────────────────────────────────────────────
+
+    /**
+     * Emits a SpendingForecast when conditions are met (day 3–25, non-zero spend),
+     * or null when the forecast should not be shown.
+     * Uses monthlyExpense (current) and lastMonthExpense (previous) which are
+     * already computed as StateFlows above.
+     */
+    val spendingForecast: StateFlow<InsightEngine.SpendingForecast?> =
+        combine(monthlyExpense, lastMonthExpense) { current, last ->
+            InsightEngine.spendingForecast(
+                totalSpentSoFar = current,
+                lastMonthTotal  = last
+            )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
 
