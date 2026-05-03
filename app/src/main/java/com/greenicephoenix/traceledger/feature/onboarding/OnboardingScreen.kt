@@ -23,7 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
+import com.greenicephoenix.traceledger.core.ui.theme.SovereignViolet
 import kotlinx.coroutines.launch
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -39,25 +39,25 @@ private data class OnboardingPage(
 private val pages = listOf(
     OnboardingPage(
         icon      = Icons.Default.AccountBalance,
-        iconTint  = NothingRed,
+        iconTint  = SovereignViolet,
         headline  = "WELCOME TO\nTRACELEDGER",
         body      = "A fast, private finance tracker.\nNo cloud. No ads. Just your money."
     ),
     OnboardingPage(
         icon      = Icons.AutoMirrored.Filled.TrendingUp,
-        iconTint  = Color(0xFF4CAF50),
+        iconTint  = SovereignViolet,
         headline  = "TRACK EVERY\nRUPEE",
         body      = "Log expenses, income and transfers across multiple accounts in seconds."
     ),
     OnboardingPage(
         icon      = Icons.Default.BarChart,
-        iconTint  = NothingRed,
+        iconTint  = SovereignViolet,
         headline  = "UNDERSTAND\nYOUR SPENDING",
         body      = "Budgets, insights and charts that show exactly where your money goes each month."
     ),
     OnboardingPage(
         icon      = Icons.Default.Lock,
-        iconTint  = Color(0xFFB3B3B3),
+        iconTint  = SovereignViolet,
         headline  = "PRIVATE\nBY DESIGN",
         body      = "All data is stored only on your device. TraceLedger never connects to the internet."
     )
@@ -136,7 +136,7 @@ fun OnboardingScreen(
                             }
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = NothingRed),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     shape  = RoundedCornerShape(14.dp),
                     modifier = Modifier.height(48.dp)
                 ) {
@@ -224,7 +224,7 @@ private fun PagerDots(pageCount: Int, currentPage: Int) {
             )
 
             val color by animateColorAsState(
-                targetValue   = if (isActive) NothingRed else Color.White.copy(alpha = 0.25f),
+                targetValue   = if (isActive) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.25f),
                 animationSpec = tween(durationMillis = 250),
                 label         = "dot_color_$index"
             )

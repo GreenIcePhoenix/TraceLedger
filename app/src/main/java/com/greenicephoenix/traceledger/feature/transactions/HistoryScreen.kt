@@ -85,7 +85,7 @@ fun HistoryScreen(
                 BadgedBox(
                     badge = {
                         if (hasActiveFilters) {
-                            Badge(containerColor = NothingRed)
+                            Badge(containerColor = MaterialTheme.colorScheme.primary)
                         }
                     }
                 ) {
@@ -93,7 +93,7 @@ fun HistoryScreen(
                         Icon(
                             imageVector        = Icons.Default.FilterList,
                             contentDescription = "Filters",
-                            tint               = if (hasActiveFilters) NothingRed
+                            tint               = if (hasActiveFilters) MaterialTheme.colorScheme.primary
                             else MaterialTheme.colorScheme.onBackground
                         )
                     }
@@ -135,9 +135,20 @@ fun HistoryScreen(
                         selected = selected,
                         onClick  = { viewModel.updateTypeFilter(type) },
                         label    = {
-                            Text(label, style = MaterialTheme.typography.labelMedium,
-                                color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface)
-                        }
+                            Text(
+                                text  = label,
+                                style = MaterialTheme.typography.labelMedium,
+                                // onPrimary when selected gives white text on violet
+                                color = if (selected) MaterialTheme.colorScheme.onPrimary
+                                else MaterialTheme.colorScheme.onSurface
+                            )
+                        },
+                        // FIXED: Override default secondaryContainer → use primary colours instead.
+                        // Without this, FilterChip selected state uses secondaryContainer (SuccessGreen).
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor     = MaterialTheme.colorScheme.onPrimary
+                        )
                     )
                 }
             }
@@ -175,7 +186,7 @@ fun HistoryScreen(
                             if (maxAmount != null) append("≤ ${CurrencyFormatter.format(maxAmount!!.toPlainString(), currency)}")
                         },
                         style = MaterialTheme.typography.labelSmall,
-                        color = NothingRed
+                        color = MaterialTheme.colorScheme.primary
                     )
                     TextButton(
                         onClick = { viewModel.clearAmountFilter() },

@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import com.greenicephoenix.traceledger.BuildConfig
 import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
 import com.greenicephoenix.traceledger.core.ui.theme.SuccessGreen
+import com.greenicephoenix.traceledger.core.ui.theme.WarningAmber
 import com.greenicephoenix.traceledger.core.util.AppLinks
 import com.greenicephoenix.traceledger.core.util.ChangelogIconMapper
 import com.greenicephoenix.traceledger.core.util.ChangelogParser
@@ -120,7 +121,7 @@ fun AboutScreen(
                 ConnectCard {
                     LinkRow(
                         icon       = Icons.Default.Forum,
-                        iconTint   = NothingRed,
+                        iconTint   = MaterialTheme.colorScheme.primary,
                         title      = "Discord",
                         subtitle   = "Join the community, share feedback",
                         isExternal = true,
@@ -193,7 +194,7 @@ fun AboutScreen(
                 ConnectCard {
                     LinkRow(
                         icon       = Icons.Default.PrivacyTip,
-                        iconTint   = NothingRed,           // was SuccessGreen — now consistent
+                        iconTint   = MaterialTheme.colorScheme.primary,           // was SuccessGreen — now consistent
                         title      = "Privacy Policy",
                         subtitle   = "How your data is handled",
                         isExternal = true,                 // opens browser, not internal screen
@@ -202,7 +203,7 @@ fun AboutScreen(
                     RowDivider()
                     LinkRow(
                         icon       = Icons.Default.Gavel,
-                        iconTint   = NothingRed,           // was grey — now consistent with Privacy row
+                        iconTint   = MaterialTheme.colorScheme.primary,           // was grey — now consistent with Privacy row
                         title      = "Terms of Use",
                         subtitle   = "Rules for using TraceLedger",
                         isExternal = true,                 // opens browser, not internal screen
@@ -242,7 +243,7 @@ private fun CheckForUpdatesRow(
             Icon(
                 imageVector        = Icons.Default.SystemUpdate,
                 contentDescription = null,
-                tint               = NothingRed,
+                tint               = MaterialTheme.colorScheme.primary,
                 modifier           = Modifier.size(18.dp)
             )
         }
@@ -270,7 +271,7 @@ private fun CheckForUpdatesRow(
         if (isChecking) {
             CircularProgressIndicator(
                 modifier    = Modifier.size(16.dp),
-                color       = NothingRed,
+                color       = MaterialTheme.colorScheme.primary,
                 strokeWidth = 2.dp
             )
         } else {
@@ -302,13 +303,13 @@ private fun AppIdentityCard() {
             Box(
                 modifier = Modifier
                     .size(72.dp)
-                    .background(NothingRed.copy(alpha = 0.12f), CircleShape),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text  = "TL",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = NothingRed
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
             Spacer(Modifier.height(4.dp))
@@ -453,12 +454,12 @@ private fun VersionCard(
                     if (isCurrent) {
                         Surface(
                             shape = RoundedCornerShape(20.dp),
-                            color = NothingRed.copy(alpha = 0.12f)
+                            color = WarningAmber.copy(alpha = 0.12f)
                         ) {
                             Text(
                                 text     = "Current",
                                 style    = MaterialTheme.typography.labelSmall,
-                                color    = NothingRed,
+                                color    = WarningAmber,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
                             )
                         }
@@ -490,13 +491,13 @@ private fun VersionCard(
                                 Box(
                                     modifier = Modifier
                                         .size(36.dp)
-                                        .background(NothingRed.copy(alpha = 0.08f), RoundedCornerShape(10.dp)),
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f), RoundedCornerShape(10.dp)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector        = ChangelogIconMapper.get(entry.iconName),
                                         contentDescription = null,
-                                        tint               = NothingRed,
+                                        tint               = MaterialTheme.colorScheme.primary,
                                         modifier           = Modifier.size(18.dp)
                                     )
                                 }
@@ -560,7 +561,7 @@ private fun PrivacyCard() {
                                 verticalAlignment     = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Icon(icon, null, tint = SuccessGreen, modifier = Modifier.size(16.dp))
+                                Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                                 Column {
                                     Text(title,    style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface)
                                     Text(subtitle, style = MaterialTheme.typography.labelSmall,  color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f))

@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
 import com.greenicephoenix.traceledger.domain.model.AccountUiModel
 import com.greenicephoenix.traceledger.domain.model.CategoryUiModel
 import com.greenicephoenix.traceledger.domain.model.TransactionType

@@ -44,7 +44,7 @@ fun RecurringTransactionsScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onAddClick,
-                containerColor = NothingRed
+                containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Recurring")
             }
@@ -104,7 +104,7 @@ fun RecurringTransactionsScreen(
                                 textAlign = TextAlign.Center
                             )
                             TextButton(onClick = onAddClick) {
-                                Text("Create one", color = NothingRed)
+                                Text("Create one", color = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }

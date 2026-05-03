@@ -279,7 +279,7 @@ fun AddTransactionScreen(
                     },
                     enabled = templateNameInput.isNotBlank()
                 ) {
-                    Text("Save", color = NothingRed)
+                    Text("Save", color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
@@ -324,12 +324,12 @@ private fun TransactionForm(
                         imageVector        = Icons.Default.ContentCopy,
                         contentDescription = null,
                         modifier           = Modifier.size(16.dp),
-                        tint               = NothingRed
+                        tint               = MaterialTheme.colorScheme.primary
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
                         text  = "Use Template",
-                        color = NothingRed,
+                        color = MaterialTheme.colorScheme.primary,
                         style = MaterialTheme.typography.labelLarge
                     )
                 }
@@ -771,7 +771,7 @@ fun AccountSelector(
                             .fillMaxWidth()
                             .background(
                                 if (isSelected)
-                                    NothingRed.copy(alpha = 0.12f)
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                                 else Color.Transparent,
                                 RoundedCornerShape(12.dp)
                             )
@@ -876,7 +876,7 @@ fun CategorySelector(
                             .fillMaxWidth()
                             .background(
                                 if (isSelected)
-                                    NothingRed.copy(alpha = 0.12f)
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                                 else Color.Transparent,
                                 RoundedCornerShape(12.dp)
                             )

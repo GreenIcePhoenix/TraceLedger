@@ -20,7 +20,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.greenicephoenix.traceledger.core.currency.CurrencyFormatter
 import com.greenicephoenix.traceledger.core.currency.CurrencyManager
-import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
 import com.greenicephoenix.traceledger.domain.model.CategoryUiModel
 import com.greenicephoenix.traceledger.feature.budgets.components.BudgetAccentProgress
 import com.greenicephoenix.traceledger.feature.budgets.domain.BudgetStatus
@@ -45,7 +44,7 @@ fun BudgetsScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick        = { if (!isPastMonth) onAddBudget() },
-                containerColor = if (isPastMonth) NothingRed.copy(alpha = 0.4f) else NothingRed
+                containerColor = if (isPastMonth) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) else MaterialTheme.colorScheme.primary
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Add Budget")
             }
@@ -77,7 +76,7 @@ fun BudgetsScreen(
                             )
                             Spacer(Modifier.height(12.dp))
                             TextButton(onClick = onAddBudget) {
-                                Text("Create a budget", color = NothingRed)
+                                Text("Create a budget", color = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }

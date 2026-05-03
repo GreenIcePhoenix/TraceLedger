@@ -38,6 +38,9 @@ import com.greenicephoenix.traceledger.feature.update.checkForUpdate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
+import com.greenicephoenix.traceledger.feature.widget.WidgetConstants
+import com.greenicephoenix.traceledger.feature.widget.WidgetUpdateHelper
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -104,6 +107,12 @@ class MainActivity : ComponentActivity() {
             )
         }
 
+        // Read the widget's "add transaction" flag BEFORE setContent.
+        // We capture it here so it's stable — intent extras don't change
+        // after the activity is created.
+        val widgetNavigateToAdd = intent.getBooleanExtra(
+            WidgetConstants.EXTRA_NAVIGATE_TO_ADD, false
+        )
         setContent {
             val context = LocalContext.current
             val view    = LocalView.current
@@ -189,6 +198,14 @@ class MainActivity : ComponentActivity() {
 
                 // ── MAIN APP ──────────────────────────────────────────────────
                 val navController = rememberNavController()
+                // If launched by the widget's "+" button, navigate to Add Transaction.
+                // delay(300) waits for the NavGraph to be ready before navigating.
+                LaunchedEffect(Unit) {
+                    if (widgetNavigateToAdd) {
+                        delay(300L)
+                        navController.navigate(Routes.ADD_TRANSACTION)
+                    }
+                }
                 var currentRoute  by remember { mutableStateOf<String?>(null) }
 
                 val showBottomBar = currentRoute?.let { route ->
@@ -233,6 +250,13 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Refresh widget data every time the user returns from the app.
+        // This ensures the widget shows current balance after adding a transaction.
+        WidgetUpdateHelper.requestUpdate(this)
     }
 
     override fun onDestroy() {

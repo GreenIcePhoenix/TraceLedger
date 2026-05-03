@@ -18,7 +18,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
 import com.greenicephoenix.traceledger.domain.model.RecurringFrequency
 import java.math.BigDecimal
 import java.time.LocalDate
@@ -441,7 +440,7 @@ private fun FrequencySelector(
                             .fillMaxWidth()
                             .background(
                                 if (isSelected)
-                                    NothingRed.copy(alpha = 0.12f)
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                                 else Color.Transparent,
                                 RoundedCornerShape(12.dp)
                             )

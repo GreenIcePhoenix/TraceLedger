@@ -159,7 +159,7 @@ fun AddEditBudgetScreen(
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = "Save",
-                        tint = if (isValid) NothingRed else Color.Gray
+                        tint = if (isValid) MaterialTheme.colorScheme.primary else Color.Gray
                     )
                 }
             }

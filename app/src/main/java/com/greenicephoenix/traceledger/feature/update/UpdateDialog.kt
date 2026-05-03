@@ -19,6 +19,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
 import androidx.core.net.toUri
+import com.greenicephoenix.traceledger.core.ui.theme.WarningAmber
 
 /**
  * Modal dialog shown when [UpdateInfo] is non-null (a newer version exists on GitHub).
@@ -55,7 +56,7 @@ fun UpdateDialog(
                 Text(
                     text  = "UPDATE AVAILABLE",
                     style = MaterialTheme.typography.headlineMedium,
-                    color = NothingRed
+                    color = WarningAmber
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
@@ -106,7 +107,7 @@ fun UpdateDialog(
                     startDownload(context, updateInfo)
                     onDismiss()
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = NothingRed),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 shape  = RoundedCornerShape(12.dp)
             ) {
                 Text("Download & Install", color = Color.White)

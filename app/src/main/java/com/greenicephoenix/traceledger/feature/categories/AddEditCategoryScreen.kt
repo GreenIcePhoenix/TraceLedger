@@ -20,7 +20,6 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
-import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
 import com.greenicephoenix.traceledger.domain.model.CategoryType
 import com.greenicephoenix.traceledger.domain.model.CategoryUiModel
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -137,7 +136,7 @@ fun AddEditCategoryScreen(
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = "Save",
-                        tint = if (isValid) NothingRed else Color.Gray
+                        tint = if (isValid) MaterialTheme.colorScheme.primary else Color.Gray
                     )
                 }
             }
@@ -258,7 +257,7 @@ private fun CategoryTypeSelector(
                     .weight(1f)
                     .fillMaxHeight()
                     .background(
-                        if (isSelected) NothingRed.copy(alpha = 0.25f)
+                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
                         else Color.Transparent,
                         RoundedCornerShape(18.dp)
                     )
@@ -267,7 +266,7 @@ private fun CategoryTypeSelector(
             ) {
                 Text(
                     text = type.name,
-                    color = if (isSelected) NothingRed else MaterialTheme.colorScheme.onSurfaceVariant
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -303,7 +302,7 @@ private fun IconPicker(
                         .clip(CircleShape)
                         .background(
                             if (selected)
-                                NothingRed.copy(alpha = 0.25f)
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
                             else
                                 MaterialTheme.colorScheme.surfaceVariant
                         ),

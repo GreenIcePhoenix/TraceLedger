@@ -69,7 +69,7 @@ fun TemplatesScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick           = onAddTemplate,
-                containerColor    = NothingRed,
+                containerColor    = MaterialTheme.colorScheme.primary,
                 contentColor      = Color.White,
                 shape             = RoundedCornerShape(16.dp)
             ) {

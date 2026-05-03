@@ -19,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
 import com.greenicephoenix.traceledger.domain.model.CategoryType
 import com.greenicephoenix.traceledger.domain.model.CategoryUiModel
 
@@ -160,7 +159,7 @@ private fun CategoryTypeSelector(
                     .weight(1f)
                     .fillMaxHeight()
                     .background(
-                        if (selected) NothingRed.copy(alpha = 0.25f) else Color.Transparent,
+                        if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f) else Color.Transparent,
                         RoundedCornerShape(18.dp)
                     )
                     .clickable { onTypeChange(type) },
@@ -169,7 +168,7 @@ private fun CategoryTypeSelector(
                 Text(
                     text  = type.name,
                     style = MaterialTheme.typography.labelMedium,
-                    color = if (selected) NothingRed
+                    color = if (selected) MaterialTheme.colorScheme.primary
                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )
             }
@@ -203,7 +202,7 @@ private fun AddCategoryCard(isLightTheme: Boolean, onClick: () -> Unit) {
             Icon(
                 imageVector        = Icons.Default.Add,
                 contentDescription = "Add Category",
-                tint               = NothingRed,
+                tint               = MaterialTheme.colorScheme.primary,
                 modifier           = Modifier.size(28.dp)
             )
         }

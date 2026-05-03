@@ -31,7 +31,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
 import com.greenicephoenix.traceledger.core.util.AppLinks
 import androidx.core.net.toUri
 
@@ -113,7 +112,7 @@ fun SupportScreen(onBack: () -> Unit) {
         Icon(
             imageVector        = Icons.Default.Favorite,
             contentDescription = null,
-            tint               = NothingRed,
+            tint               = MaterialTheme.colorScheme.primary,
             modifier           = Modifier
                 .size(52.dp)
                 .align(Alignment.CenterHorizontally)
@@ -217,15 +216,15 @@ fun SupportScreen(onBack: () -> Unit) {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier        = Modifier.fillMaxWidth(),
                         colors          = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor   = NothingRed,
-                            focusedLabelColor    = NothingRed,
+                            focusedBorderColor   = MaterialTheme.colorScheme.primary,
+                            focusedLabelColor    = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
                         ),
                         shape = RoundedCornerShape(12.dp)
                     )
                 }
 
-                // UPI pay button — NothingRed filled
+                // UPI pay button — MaterialTheme.colorScheme.primary filled
                 Button(
                     onClick  = {
                         if (effectiveInr.isBlank() || effectiveInr == "0") return@Button
@@ -240,8 +239,8 @@ fun SupportScreen(onBack: () -> Unit) {
                     enabled  = effectiveInr.isNotBlank() && effectiveInr != "0",
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     colors   = ButtonDefaults.buttonColors(
-                        containerColor         = NothingRed,
-                        disabledContainerColor = NothingRed.copy(alpha = 0.4f)
+                        containerColor         = MaterialTheme.colorScheme.primary,
+                        disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
                     ),
                     shape    = RoundedCornerShape(12.dp)
                 ) {
@@ -299,7 +298,7 @@ fun SupportScreen(onBack: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    Text("Change", style = MaterialTheme.typography.labelSmall, color = NothingRed)
+                    Text("Change", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                 }
 
                 // PayPal preset chips + Custom chip
@@ -345,15 +344,15 @@ fun SupportScreen(onBack: () -> Unit) {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier        = Modifier.fillMaxWidth(),
                         colors          = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor   = NothingRed,
-                            focusedLabelColor    = NothingRed,
+                            focusedBorderColor   = MaterialTheme.colorScheme.primary,
+                            focusedLabelColor    = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f)
                         ),
                         shape = RoundedCornerShape(12.dp)
                     )
                 }
 
-                // PayPal button — same NothingRed filled style as UPI button
+                // PayPal button — same MaterialTheme.colorScheme.primary filled style as UPI button
                 // URL format: https://paypal.me/USERNAME/AMOUNTCURRENCYCODE
                 // e.g.        https://paypal.me/GreenIcePhoenix/100EUR
                 Button(
@@ -365,8 +364,8 @@ fun SupportScreen(onBack: () -> Unit) {
                     enabled  = effectiveUsd.isNotBlank() && effectiveUsd != "0",
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     colors   = ButtonDefaults.buttonColors(
-                        containerColor         = NothingRed,
-                        disabledContainerColor = NothingRed.copy(alpha = 0.4f)
+                        containerColor         = MaterialTheme.colorScheme.primary,
+                        disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
                     ),
                     shape    = RoundedCornerShape(12.dp)
                 ) {
@@ -414,7 +413,7 @@ fun SupportScreen(onBack: () -> Unit) {
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
                             .background(
-                                if (isSelected) NothingRed.copy(alpha = 0.10f) else Color.Transparent
+                                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.10f) else Color.Transparent
                             )
                             .clickable {
                                 selectedCurrency = currency
@@ -439,16 +438,16 @@ fun SupportScreen(onBack: () -> Unit) {
                                 Text(
                                     text  = currency.symbol,
                                     style = MaterialTheme.typography.titleMedium,
-                                    color = if (isSelected) NothingRed else MaterialTheme.colorScheme.onSurface
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                 )
                             }
                             Text(
                                 text  = currency.label,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = if (isSelected) NothingRed else MaterialTheme.colorScheme.onSurface
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                             )
                         }
-                        if (isSelected) Text("✓", color = NothingRed, style = MaterialTheme.typography.bodyMedium)
+                        if (isSelected) Text("✓", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
@@ -464,7 +463,7 @@ fun SupportScreen(onBack: () -> Unit) {
             containerColor = MaterialTheme.colorScheme.surface,
             title          = { Text("No UPI App Found", style = MaterialTheme.typography.titleMedium) },
             text           = { Text("Please install Google Pay, PhonePe, Paytm, or BHIM and try again.\n\nAlternatively use the PayPal option.") },
-            confirmButton  = { TextButton(onClick = { showNoUpiDialog = false }) { Text("OK", color = NothingRed) } }
+            confirmButton  = { TextButton(onClick = { showNoUpiDialog = false }) { Text("OK", color = MaterialTheme.colorScheme.primary) } }
         )
     }
 
@@ -475,7 +474,7 @@ fun SupportScreen(onBack: () -> Unit) {
             containerColor = MaterialTheme.colorScheme.surface,
             title          = { Text("Cannot Open PayPal", style = MaterialTheme.typography.titleMedium) },
             text           = { Text("Could not open a browser. Please install Chrome or Firefox and try again.") },
-            confirmButton  = { TextButton(onClick = { showNoBrowserDialog = false }) { Text("OK", color = NothingRed) } }
+            confirmButton  = { TextButton(onClick = { showNoBrowserDialog = false }) { Text("OK", color = MaterialTheme.colorScheme.primary) } }
         )
     }
 }
@@ -524,7 +523,7 @@ private fun AccordionCard(
                 Icon(
                     imageVector        = if (isOpen) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                     contentDescription = null,
-                    tint               = NothingRed,
+                    tint               = MaterialTheme.colorScheme.primary,
                     modifier           = Modifier.size(20.dp)
                 )
             }
@@ -574,10 +573,10 @@ private fun AmountChip(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(if (isSelected) NothingRed else MaterialTheme.colorScheme.background)
+            .background(if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.background)
             .border(
                 1.dp,
-                if (isSelected) NothingRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f),
+                if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f),
                 RoundedCornerShape(10.dp)
             )
             .clickable { onClick() }

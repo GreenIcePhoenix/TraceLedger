@@ -489,7 +489,7 @@ private fun AddAccountCard(onClick: () -> Unit) {
         colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Icon(Icons.Default.Add, null, tint = NothingRed, modifier = Modifier.size(28.dp))
+            Icon(Icons.Default.Add, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(28.dp))
         }
     }
 }

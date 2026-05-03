@@ -5,9 +5,11 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import androidx.compose.ui.graphics.toArgb
 import androidx.core.app.NotificationCompat
 import com.greenicephoenix.traceledger.MainActivity
 import com.greenicephoenix.traceledger.R
+import com.greenicephoenix.traceledger.core.ui.theme.SovereignViolet
 
 /**
  * Manages notification channels and posting of the daily reminder notification.
@@ -63,6 +65,7 @@ object NotificationHelper {
 
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)          // app icon in the notification shade
+            .setColor(SovereignViolet.toArgb())
             .setContentTitle("TraceLedger")
             .setContentText("Don't forget to log today's transactions!")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

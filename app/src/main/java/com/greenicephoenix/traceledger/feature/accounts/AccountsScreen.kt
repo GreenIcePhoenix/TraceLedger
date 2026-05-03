@@ -21,7 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.greenicephoenix.traceledger.core.currency.CurrencyFormatter
 import com.greenicephoenix.traceledger.core.currency.CurrencyManager
-import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
 import com.greenicephoenix.traceledger.domain.model.AccountUiModel
 
 @Composable
@@ -75,7 +74,7 @@ fun AccountsScreen(
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                     )
                     TextButton(onClick = onAddAccount) {
-                        Text("Add your first account", color = NothingRed)
+                        Text("Add your first account", color = MaterialTheme.colorScheme.primary)
                     }
                 }
             }

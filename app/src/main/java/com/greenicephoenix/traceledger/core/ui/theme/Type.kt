@@ -9,155 +9,161 @@ import androidx.compose.ui.unit.sp
 import com.greenicephoenix.traceledger.R
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Font setup
+// Font families
 //
-// DotMatrixFont — inspired by Nothing OS dot-matrix aesthetic.
-// This font is used for screen headers, key financial figures, and display text.
-// The font file lives at: res/font/dot_matrix.ttf
+// Three fonts, three distinct roles — no overlap:
 //
-// Licensing note: ensure dot_matrix.ttf in res/font/ is either:
-//   - OFL (SIL Open Font License) licensed, or
-//   - A custom font you own outright
-// before publishing to the Play Store.
+//   DotMatrixFont  →  display* only (the big financial numbers: total balance,
+//                     monthly totals). This is TraceLedger's signature. Kept
+//                     from the original Nothing OS design — financial figures
+//                     should feel distinct from all other text.
+//
+//   CinzelFont     →  headline* (screen-level titles: DASHBOARD, STATISTICS,
+//                     ACCOUNTS). GIP brand font — sharp, elegant, forged-in-stone.
+//                     License: SIL Open Font License (OFL) — Play Store safe.
+//
+//   OutfitFont     →  title*, body*, label* (all UI text, card headers, body
+//                     copy, chips, captions). Modern geometric sans. Far more
+//                     readable at small sizes than the old generic SansSerif.
+//                     License: OFL — Play Store safe.
+//
+// Font files location: app/src/main/res/font/
 // ─────────────────────────────────────────────────────────────────────────────
+
 val DotMatrixFont = FontFamily(
     Font(R.font.dot_matrix, FontWeight.Normal)
 )
 
+val CinzelFont = FontFamily(
+    Font(R.font.cinzel_regular, FontWeight.Normal),
+    Font(R.font.cinzel_bold,    FontWeight.Bold),
+    Font(R.font.cinzel_black,   FontWeight.Black)
+)
+
+val OutfitFont = FontFamily(
+    Font(R.font.outfit_light,    FontWeight.Light),
+    Font(R.font.outfit_regular,  FontWeight.Normal),
+    Font(R.font.outfit_medium,   FontWeight.Medium),
+    Font(R.font.outfit_semibold, FontWeight.SemiBold)
+)
+
 // ─────────────────────────────────────────────────────────────────────────────
 // TraceLedger Typography
-//
-// Usage rules:
-//   displayLarge / displayMedium / displaySmall  → Big financial numbers (balance, totals)
-//   headlineLarge / headlineMedium               → Screen titles (OVERVIEW, TRANSACTIONS)
-//   titleLarge / titleMedium                     → Section titles, card headers
-//   bodyLarge / bodyMedium / bodySmall           → Regular content text
-//   labelLarge / labelMedium / labelSmall        → Chips, badges, captions
-//
-// DotMatrixFont is ONLY used for display* and headline* styles.
-// All body and label text uses system SansSerif to stay readable.
 // ─────────────────────────────────────────────────────────────────────────────
 val TraceLedgerTypography = Typography(
 
-    // ── Display (large financial numbers) ────────────────────────────────────
+    // ── Display — DotMatrixFont ───────────────────────────────────────────────
+    // Used for: total balance (displaySmall), large financial figures.
+    // These are the app's signature numbers. DotMatrix makes them unmistakably
+    // "financial data", visually separated from all other text.
 
-    // Used for: nothing currently — reserved for full-screen balance views
     displayLarge = TextStyle(
         fontFamily = DotMatrixFont,
         fontWeight = FontWeight.Normal,
-        fontSize = 48.sp,
+        fontSize   = 48.sp,
         lineHeight = 56.sp
     ),
-
-    // Used for: nothing currently — reserved for prominent balance displays
     displayMedium = TextStyle(
         fontFamily = DotMatrixFont,
         fontWeight = FontWeight.Normal,
-        fontSize = 40.sp,
+        fontSize   = 40.sp,
         lineHeight = 48.sp
     ),
-
-    // FIX: Was missing — DashboardScreen uses displaySmall for total balance.
-    // Without this definition it fell back to Material3 default (Roboto),
-    // breaking the Nothing-brand dot-matrix aesthetic on the most important number.
     displaySmall = TextStyle(
         fontFamily = DotMatrixFont,
         fontWeight = FontWeight.Normal,
-        fontSize = 32.sp,
+        fontSize   = 32.sp,
         lineHeight = 40.sp
     ),
 
-    // ── Headlines (screen titles) ─────────────────────────────────────────────
+    // ── Headlines — CinzelFont ────────────────────────────────────────────────
+    // Used for: main screen titles (DASHBOARD, ACCOUNTS, STATISTICS, SETTINGS).
+    // Cinzel's sharp serifs give these titles a premium, branded character.
 
-    // Used for: main screen titles like "OVERVIEW", "TRANSACTIONS"
     headlineLarge = TextStyle(
-        fontFamily = DotMatrixFont,
-        fontWeight = FontWeight.Normal,
-        fontSize = 28.sp,
+        fontFamily = CinzelFont,
+        fontWeight = FontWeight.Bold,
+        fontSize   = 28.sp,
         lineHeight = 36.sp
     ),
-
-    // Used for: sub-screen titles
     headlineMedium = TextStyle(
-        fontFamily = DotMatrixFont,
-        fontWeight = FontWeight.Normal,
-        fontSize = 24.sp,
+        fontFamily = CinzelFont,
+        fontWeight = FontWeight.Bold,
+        fontSize   = 24.sp,
         lineHeight = 32.sp
     ),
-
     headlineSmall = TextStyle(
-        fontFamily = DotMatrixFont,
+        fontFamily = CinzelFont,
         fontWeight = FontWeight.Normal,
-        fontSize = 20.sp,
+        fontSize   = 20.sp,
         lineHeight = 28.sp
     ),
 
-    // ── Titles (card headers, section labels) ─────────────────────────────────
+    // ── Titles — OutfitFont ───────────────────────────────────────────────────
+    // Used for: card headers, section labels, dialog titles.
+    // Outfit SemiBold at these sizes is clean and highly legible.
 
     titleLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = OutfitFont,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 18.sp,
+        fontSize   = 18.sp,
         lineHeight = 26.sp
     ),
-
     titleMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = OutfitFont,
         fontWeight = FontWeight.Medium,
-        fontSize = 16.sp,
+        fontSize   = 16.sp,
         lineHeight = 24.sp
     ),
-
     titleSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = OutfitFont,
         fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
+        fontSize   = 14.sp,
         lineHeight = 20.sp
     ),
 
-    // ── Body (regular content) ────────────────────────────────────────────────
+    // ── Body — OutfitFont ─────────────────────────────────────────────────────
+    // Used for: transaction notes, settings descriptions, all paragraph text.
+    // Outfit Regular is noticeably more polished than generic SansSerif.
 
     bodyLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = OutfitFont,
         fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
+        fontSize   = 16.sp,
         lineHeight = 24.sp
     ),
-
     bodyMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = OutfitFont,
         fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
+        fontSize   = 14.sp,
         lineHeight = 20.sp
     ),
-
     bodySmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
-        fontWeight = FontWeight.Normal,
-        fontSize = 12.sp,
+        fontFamily = OutfitFont,
+        fontWeight = FontWeight.Light,
+        fontSize   = 12.sp,
         lineHeight = 16.sp
     ),
 
-    // ── Labels (chips, badges, captions) ─────────────────────────────────────
+    // ── Labels — OutfitFont ───────────────────────────────────────────────────
+    // Used for: chips, badges, captions, bottom nav labels.
 
     labelLarge = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = OutfitFont,
         fontWeight = FontWeight.Medium,
-        fontSize = 14.sp,
+        fontSize   = 14.sp,
         lineHeight = 20.sp
     ),
-
     labelMedium = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = OutfitFont,
         fontWeight = FontWeight.Medium,
-        fontSize = 12.sp,
+        fontSize   = 12.sp,
         lineHeight = 16.sp
     ),
-
     labelSmall = TextStyle(
-        fontFamily = FontFamily.SansSerif,
+        fontFamily = OutfitFont,
         fontWeight = FontWeight.Normal,
-        fontSize = 11.sp,
+        fontSize   = 11.sp,
         lineHeight = 16.sp
     )
 )

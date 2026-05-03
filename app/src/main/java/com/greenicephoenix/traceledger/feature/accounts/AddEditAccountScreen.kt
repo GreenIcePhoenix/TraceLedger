@@ -169,7 +169,7 @@ fun AddEditAccountScreen(
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = "Save",
-                        tint = if (isValidAccount) NothingRed else Color.Gray
+                        tint = if (isValidAccount) MaterialTheme.colorScheme.primary else Color.Gray
                     )
                 }
             }
@@ -271,7 +271,7 @@ private fun AccountTypeSelector(
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(20.dp))
                     .background(
-                        if (isSelected) NothingRed.copy(alpha = 0.25f)
+                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
                         else Color.Transparent
                     )
                     .clickable { onSelected(type) },
@@ -281,7 +281,7 @@ private fun AccountTypeSelector(
                     text = type.name.replace("_", " "),
                     color =
                         if (isSelected)
-                            NothingRed
+                            MaterialTheme.colorScheme.primary
                         else
                             MaterialTheme.colorScheme.onSurface,
                     style = MaterialTheme.typography.bodySmall,

@@ -13,7 +13,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
 import com.greenicephoenix.traceledger.core.util.ChangelogEntry
 import com.greenicephoenix.traceledger.core.util.ChangelogIconMapper
 import com.greenicephoenix.traceledger.core.util.VersionChangelog
@@ -60,12 +59,12 @@ fun WhatsNewSheet(
                         )
                         Surface(
                             shape = RoundedCornerShape(20.dp),
-                            color = NothingRed.copy(alpha = 0.12f)
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                         ) {
                             Text(
                                 text     = "v${changelog.version}",
                                 style    = MaterialTheme.typography.labelSmall,
-                                color    = NothingRed,
+                                color    = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                             )
                         }
@@ -111,7 +110,7 @@ fun WhatsNewSheet(
                         onClick  = onDismiss,
                         modifier = Modifier.fillMaxWidth(),
                         colors   = ButtonDefaults.buttonColors(
-                            containerColor = NothingRed
+                            containerColor = MaterialTheme.colorScheme.primary
                         ),
                         shape = RoundedCornerShape(14.dp)
                     ) {
@@ -143,7 +142,7 @@ private fun WhatsNewEntryRow(entry: ChangelogEntry) {
             modifier = Modifier
                 .size(38.dp)
                 .background(
-                    NothingRed.copy(alpha = 0.10f),
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.10f),
                     RoundedCornerShape(10.dp)
                 ),
             contentAlignment = Alignment.Center
@@ -151,7 +150,7 @@ private fun WhatsNewEntryRow(entry: ChangelogEntry) {
             Icon(
                 imageVector        = ChangelogIconMapper.get(entry.iconName),
                 contentDescription = null,
-                tint               = NothingRed,
+                tint               = MaterialTheme.colorScheme.primary,
                 modifier           = Modifier.size(18.dp)
             )
         }

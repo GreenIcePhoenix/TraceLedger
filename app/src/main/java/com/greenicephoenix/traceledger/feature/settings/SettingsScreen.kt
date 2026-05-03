@@ -12,13 +12,18 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.greenicephoenix.traceledger.BuildConfig
 import com.greenicephoenix.traceledger.core.currency.Currency
 import com.greenicephoenix.traceledger.core.currency.CurrencyManager
 import com.greenicephoenix.traceledger.core.currency.NumberFormatManager
@@ -28,12 +33,28 @@ import com.greenicephoenix.traceledger.core.export.ExportFormat
 import com.greenicephoenix.traceledger.core.importer.ImportPreview
 import com.greenicephoenix.traceledger.core.navigation.Routes
 import com.greenicephoenix.traceledger.core.notifications.ReminderScheduler
-import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
 import com.greenicephoenix.traceledger.core.ui.theme.ThemeManager
 import com.greenicephoenix.traceledger.core.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
 
 enum class ImportType { JSON, CSV }
+
+// ── Icon accent colours ───────────────────────────────────────────────────────
+// These are decorative only — not part of the Material3 theme.
+// Each colour family groups related settings visually:
+//   Green  → brand/money (Theme, Currency, Categories, Import)
+//   Blue   → data/format (Number Format, Export)
+//   Amber  → time/limits (Budgets, Reminder)
+//   Purple → utility    (Templates, About)
+private val IconGreen  = Color(0xFF2ECC71)
+private val IconBlue   = Color(0xFF638FD4)
+private val IconAmber  = Color(0xFFF59E0B)
+private val IconPurple = Color(0xFF9575CD)
+
+private val BgGreen  = Color(0xFF2ECC71).copy(alpha = 0.12f)
+private val BgBlue   = Color(0xFF638FD4).copy(alpha = 0.12f)
+private val BgAmber  = Color(0xFFF59E0B).copy(alpha = 0.12f)
+private val BgPurple = Color(0xFF9575CD).copy(alpha = 0.12f)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +73,7 @@ fun SettingsScreen(
     val coroutineScope = rememberCoroutineScope()
     val settingsStore  = remember { SettingsDataStore(context) }
 
-    // ── Sheet / dialog visibility flags ──────────────────────────────────────
+    // ── Sheet / dialog visibility ─────────────────────────────────────────────
     var pendingImportUri    by remember { mutableStateOf<Uri?>(null) }
     var importPreview       by remember { mutableStateOf<ImportPreview?>(null) }
     var showImportPreview   by remember { mutableStateOf(false) }
@@ -69,45 +90,51 @@ fun SettingsScreen(
 
     // ── Observed state ────────────────────────────────────────────────────────
     val currentCurrency  by CurrencyManager.currency.collectAsState()
-    val currentTheme     by ThemeManager.themeModeFlow(context).collectAsState(initial = ThemeMode.DARK)
+    // Default changed from DARK → SYSTEM to match the new ThemeManager default
+    val currentTheme     by ThemeManager.themeModeFlow(context).collectAsState(initial = ThemeMode.SYSTEM)
     val currentNumFormat by settingsStore.numberFormat.collectAsState(initial = null)
 
-    // Daily reminder state — read from DataStore
     val reminderEnabled by settingsStore.reminderEnabled.collectAsState(initial = false)
     val reminderHour    by settingsStore.reminderHour.collectAsState(initial = 22)
     val reminderMinute  by settingsStore.reminderMinute.collectAsState(initial = 0)
 
-    val numFormatLabel = when (currentNumFormat) {
-        NumberFormat.INDIAN.name        -> NumberFormat.INDIAN.label
-        NumberFormat.INTERNATIONAL.name -> NumberFormat.INTERNATIONAL.label
-        else                            -> "Indian (1,00,000)"
+    // ── Derived display strings ───────────────────────────────────────────────
+
+    // Human-readable label for the currently selected theme mode
+    val currentThemeLabel = when (currentTheme) {
+        ThemeMode.SYSTEM     -> "System"
+        ThemeMode.LIGHT      -> "Light"
+        ThemeMode.DARK       -> "Dark"
+        ThemeMode.ULTRA_DARK -> "Extra Dark"
     }
 
-    // Format reminder time as "10:00 PM" for the subtitle
+    val numFormatLabel = when (currentNumFormat) {
+        NumberFormat.INDIAN.name        -> "Indian"
+        NumberFormat.INTERNATIONAL.name -> "International"
+        else                            -> "Indian"
+    }
+
+    // e.g. "10:00 PM"
     val reminderTimeLabel = remember(reminderHour, reminderMinute) {
-        val amPm  = if (reminderHour < 12) "AM" else "PM"
+        val amPm   = if (reminderHour < 12) "AM" else "PM"
         val hour12 = when {
-            reminderHour == 0  -> 12
-            reminderHour > 12  -> reminderHour - 12
-            else               -> reminderHour
+            reminderHour == 0 -> 12
+            reminderHour > 12 -> reminderHour - 12
+            else              -> reminderHour
         }
         "$hour12:${reminderMinute.toString().padStart(2, '0')} $amPm"
     }
 
-    // ── POST_NOTIFICATIONS permission launcher (Android 13+) ─────────────────
-    // When the user turns on the reminder toggle, we request notification permission
-    // on Android 13+. On older versions the permission is granted at install time.
+    // ── Notification permission launcher (Android 13+) ────────────────────────
     val notificationPermLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            // Permission granted — actually enable the reminder
             coroutineScope.launch {
                 settingsStore.setReminderEnabled(true)
                 ReminderScheduler.schedule(context, reminderHour, reminderMinute)
             }
         }
-        // If denied: do nothing — the toggle stays off (we never wrote enabled=true)
     }
 
     // ── File launchers ────────────────────────────────────────────────────────
@@ -118,15 +145,17 @@ fun SettingsScreen(
         pendingExportFormat = null
     }
 
-    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
         if (uri != null && pendingImportType != null) {
             val type = pendingImportType ?: return@rememberLauncherForActivityResult
             when (type) {
                 ImportType.JSON, ImportType.CSV -> {
                     coroutineScope.launch {
                         try {
-                            importPreview    = onImportPreviewRequested(uri)
-                            pendingImportUri = uri
+                            importPreview     = onImportPreviewRequested(uri)
+                            pendingImportUri  = uri
                             showImportPreview = true
                         } catch (e: Exception) {
                             onImportError(e.message ?: "Invalid file")
@@ -144,98 +173,112 @@ fun SettingsScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .padding(horizontal = 20.dp)
+            .padding(top = 20.dp, bottom = 32.dp),
+        verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        Text(
-            text  = "SETTINGS",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onBackground
-        )
 
-        Spacer(Modifier.height(4.dp))
+        // Screen title — uses Cinzel via headlineMedium in TraceLedgerTypography
+        Text(
+            text     = "SETTINGS",
+            style    = MaterialTheme.typography.headlineMedium,
+            color    = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
 
         // ── APPEARANCE ────────────────────────────────────────────────────────
-        SettingsSectionLabel("APPEARANCE")
+        SettingsSectionLabel("Appearance")
 
-        SettingsItem(
-            title    = "Theme",
-            subtitle = if (currentTheme == ThemeMode.DARK) "Dark" else "Light",
-            onClick  = { showThemeSheet = true }
+        SettingsRow(
+            icon       = Icons.Outlined.Palette,
+            iconTint   = IconGreen,
+            iconBg     = BgGreen,
+            title      = "Theme",
+            value      = currentThemeLabel,
+            onClick    = { showThemeSheet = true }
+        )
+        SettingsRow(
+            icon       = Icons.Outlined.AttachMoney,
+            iconTint   = IconGreen,
+            iconBg     = BgGreen,
+            title      = "Currency",
+            value      = "${currentCurrency.code} ${currentCurrency.symbol}",
+            onClick    = { showCurrencySheet = true }
+        )
+        SettingsRow(
+            icon       = Icons.Outlined.Tag,
+            iconTint   = IconBlue,
+            iconBg     = BgBlue,
+            title      = "Number Format",
+            value      = numFormatLabel,
+            onClick    = { showNumberFormatSheet = true }
         )
 
-        SettingsItem(
-            title    = "Currency",
-            subtitle = "${currentCurrency.code} (${currentCurrency.symbol})",
-            onClick  = { showCurrencySheet = true }
-        )
-
-        SettingsItem(
-            title    = "Number Format",
-            subtitle = numFormatLabel,
-            onClick  = { showNumberFormatSheet = true }
-        )
-
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(20.dp))
 
         // ── FINANCE ───────────────────────────────────────────────────────────
-        SettingsSectionLabel("FINANCE")
+        SettingsSectionLabel("Finance")
 
-        SettingsItem(
-            title    = "Categories",
-            subtitle = "Manage income and expense categories",
-            onClick  = { onNavigate(Routes.CATEGORIES) }
+        SettingsRow(
+            icon    = Icons.Outlined.Category,
+            iconTint = IconGreen,
+            iconBg  = BgGreen,
+            title   = "Categories",
+            subtitle = "Expense & income",
+            onClick = { onNavigate(Routes.CATEGORIES) }
+        )
+        SettingsRow(
+            icon    = Icons.Outlined.PieChart,
+            iconTint = IconAmber,
+            iconBg  = BgAmber,
+            title   = "Budgets",
+            subtitle = "Monthly limits",
+            onClick = onBudgetsClick
+        )
+        SettingsRow(
+            icon    = Icons.Outlined.Repeat,
+            iconTint = IconBlue,
+            iconBg  = BgBlue,
+            title   = "Recurring",
+            subtitle = "Auto transactions",
+            onClick = { onNavigate(Routes.RECURRING) }
+        )
+        SettingsRow(
+            icon    = Icons.Outlined.BookmarkBorder,
+            iconTint = IconPurple,
+            iconBg  = BgPurple,
+            title   = "Templates",
+            subtitle = "Saved transactions",
+            onClick = { onNavigate(Routes.TEMPLATES) }
         )
 
-        SettingsItem(
-            title    = "Budgets",
-            subtitle = "Monthly spending limits",
-            onClick  = onBudgetsClick
-        )
-
-        SettingsItem(
-            title    = "Recurring Transactions",
-            subtitle = "Manage automatic repeating transactions",
-            onClick  = { onNavigate(Routes.RECURRING) }
-        )
-
-        SettingsItem(
-            title    = "Transaction Templates",
-            subtitle = "Save and reuse frequent transactions",
-            onClick  = { onNavigate(Routes.TEMPLATES) }
-        )
-
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(20.dp))
 
         // ── NOTIFICATIONS ─────────────────────────────────────────────────────
-        SettingsSectionLabel("NOTIFICATIONS")
+        SettingsSectionLabel("Notifications")
 
-        // Daily Reminder toggle row.
-        // Tapping the card when the reminder is ON opens the time picker.
-        // The Switch itself toggles the reminder on/off.
-        SettingsItemWithToggle(
+        SettingsRowToggle(
+            icon     = Icons.Outlined.Notifications,
+            iconTint = IconAmber,
+            iconBg   = BgAmber,
             title    = "Daily Reminder",
-            subtitle = if (reminderEnabled) "Enabled · $reminderTimeLabel"
-            else "Remind you to log transactions each day",
+            // Show time only when enabled — subtitle doubles as the status hint
+            subtitle = if (reminderEnabled) reminderTimeLabel
+            else "Remind you to log daily",
             checked  = reminderEnabled,
-            onClick  = {
-                // Tapping the card while enabled → open time picker to change time
-                if (reminderEnabled) showTimePicker = true
-            },
+            // Tapping the row while ON opens the time picker
+            onClick  = { if (reminderEnabled) showTimePicker = true },
             onCheckedChange = { enabled ->
                 if (enabled) {
-                    // Turning ON: request notification permission on Android 13+
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                         notificationPermLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                     } else {
-                        // Android 12 and below — permission is automatic
                         coroutineScope.launch {
                             settingsStore.setReminderEnabled(true)
                             ReminderScheduler.schedule(context, reminderHour, reminderMinute)
                         }
                     }
                 } else {
-                    // Turning OFF: cancel the alarm and clear the stored flag
                     coroutineScope.launch {
                         settingsStore.setReminderEnabled(false)
                         ReminderScheduler.cancel(context)
@@ -244,51 +287,60 @@ fun SettingsScreen(
             }
         )
 
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(20.dp))
 
         // ── DATA ──────────────────────────────────────────────────────────────
-        SettingsSectionLabel("DATA")
+        SettingsSectionLabel("Data")
 
-        SettingsItem(
-            title    = "Export data",
-            subtitle = "Backup your data as JSON or CSV",
-            onClick  = { showExportSheet = true }
+        SettingsRow(
+            icon    = Icons.Outlined.FileUpload,
+            iconTint = IconBlue,
+            iconBg  = BgBlue,
+            title   = "Export Data",
+            subtitle = "JSON · CSV",
+            onClick = { showExportSheet = true }
+        )
+        SettingsRow(
+            icon    = Icons.Outlined.FileDownload,
+            iconTint = IconGreen,
+            iconBg  = BgGreen,
+            title   = "Import Data",
+            subtitle = "Restore backup",
+            onClick = { showImportSheet = true }
         )
 
-        SettingsItem(
-            title    = "Import data",
-            subtitle = "Restore data from a backup file",
-            onClick  = { showImportSheet = true }
-        )
-
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(20.dp))
 
         // ── APP ───────────────────────────────────────────────────────────────
-        SettingsSectionLabel("APP")
+        SettingsSectionLabel("App")
 
-        SettingsItem(
-            title    = "Support the Developer",
-            subtitle = "Paypal/UPI — tip jar",
-            onClick  = { onNavigate(Routes.SUPPORT) }
-        )
+        // Support row — special brand-accented treatment to make it stand out
+        // without being obnoxious. Green tint border, glowing dot, own background.
+        SupportRow(onClick = { onNavigate(Routes.SUPPORT) })
 
-        SettingsItem(
-            title    = "About",
-            subtitle = "Version, changelog, and app info",
-            onClick  = { onNavigate(Routes.ABOUT) }
+        SettingsRow(
+            icon    = Icons.Outlined.Info,
+            iconTint = IconPurple,
+            iconBg  = BgPurple,
+            title   = "About",
+            // Show version inline so users don't have to open the page to check
+            subtitle = "v${BuildConfig.VERSION_NAME} · Changelog",
+            onClick = { onNavigate(Routes.ABOUT) }
         )
     }
 
-    // ── Time Picker Dialog ────────────────────────────────────────────────────
-    // Shown when the user taps the reminder row while it's already enabled.
-    // Material 3 TimePicker is used here — it gives a polished clock-face UI.
+    // ─────────────────────────────────────────────────────────────────────────
+    // Dialogs and Bottom Sheets
+    // Nothing below this line changes layout — all logic preserved as-is.
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // ── Time Picker ───────────────────────────────────────────────────────────
     if (showTimePicker) {
         val timePickerState = rememberTimePickerState(
             initialHour   = reminderHour,
             initialMinute = reminderMinute,
             is24Hour      = false
         )
-
         AlertDialog(
             onDismissRequest = { showTimePicker = false },
             shape            = RoundedCornerShape(20.dp),
@@ -296,19 +348,15 @@ fun SettingsScreen(
             title = {
                 Text(
                     text  = "REMINDER TIME",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.onSurface
                 )
             },
-            text = {
-                // TimePicker renders the clock face
-                TimePicker(state = timePickerState)
-            },
+            text = { TimePicker(state = timePickerState) },
             confirmButton = {
                 TextButton(onClick = {
                     showTimePicker = false
                     coroutineScope.launch {
-                        // Save the new time and re-schedule the alarm
                         settingsStore.setReminderTime(
                             hour   = timePickerState.hour,
                             minute = timePickerState.minute
@@ -320,26 +368,28 @@ fun SettingsScreen(
                         )
                     }
                 }) {
-                    Text("Set", color = NothingRed)
+                    // FIXED: was NothingRed — now uses theme primary (VinesGreen)
+                    Text("Set", color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showTimePicker = false }) {
-                    Text("Cancel", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                    Text(
+                        "Cancel",
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
                 }
             }
         )
     }
 
-    // ── BOTTOM SHEETS ─────────────────────────────────────────────────────────
-
+    // ── Currency Sheet ────────────────────────────────────────────────────────
     if (showCurrencySheet) {
         PickerBottomSheet(title = "Currency", onDismiss = { showCurrencySheet = false }) {
             Currency.entries.forEach { currency ->
-                val isSelected = currency == currentCurrency
                 PickerRow(
-                    label      = "${currency.code}  ${currency.symbol}  (${currency.code})",
-                    isSelected = isSelected,
+                    label      = "${currency.code}  ${currency.symbol}",
+                    isSelected = currency == currentCurrency,
                     onClick    = {
                         CurrencyManager.setCurrency(currency)
                         showCurrencySheet = false
@@ -349,13 +399,21 @@ fun SettingsScreen(
         }
     }
 
+    // ── Theme Sheet ───────────────────────────────────────────────────────────
     if (showThemeSheet) {
         PickerBottomSheet(title = "Theme", onDismiss = { showThemeSheet = false }) {
+            // Maps each ThemeMode enum value to its display label.
+            // ULTRA_DARK is shown as "Extra Dark" — more user-friendly than the enum name.
             ThemeMode.entries.forEach { mode ->
-                val isSelected = mode == currentTheme
+                val label = when (mode) {
+                    ThemeMode.SYSTEM     -> "System (follow device)"
+                    ThemeMode.LIGHT      -> "Light"
+                    ThemeMode.DARK       -> "Dark"
+                    ThemeMode.ULTRA_DARK -> "Extra Dark  (OLED)"
+                }
                 PickerRow(
-                    label      = if (mode == ThemeMode.DARK) "Dark" else "Light",
-                    isSelected = isSelected,
+                    label      = label,
+                    isSelected = mode == currentTheme,
                     onClick    = {
                         showThemeSheet = false
                         coroutineScope.launch { ThemeManager.setThemeMode(context, mode) }
@@ -365,17 +423,18 @@ fun SettingsScreen(
         }
     }
 
+    // ── Number Format Sheet ───────────────────────────────────────────────────
     if (showNumberFormatSheet) {
-        PickerBottomSheet(title = "Number Format", onDismiss = { showNumberFormatSheet = false }) {
+        PickerBottomSheet(
+            title     = "Number Format",
+            onDismiss = { showNumberFormatSheet = false }
+        ) {
             NumberFormat.entries.forEach { format ->
-                val isSelected = (currentNumFormat ?: NumberFormat.INDIAN.name) == format.name
                 PickerRow(
                     label      = "${format.label}  e.g. ${format.example}",
-                    isSelected = isSelected,
+                    isSelected = (currentNumFormat ?: NumberFormat.INDIAN.name) == format.name,
                     onClick    = {
                         showNumberFormatSheet = false
-                        // Use NumberFormatManager so CurrencyFormatter sees the change
-                        // immediately — no app restart required.
                         NumberFormatManager.setFormat(format)
                     }
                 )
@@ -383,12 +442,13 @@ fun SettingsScreen(
         }
     }
 
+    // ── Export Sheet ──────────────────────────────────────────────────────────
     if (showExportSheet) {
-        PickerBottomSheet(title = "Export data", onDismiss = { showExportSheet = false }) {
+        PickerBottomSheet(title = "Export Data", onDismiss = { showExportSheet = false }) {
             Text(
                 text     = "Choose a format",
                 style    = MaterialTheme.typography.bodySmall,
-                color    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                color    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
             Spacer(Modifier.height(8.dp))
@@ -413,8 +473,9 @@ fun SettingsScreen(
         }
     }
 
+    // ── Import Sheet ──────────────────────────────────────────────────────────
     if (showImportSheet) {
-        PickerBottomSheet(title = "Import data", onDismiss = { showImportSheet = false }) {
+        PickerBottomSheet(title = "Import Data", onDismiss = { showImportSheet = false }) {
             ExportOption(
                 title       = "JSON (full restore)",
                 description = "Replaces all data with backup contents",
@@ -442,6 +503,7 @@ fun SettingsScreen(
         }
     }
 
+    // ── Import Preview Sheet ──────────────────────────────────────────────────
     if (showImportPreview && importPreview != null) {
         ModalBottomSheet(onDismissRequest = {
             showImportPreview = false
@@ -455,7 +517,7 @@ fun SettingsScreen(
                 modifier            = Modifier.fillMaxWidth().padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Text("Import preview", style = MaterialTheme.typography.titleMedium)
+                Text("Import Preview", style = MaterialTheme.typography.titleMedium)
 
                 if (preview.accounts > 0)     Text("Accounts: ${preview.accounts}")
                 if (preview.categories > 0)   Text("Categories: ${preview.categories}")
@@ -464,7 +526,7 @@ fun SettingsScreen(
                 if (preview.validRows > 0)    Text("Valid rows: ${preview.validRows}")
                 if (preview.skippedRows > 0) {
                     Text(
-                        text  = "Skipped rows: ${preview.skippedRows}",
+                        "Skipped rows: ${preview.skippedRows}",
                         color = MaterialTheme.colorScheme.error
                     )
                 }
@@ -514,7 +576,7 @@ fun SettingsScreen(
         }
     }
 
-    // Import progress overlay — covers the screen while data is being written
+    // ── Import progress overlay ───────────────────────────────────────────────
     importProgress?.let { progress ->
         Box(
             modifier         = Modifier
@@ -551,97 +613,230 @@ fun SettingsScreen(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shared composables
+// Private composables
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Section label — small uppercase text above a group of rows.
+ * Uses onBackground at reduced opacity so it recedes behind the rows.
+ */
 @Composable
 private fun SettingsSectionLabel(text: String) {
     Text(
-        text     = text,
+        text     = text.uppercase(),
         style    = MaterialTheme.typography.labelSmall,
-        color    = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.45f),
-        modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+        color    = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.4f),
+        modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
     )
 }
 
-/** Standard settings row — tapping opens a sheet or navigates. */
+/**
+ * Standard settings row.
+ *
+ * Layout: [Icon] [Title + optional subtitle]  [optional value] [›]
+ *
+ * The icon sits in a small rounded square with a tinted background.
+ * The value (if provided) is shown in primary green before the chevron —
+ * so users can see what's currently set without opening the sheet.
+ */
 @Composable
-private fun SettingsItem(title: String, subtitle: String, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
-        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape    = MaterialTheme.shapes.medium
+private fun SettingsRow(
+    icon     : ImageVector,
+    iconTint : Color,
+    iconBg   : Color,
+    title    : String,
+    subtitle : String?  = null,
+    value    : String?  = null,
+    onClick  : () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.small)
+            .clickable { onClick() }
+            .padding(horizontal = 4.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        // Coloured icon container
+        Box(
+            modifier        = Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(9.dp))
+                .background(iconBg),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector        = icon,
+                contentDescription = null,
+                tint               = iconTint,
+                modifier           = Modifier.size(18.dp)
+            )
+        }
+
+        // Title + subtitle
+        Column(modifier = Modifier.weight(1f)) {
             Text(
                 text  = title,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
+            if (subtitle != null) {
+                Text(
+                    text  = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                )
+            }
+        }
+
+        // Current value — green, aligned right before the chevron
+        if (value != null) {
             Text(
-                text  = subtitle,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                text  = value,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary
             )
         }
+
+        // Chevron
+        Icon(
+            imageVector        = Icons.Outlined.ChevronRight,
+            contentDescription = null,
+            tint               = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.2f),
+            modifier           = Modifier.size(18.dp)
+        )
     }
 }
 
 /**
- * Settings row with a Switch on the trailing edge.
- * Tapping the card fires [onClick] (e.g. open time picker).
- * Tapping the Switch fires [onCheckedChange].
- * These are deliberately kept separate so the two touch targets behave differently.
+ * Settings row with a trailing Switch.
+ * Two separate touch targets:
+ *   - Row body  → onClick  (e.g. open time picker)
+ *   - Switch    → onCheckedChange (toggle on/off)
  */
 @Composable
-private fun SettingsItemWithToggle(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onClick: () -> Unit,
-    onCheckedChange: (Boolean) -> Unit
+private fun SettingsRowToggle(
+    icon            : ImageVector,
+    iconTint        : Color,
+    iconBg          : Color,
+    title           : String,
+    subtitle        : String?  = null,
+    checked         : Boolean,
+    onClick         : () -> Unit,
+    onCheckedChange : (Boolean) -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
-        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape    = MaterialTheme.shapes.medium
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.small)
+            .clickable { onClick() }
+            .padding(horizontal = 4.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
-            modifier          = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            modifier         = Modifier
+                .size(34.dp)
+                .clip(RoundedCornerShape(9.dp))
+                .background(iconBg),
+            contentAlignment = Alignment.Center
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text  = title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+            Icon(
+                imageVector        = icon,
+                contentDescription = null,
+                tint               = iconTint,
+                modifier           = Modifier.size(18.dp)
+            )
+        }
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text  = title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (subtitle != null) {
                 Text(
                     text  = subtitle,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
             }
-            Switch(
-                checked         = checked,
-                onCheckedChange = onCheckedChange,
-                colors          = SwitchDefaults.colors(
-                    checkedThumbColor  = MaterialTheme.colorScheme.surface,
-                    checkedTrackColor  = NothingRed,
-                    uncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                    uncheckedTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.15f)
-                )
-            )
         }
+
+        // FIXED: checkedTrackColor was NothingRed — now uses theme primary (VinesGreen)
+        Switch(
+            checked         = checked,
+            onCheckedChange = onCheckedChange,
+            colors          = SwitchDefaults.colors(
+                checkedThumbColor   = MaterialTheme.colorScheme.onPrimary,
+                checkedTrackColor   = MaterialTheme.colorScheme.primary,
+                uncheckedThumbColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                uncheckedTrackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
+            )
+        )
     }
 }
 
+/**
+ * Special "Support" row — stands apart from regular rows with a
+ * faint green tint background and branded accent border.
+ * Signals importance without being aggressive.
+ */
+@Composable
+private fun SupportRow(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.07f))
+            .clickable { onClick() }
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Glowing dot — a small brand signal without full icon weight
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.primary)
+        )
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text  = "Support TraceLedger",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text  = "UPI · PayPal — buy me a coffee",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+            )
+        }
+
+        Icon(
+            imageVector        = Icons.Outlined.ChevronRight,
+            contentDescription = null,
+            tint               = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f),
+            modifier           = Modifier.size(18.dp)
+        )
+    }
+
+    Spacer(Modifier.height(4.dp))
+}
+
+/**
+ * Reusable bottom sheet wrapper used by all picker sheets.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PickerBottomSheet(
-    title: String,
-    onDismiss: () -> Unit,
-    content: @Composable ColumnScope.() -> Unit
+    title     : String,
+    onDismiss : () -> Unit,
+    content   : @Composable ColumnScope.() -> Unit
 ) {
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -659,15 +854,23 @@ private fun PickerBottomSheet(
     }
 }
 
+/**
+ * Single selectable row inside a picker bottom sheet.
+ * Selected state: green tint background + green text + checkmark.
+ */
 @Composable
-private fun PickerRow(label: String, isSelected: Boolean, onClick: () -> Unit) {
+private fun PickerRow(
+    label      : String,
+    isSelected : Boolean,
+    onClick    : () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
             .background(
-                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                else Color.Transparent,
-                MaterialTheme.shapes.medium
+                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                else Color.Transparent
             )
             .clickable { onClick() }
             .padding(horizontal = 16.dp, vertical = 14.dp),
@@ -681,16 +884,30 @@ private fun PickerRow(label: String, isSelected: Boolean, onClick: () -> Unit) {
             modifier = Modifier.weight(1f)
         )
         if (isSelected) {
-            Text("✓", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
+            Icon(
+                imageVector        = Icons.Outlined.Check,
+                contentDescription = null,
+                tint               = MaterialTheme.colorScheme.primary,
+                modifier           = Modifier.size(18.dp)
+            )
         }
     }
 }
 
+/**
+ * Used inside Export and Import sheets to show a two-line option card.
+ */
 @Composable
-private fun ExportOption(title: String, description: String, onClick: () -> Unit) {
+private fun ExportOption(
+    title       : String,
+    description : String,
+    onClick     : () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
-        colors   = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors   = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
