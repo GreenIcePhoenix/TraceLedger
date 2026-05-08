@@ -40,6 +40,9 @@ object Routes {
     const val IMPORT_HUB    = "import_hub"
     const val IMPORT_REVIEW = "import_review/{accountId}"
     const val IMPORT_RESULT = "import_result/{imported}/{skipped}/{duplicates}"
+    const val SMS_SETTINGS = "sms_settings"
+    const val SMS_REVIEW   = "sms_review"
+
 
     /** Build a concrete IMPORT_REVIEW route for a given accountId. */
     fun importReviewFor(accountId: String) = "import_review/$accountId"

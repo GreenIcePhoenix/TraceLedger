@@ -105,6 +105,11 @@ class DashboardViewModel(
                 lastMonthTotal  = last
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    // In DashboardViewModel:
+    val smsPendingCount: StateFlow<Int> = smsQueueRepository
+        .observePendingCount()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
 }
 
 class DashboardViewModelFactory(

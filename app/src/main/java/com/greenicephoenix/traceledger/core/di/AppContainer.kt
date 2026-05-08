@@ -1,6 +1,9 @@
 package com.greenicephoenix.traceledger.core.di
 
+import android.app.Application
 import android.content.Context
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import com.greenicephoenix.traceledger.core.database.TraceLedgerDatabase
 import com.greenicephoenix.traceledger.core.datastore.SettingsDataStore
 import com.greenicephoenix.traceledger.core.export.ExportService
@@ -22,6 +25,10 @@ import com.greenicephoenix.traceledger.feature.templates.TemplatesViewModelFacto
 // v1.3.0 imports
 import com.greenicephoenix.traceledger.feature.accountimport.repository.StatementImportRepository
 import com.greenicephoenix.traceledger.feature.accountimport.viewmodel.StatementImportViewModelFactory
+import com.greenicephoenix.traceledger.feature.sms.repository.SmsQueueRepository
+import com.greenicephoenix.traceledger.feature.sms.repository.SmsRuleRepository
+import com.greenicephoenix.traceledger.feature.sms.viewmodel.SmsReviewViewModel
+import com.greenicephoenix.traceledger.feature.sms.viewmodel.SmsSettingsViewModel
 
 class AppContainer(private val context: Context) {
 
@@ -110,4 +117,41 @@ class AppContainer(private val context: Context) {
             appContext       = context.applicationContext,
             importRepository = statementImportRepository
         )
+
+    // --- SMS Repositories ---
+    val smsQueueRepository: SmsQueueRepository by lazy {
+        SmsQueueRepository(
+            smsPendingDao = database.smsPendingTransactionDao(),
+            smsCustomRuleDao = database.smsCustomRuleDao(),
+            transactionDao = database.transactionDao(),
+            accountDao = database.accountDao(),
+            categoryDao = database.categoryDao(),
+            context = appContext,
+        )
+    }
+
+    val smsRuleRepository: SmsRuleRepository by lazy {
+        SmsRuleRepository(dao = database.smsCustomRuleDao())
+    }
+
+    // --- SMS ViewModel Factories ---
+    val smsSettingsViewModelFactory = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T =
+            SmsSettingsViewModel(
+                application = appContext as Application,
+                smsQueueRepository = smsQueueRepository,
+                settingsDataStore = settingsDataStore,
+            ) as T
+    }
+
+    val smsReviewViewModelFactory = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T =
+            SmsReviewViewModel(
+                repository = smsQueueRepository,
+                accountDao = database.accountDao(),
+                categoryDao = database.categoryDao(),
+            ) as T
+    }
 }

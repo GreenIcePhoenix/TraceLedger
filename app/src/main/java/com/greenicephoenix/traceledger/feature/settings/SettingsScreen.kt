@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -316,6 +317,16 @@ fun SettingsScreen(
             subtitle = "Bank account & credit card statements • Support varies by format",
             value    = "NEW",
             onClick  = { onNavigate(Routes.IMPORT_HUB) }
+        )
+
+        SettingsRow(
+            icon     = Icons.Default.Sms,
+            iconTint = IconPurple,
+            iconBg   = BgPurple,
+            title    = "SMS Detection",
+            subtitle = "",
+            value    = "NEW",
+            onClick = { onNavigate(Routes.SMS_SETTINGS) }
         )
 
         Spacer(Modifier.height(20.dp))

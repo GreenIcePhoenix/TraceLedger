@@ -2,7 +2,6 @@ package com.greenicephoenix.traceledger.core.database.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import androidx.room.Upsert
@@ -63,4 +62,6 @@ interface AccountDao {
     @Query("DELETE FROM accounts")
     suspend fun deleteAll()
 
+    @Query("SELECT * FROM accounts WHERE SUBSTR(accountNumber, -4) = :lastFour LIMIT 1")
+    suspend fun findByLastFour(lastFour: String): AccountEntity?
 }

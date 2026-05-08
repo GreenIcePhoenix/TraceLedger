@@ -9,8 +9,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * amount is stored as TEXT (nullable) so no Room type converter is needed here.
  */
 val MIGRATION_10_11 = object : Migration(10, 11) {
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL(
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
             """
             CREATE TABLE IF NOT EXISTS transaction_templates (
                 id            TEXT NOT NULL PRIMARY KEY,

@@ -54,6 +54,7 @@ fun DashboardScreen(
     val savingsSummary       by dashboardViewModel.savingsSummary.collectAsState()
     val netWorthTrend        by dashboardViewModel.netWorthTrend.collectAsState()
     val forecast             by dashboardViewModel.spendingForecast.collectAsState()
+    val smsPendingCount      by dashboardViewModel.smsPendingCount.collectAsState()
 
     val budgetStatuses          by budgetsViewModel.budgetStatuses.collectAsState()
     val hasExceededBudgets      by budgetsViewModel.hasExceededBudgets.collectAsState()

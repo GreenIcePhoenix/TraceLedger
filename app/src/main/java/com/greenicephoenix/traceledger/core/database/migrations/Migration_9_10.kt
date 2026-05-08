@@ -8,8 +8,8 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 // which enables pause/resume functionality for recurring rules.
 // DEFAULT 1 means all existing recurring rules are active after migration.
 val MIGRATION_9_10 = object : Migration(9, 10) { // FIX: was incorrectly (8, 9)
-    override fun migrate(database: SupportSQLiteDatabase) {
-        database.execSQL(
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
             """
             ALTER TABLE recurring_transactions
             ADD COLUMN isActive INTEGER NOT NULL DEFAULT 1

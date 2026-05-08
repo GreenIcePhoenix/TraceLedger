@@ -1,7 +1,6 @@
 package com.greenicephoenix.traceledger.core.navigation
 
 import android.net.Uri
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
@@ -46,6 +45,10 @@ import com.greenicephoenix.traceledger.feature.transactions.HistoryScreen
 import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewModel
 import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewModelFactory
 import com.greenicephoenix.traceledger.feature.accountimport.ui.ImportResultScreen
+import com.greenicephoenix.traceledger.feature.sms.ui.SmsReviewScreen
+import com.greenicephoenix.traceledger.feature.sms.ui.SmsSettingsScreen
+import com.greenicephoenix.traceledger.feature.sms.viewmodel.SmsReviewViewModel
+import com.greenicephoenix.traceledger.feature.sms.viewmodel.SmsSettingsViewModel
 import kotlinx.coroutines.launch
 
 @Composable
@@ -594,6 +597,29 @@ fun TraceLedgerNavGraph(
                         launchSingleTop = true
                     }
                 }
+            )
+        }
+
+        // ADD these two composable destinations inside your NavHost { ... } block:
+
+        composable(Routes.SMS_SETTINGS) {
+            val viewModel: SmsSettingsViewModel = viewModel(
+                factory = app.container.smsSettingsViewModelFactory
+            )
+            SmsSettingsScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToReview = { navController.navigate(Routes.SMS_REVIEW) }
+            )
+        }
+
+        composable(Routes.SMS_REVIEW) {
+            val viewModel: SmsReviewViewModel = viewModel(
+                factory = app.container.smsReviewViewModelFactory
+            )
+            SmsReviewScreen(
+                viewModel = viewModel,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }
