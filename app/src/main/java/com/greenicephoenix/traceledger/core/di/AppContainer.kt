@@ -19,8 +19,11 @@ import com.greenicephoenix.traceledger.feature.recurring.RecurringTransactionsVi
 import com.greenicephoenix.traceledger.feature.statistics.StatisticsViewModelFactory
 import com.greenicephoenix.traceledger.feature.templates.data.TemplateRepository
 import com.greenicephoenix.traceledger.feature.templates.TemplatesViewModelFactory
+// v1.3.0 imports
+import com.greenicephoenix.traceledger.feature.accountimport.repository.StatementImportRepository
+import com.greenicephoenix.traceledger.feature.accountimport.viewmodel.StatementImportViewModelFactory
 
-class AppContainer(context: Context) {
+class AppContainer(private val context: Context) {
 
     private val database = TraceLedgerDatabase.getInstance(context)
 
@@ -54,6 +57,17 @@ class AppContainer(context: Context) {
         TemplateRepository(database.transactionTemplateDao())
     }
 
+    // ── v1.3.0: Statement Import ──────────────────────────────────────────────
+    // StatementImportRepository handles all DB writes for the import feature:
+    // bulk inserts, duplicate checks, and balance strategy execution.
+    val statementImportRepository: StatementImportRepository by lazy {
+        StatementImportRepository(
+            database       = database,
+            transactionDao = database.transactionDao(),
+            accountDao     = database.accountDao()
+        )
+    }
+
     val exportService by lazy {
         ExportService(database = database, contentResolver = context.contentResolver)
     }
@@ -68,6 +82,8 @@ class AppContainer(context: Context) {
             transactionRepository = transactionRepository
         )
     }
+
+    // ── ViewModel factories ───────────────────────────────────────────────────
 
     val accountsViewModelFactory   = AccountsViewModelFactory(accountRepository)
     val categoriesViewModelFactory = CategoriesViewModelFactory(categoryRepository)
@@ -84,4 +100,14 @@ class AppContainer(context: Context) {
     val templatesViewModelFactory by lazy {
         TemplatesViewModelFactory(templateRepository)
     }
+
+    // ── v1.3.0: Statement import ViewModel factory ────────────────────────────
+    // Returns a new factory each time — the factory is lightweight.
+    // The ViewModel itself is scoped to the NavBackStackEntry (in NavGraph),
+    // so it lives exactly as long as the review screen.
+    val statementImportViewModelFactory: StatementImportViewModelFactory
+        get() = StatementImportViewModelFactory(
+            appContext       = context.applicationContext,
+            importRepository = statementImportRepository
+        )
 }

@@ -18,13 +18,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.greenicephoenix.traceledger.BuildConfig
-import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
+import androidx.compose.foundation.Image
 import com.greenicephoenix.traceledger.core.ui.theme.SuccessGreen
 import com.greenicephoenix.traceledger.core.ui.theme.WarningAmber
 import com.greenicephoenix.traceledger.core.util.AppLinks
@@ -37,6 +39,7 @@ import com.greenicephoenix.traceledger.feature.update.checkForUpdate
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.greenicephoenix.traceledger.R
 
 /**
  * About screen.
@@ -237,7 +240,7 @@ private fun CheckForUpdatesRow(
         Box(
             modifier = Modifier
                 .size(38.dp)
-                .background(NothingRed.copy(alpha = 0.10f), RoundedCornerShape(10.dp)),
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f), RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -335,6 +338,7 @@ private fun AppIdentityCard() {
         }
     }
 }
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ConnectCard

@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import com.greenicephoenix.traceledger.core.database.entity.AccountEntity
 import kotlinx.coroutines.flow.Flow
 import java.math.BigDecimal
@@ -18,7 +19,10 @@ interface AccountDao {
     @Query("SELECT * FROM accounts WHERE id = :accountId LIMIT 1")
     suspend fun getAccountById(accountId: String): AccountEntity?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+//    @Insert(onConflict = OnConflictStrategy.REPLACE)
+//    suspend fun upsertAccount(account: AccountEntity)
+
+    @Upsert
     suspend fun upsertAccount(account: AccountEntity)
 
     @Update

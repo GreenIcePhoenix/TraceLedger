@@ -1,6 +1,7 @@
 package com.greenicephoenix.traceledger.feature.accounts
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,10 +12,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
@@ -26,16 +29,18 @@ import com.greenicephoenix.traceledger.domain.model.AccountUiModel
 @Composable
 fun AccountsScreen(
     accounts: List<AccountUiModel>,
-    // Phase 2: ViewModel passed in so we can observe deleteError directly
     viewModel: AccountsViewModel,
     onBack: () -> Unit,
     onAddAccount: () -> Unit,
-    onAccountClick: (AccountUiModel) -> Unit
+    onAccountClick: (AccountUiModel) -> Unit,
+    // v1.3.0: navigates to the Import Hub from the banner at top of accounts list.
+    // Wired in NavGraph: onNavigateToImport = { navController.navigate(Routes.IMPORT_HUB) }
+    onNavigateToImport: () -> Unit = {}
 ) {
     var accountPendingDeletion by remember { mutableStateOf<AccountUiModel?>(null) }
 
-    // Phase 2: observe delete errors from ViewModel instead of a local boolean.
-    // When Room's FK constraint fires, the error message flows here automatically.
+    // Observe delete errors from ViewModel. When Room's FK constraint fires,
+    // the error message flows here automatically.
     val deleteError by viewModel.deleteError.collectAsState()
 
     Column(
@@ -45,8 +50,8 @@ fun AccountsScreen(
     ) {
         // ── HEADER ────────────────────────────────────────────────────────────
         AccountsHeader(
-            vaultCount  = accounts.size,
-            onBack      = onBack,
+            vaultCount   = accounts.size,
+            onBack       = onBack,
             onAddAccount = onAddAccount
         )
 
@@ -85,11 +90,43 @@ fun AccountsScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+
+                // Import nudge banner — soft prompt, not a blocking UI element.
+                // Tapping it navigates to Settings → Import Hub.
+                // Shown only when there are accounts (user is ready to import).
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            // Slight inner padding reduction so it sits flush
+                            // with the account cards below it.
+                            .padding(bottom = 4.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.07f))
+                            .clickable { onNavigateToImport() }
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.FileDownload,
+                            contentDescription = null,
+                            tint     = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            text  = "Have a bank statement? Import it to auto-fill transactions.",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
                 items(accounts, key = { it.id }) { account ->
                     AccountRowCard(
-                        account      = account,
-                        onClick      = { onAccountClick(account) },
-                        onLongPress  = { accountPendingDeletion = account }
+                        account     = account,
+                        onClick     = { onAccountClick(account) },
+                        onLongPress = { accountPendingDeletion = account }
                     )
                 }
             }
@@ -126,9 +163,6 @@ fun AccountsScreen(
     }
 
     // ── DELETE BLOCKED ERROR DIALOG ───────────────────────────────────────────
-    // Phase 2: shown when the ViewModel's deleteError StateFlow emits a message.
-    // Previously this was a local Boolean that was unreliable because the
-    // Room exception happened in a coroutine the UI couldn't observe.
     deleteError?.let { message ->
         AlertDialog(
             onDismissRequest = { viewModel.clearDeleteError() },
@@ -142,6 +176,8 @@ fun AccountsScreen(
         )
     }
 }
+
+// ── Private composables ────────────────────────────────────────────────────────
 
 @Composable
 private fun AccountsHeader(
@@ -210,7 +246,7 @@ private fun AccountRowCard(
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Colour dot / icon
+            // Colour dot
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -228,9 +264,9 @@ private fun AccountRowCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text  = account.name.uppercase(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    text       = account.name.uppercase(),
+                    style      = MaterialTheme.typography.bodyMedium,
+                    color      = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
@@ -242,9 +278,9 @@ private fun AccountRowCard(
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text  = CurrencyFormatter.format(account.balance.toPlainString(), currency),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    text       = CurrencyFormatter.format(account.balance.toPlainString(), currency),
+                    style      = MaterialTheme.typography.bodyMedium,
+                    color      = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(

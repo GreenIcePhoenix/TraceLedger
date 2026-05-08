@@ -1,5 +1,7 @@
 package com.greenicephoenix.traceledger.core.navigation
 
+import android.net.Uri
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
@@ -11,8 +13,12 @@ import com.greenicephoenix.traceledger.feature.about.AboutScreen
 import com.greenicephoenix.traceledger.feature.accounts.AccountsScreen
 import com.greenicephoenix.traceledger.feature.accounts.AccountsViewModel
 import com.greenicephoenix.traceledger.feature.accounts.AddEditAccountScreen
+import com.greenicephoenix.traceledger.feature.accountimport.ui.ImportHubScreen
+import com.greenicephoenix.traceledger.feature.accountimport.ui.ImportReviewScreen
 import com.greenicephoenix.traceledger.feature.addtransaction.AddTransactionScreen
 import com.greenicephoenix.traceledger.feature.addtransaction.AddTransactionViewModel
+import com.greenicephoenix.traceledger.feature.addtransaction.AddTransactionEvent
+import com.greenicephoenix.traceledger.feature.addtransaction.AddTransactionViewModelFactory
 import com.greenicephoenix.traceledger.feature.budgets.AddEditBudgetScreen
 import com.greenicephoenix.traceledger.feature.budgets.BudgetsScreen
 import com.greenicephoenix.traceledger.feature.budgets.BudgetsViewModel
@@ -32,16 +38,15 @@ import com.greenicephoenix.traceledger.feature.statistics.ExpenseBreakdownScreen
 import com.greenicephoenix.traceledger.feature.statistics.IncomeBreakdownScreen
 import com.greenicephoenix.traceledger.feature.statistics.StatisticsScreen
 import com.greenicephoenix.traceledger.feature.statistics.StatisticsViewModel
-import com.greenicephoenix.traceledger.feature.transactions.HistoryScreen
-import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewModel
-import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewModelFactory
-import kotlinx.coroutines.launch
 import com.greenicephoenix.traceledger.feature.support.SupportScreen
 import com.greenicephoenix.traceledger.feature.templates.AddEditTemplateScreen
 import com.greenicephoenix.traceledger.feature.templates.TemplatesScreen
 import com.greenicephoenix.traceledger.feature.templates.TemplatesViewModel
-import com.greenicephoenix.traceledger.feature.addtransaction.AddTransactionEvent
-import com.greenicephoenix.traceledger.feature.addtransaction.AddTransactionViewModelFactory
+import com.greenicephoenix.traceledger.feature.transactions.HistoryScreen
+import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewModel
+import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewModelFactory
+import com.greenicephoenix.traceledger.feature.accountimport.ui.ImportResultScreen
+import kotlinx.coroutines.launch
 
 @Composable
 fun TraceLedgerNavGraph(
@@ -99,13 +104,14 @@ fun TraceLedgerNavGraph(
         /* ── ACCOUNTS ──────────────────────────────────────────────────────── */
         composable(Routes.ACCOUNTS) {
             AccountsScreen(
-                accounts       = accounts,
-                viewModel      = accountsViewModel,
-                onBack         = { navController.popBackStack() },
-                onAddAccount   = { navController.navigate(Routes.ADD_ACCOUNT) },
-                onAccountClick = { account ->
+                accounts           = accounts,
+                viewModel          = accountsViewModel,
+                onBack             = { navController.popBackStack() },
+                onAddAccount       = { navController.navigate(Routes.ADD_ACCOUNT) },
+                onAccountClick     = { account ->
                     navController.navigate(Routes.EDIT_ACCOUNT.replace("{accountId}", account.id))
-                }
+                },
+                onNavigateToImport = { navController.navigate(Routes.IMPORT_HUB) }
             )
         }
 
@@ -163,7 +169,7 @@ fun TraceLedgerNavGraph(
                     templateRepository    = app.container.templateRepository
                 )
             )
-            val state by addTransactionViewModel.state.collectAsState()
+            val state     by addTransactionViewModel.state.collectAsState()
             val templates by addTransactionViewModel.templates.collectAsState()
             AddTransactionScreen(
                 state      = state,
@@ -181,7 +187,6 @@ fun TraceLedgerNavGraph(
                     addTransactionViewModel.consumeSaveCompleted()
                 }
             }
-            // Show snackbar when a template is saved from this screen
             LaunchedEffect(state.templateSaved) {
                 if (state.templateSaved) {
                     scope.launch { snackbarHostState.showSnackbar("Template saved") }
@@ -222,7 +227,7 @@ fun TraceLedgerNavGraph(
             }
         }
 
-        /* ── STATISTICS (nested graph) ─────────────────────────────────────── */
+        /* ── STATISTICS ────────────────────────────────────────────────────── */
         navigation(route = Routes.STATISTICS, startDestination = Routes.STATISTICS_OVERVIEW) {
             composable(Routes.STATISTICS_OVERVIEW) { backStackEntry ->
                 val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
@@ -380,7 +385,11 @@ fun TraceLedgerNavGraph(
 
         composable(
             route     = "${Routes.ADD_EDIT_BUDGET}/{budgetId}",
-            arguments = listOf(navArgument("budgetId") { type = NavType.StringType; nullable = true; defaultValue = null })
+            arguments = listOf(navArgument("budgetId") {
+                type         = NavType.StringType
+                nullable     = true
+                defaultValue = null
+            })
         ) { backStackEntry ->
             val budgetId      = backStackEntry.arguments?.getString("budgetId")
             val selectedMonth by budgetsViewModel.selectedMonth.collectAsState()
@@ -394,16 +403,9 @@ fun TraceLedgerNavGraph(
         }
 
         /* ── ABOUT ─────────────────────────────────────────────────────────── */
-        // onPrivacyPolicy and onTerms callbacks removed — AboutScreen now opens
-        // website URLs directly via LocalUriHandler. No internal routes needed.
         composable(Routes.ABOUT) {
-            AboutScreen(
-                onBack = { navController.popBackStack() }
-            )
+            AboutScreen(onBack = { navController.popBackStack() })
         }
-
-        // REMOVED: Routes.PRIVACY_POLICY composable (PrivacyPolicyScreen deleted)
-        // REMOVED: Routes.TERMS composable (TermsScreen deleted)
 
         /* ── RECURRING ─────────────────────────────────────────────────────── */
         composable(Routes.RECURRING) {
@@ -451,12 +453,12 @@ fun TraceLedgerNavGraph(
             )
         }
 
-        /* ── SUPPORT ──────────────────────────────────────────────────────── */
+        /* ── SUPPORT ───────────────────────────────────────────────────────── */
         composable(Routes.SUPPORT) {
             SupportScreen(onBack = { navController.popBackStack() })
         }
 
-        /* ── TEMPLATES ─────────────────────────────────────────────────────────── */
+        /* ── TEMPLATES ─────────────────────────────────────────────────────── */
         composable(Routes.TEMPLATES) {
             val vm: TemplatesViewModel = viewModel(factory = app.container.templatesViewModelFactory)
             val templates by vm.templates.collectAsState()
@@ -492,11 +494,6 @@ fun TraceLedgerNavGraph(
             val vm: TemplatesViewModel = viewModel(factory = app.container.templatesViewModelFactory)
             val templates by vm.templates.collectAsState()
             val existing = templates.firstOrNull { it.id == templateId }
-
-            // key(existing) forces AddEditTemplateScreen to fully reinitialise
-            // its remember{} state when the template loads from DB.
-            // Without this, the screen renders once with null (empty fields)
-            // and never re-runs the remember blocks when data arrives.
             key(existing) {
                 AddEditTemplateScreen(
                     existingTemplate = existing,
@@ -506,6 +503,98 @@ fun TraceLedgerNavGraph(
                     onCancel         = { navController.popBackStack() }
                 )
             }
+        }
+
+        /* ── IMPORT HUB — Step 1 ───────────────────────────────────────────── */
+        composable(Routes.IMPORT_HUB) {
+            ImportHubScreen(
+                accounts = accounts,
+                onBack   = { navController.popBackStack() },
+                onFileReady = { accountId, fileUri ->
+                    // Store URI in SavedStateHandle — URIs contain characters that
+                    // break URL encoding if passed as a route argument directly.
+                    navController.currentBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("pending_import_uri", fileUri.toString())
+                    navController.navigate(Routes.importReviewFor(accountId))
+                }
+            )
+        }
+
+        /* ── IMPORT REVIEW — Step 2 ────────────────────────────────────────── */
+        composable(
+            route     = Routes.IMPORT_REVIEW,
+            arguments = listOf(navArgument("accountId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val accountId = backStackEntry.arguments?.getString("accountId") ?: return@composable
+
+            // Retrieve URI stored by IMPORT_HUB before navigating here
+            val uriString = navController
+                .previousBackStackEntry
+                ?.savedStateHandle
+                ?.get<String>("pending_import_uri")
+            val fileUri = uriString?.let { Uri.parse(it) }
+
+            if (fileUri == null) {
+                // URI lost (e.g. process death) — go back so user can re-pick file
+                LaunchedEffect(Unit) { navController.popBackStack() }
+                return@composable
+            }
+
+            ImportReviewScreen(
+                accountId    = accountId,
+                fileUri      = fileUri,
+                accounts     = accounts,
+                categories   = categories,
+                vmFactory    = app.container.statementImportViewModelFactory,
+                onBack       = { navController.popBackStack() },
+                onRetry      = { navController.popBackStack(Routes.IMPORT_HUB, inclusive = false) },
+                onImportDone = { imported, skipped, duplicates ->
+                    // Pop IMPORT_REVIEW and IMPORT_HUB off the back stack,
+                    // then go to result screen. User can't "back" into review
+                    // after a successful import — the data is already written.
+                    navController.navigate(
+                        Routes.importResultRoute(imported, skipped, duplicates)
+                    ) {
+                        popUpTo(Routes.IMPORT_HUB) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        /* ── IMPORT RESULT — Step 3 ────────────────────────────────────────────── */
+        composable(
+            route     = Routes.IMPORT_RESULT,
+            arguments = listOf(
+                navArgument("imported")   { type = NavType.IntType },
+                navArgument("skipped")    { type = NavType.IntType },
+                navArgument("duplicates") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val imported   = backStackEntry.arguments?.getInt("imported")   ?: 0
+            val skipped    = backStackEntry.arguments?.getInt("skipped")    ?: 0
+            val duplicates = backStackEntry.arguments?.getInt("duplicates") ?: 0
+
+            ImportResultScreen(
+                imported           = imported,
+                skipped            = skipped,
+                duplicates         = duplicates,
+                onViewTransactions = {
+                    // Navigate to Transactions tab, clearing the import back stack
+                    // so the user can't "back" into the result screen.
+                    navController.navigate(Routes.TRANSACTIONS) {
+                        popUpTo(Routes.SETTINGS) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
+                onDone = {
+                    // Return to Settings — import flow is complete
+                    navController.navigate(Routes.SETTINGS) {
+                        popUpTo(Routes.SETTINGS) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                }
+            )
         }
     }
 }

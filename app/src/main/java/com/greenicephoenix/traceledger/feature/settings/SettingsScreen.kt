@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -41,26 +42,27 @@ enum class ImportType { JSON, CSV }
 
 // ── Icon accent colours ───────────────────────────────────────────────────────
 // These are decorative only — not part of the Material3 theme.
-// Each colour family groups related settings visually:
-//   Green  → brand/money (Theme, Currency, Categories, Import)
-//   Blue   → data/format (Number Format, Export)
-//   Amber  → time/limits (Budgets, Reminder)
-//   Purple → utility    (Templates, About)
 private val IconGreen  = Color(0xFF2ECC71)
 private val IconBlue   = Color(0xFF638FD4)
 private val IconAmber  = Color(0xFFF59E0B)
 private val IconPurple = Color(0xFF9575CD)
+// Teal used exclusively for the Import Transactions row — "data in" visual cue
+private val IconTeal   = Color(0xFF00BFA5)
 
 private val BgGreen  = Color(0xFF2ECC71).copy(alpha = 0.12f)
 private val BgBlue   = Color(0xFF638FD4).copy(alpha = 0.12f)
 private val BgAmber  = Color(0xFFF59E0B).copy(alpha = 0.12f)
 private val BgPurple = Color(0xFF9575CD).copy(alpha = 0.12f)
+private val BgTeal   = Color(0xFF00BFA5).copy(alpha = 0.12f)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBudgetsClick: () -> Unit,
     onNavigate: (String) -> Unit,
+    // NOTE: onExportSelected, onImportContinue, onImportUriReady are kept for
+    // backward compatibility with NavGraph but are not called inside this screen.
+    // They will be removed in a future cleanup pass.
     onExportSelected: (ExportFormat) -> Unit,
     onExportUriReady: (ExportFormat, Uri) -> Unit,
     onImportContinue: () -> Unit,
@@ -90,7 +92,6 @@ fun SettingsScreen(
 
     // ── Observed state ────────────────────────────────────────────────────────
     val currentCurrency  by CurrencyManager.currency.collectAsState()
-    // Default changed from DARK → SYSTEM to match the new ThemeManager default
     val currentTheme     by ThemeManager.themeModeFlow(context).collectAsState(initial = ThemeMode.SYSTEM)
     val currentNumFormat by settingsStore.numberFormat.collectAsState(initial = null)
 
@@ -99,8 +100,6 @@ fun SettingsScreen(
     val reminderMinute  by settingsStore.reminderMinute.collectAsState(initial = 0)
 
     // ── Derived display strings ───────────────────────────────────────────────
-
-    // Human-readable label for the currently selected theme mode
     val currentThemeLabel = when (currentTheme) {
         ThemeMode.SYSTEM     -> "System"
         ThemeMode.LIGHT      -> "Light"
@@ -114,13 +113,12 @@ fun SettingsScreen(
         else                            -> "Indian"
     }
 
-    // e.g. "10:00 PM"
     val reminderTimeLabel = remember(reminderHour, reminderMinute) {
         val amPm   = if (reminderHour < 12) "AM" else "PM"
         val hour12 = when {
-            reminderHour == 0 -> 12
-            reminderHour > 12 -> reminderHour - 12
-            else              -> reminderHour
+            reminderHour == 0  -> 12
+            reminderHour > 12  -> reminderHour - 12
+            else               -> reminderHour
         }
         "$hour12:${reminderMinute.toString().padStart(2, '0')} $amPm"
     }
@@ -178,7 +176,6 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
 
-        // Screen title — uses Cinzel via headlineMedium in TraceLedgerTypography
         Text(
             text     = "SETTINGS",
             style    = MaterialTheme.typography.headlineMedium,
@@ -190,28 +187,28 @@ fun SettingsScreen(
         SettingsSectionLabel("Appearance")
 
         SettingsRow(
-            icon       = Icons.Outlined.Palette,
-            iconTint   = IconGreen,
-            iconBg     = BgGreen,
-            title      = "Theme",
-            value      = currentThemeLabel,
-            onClick    = { showThemeSheet = true }
+            icon     = Icons.Outlined.Palette,
+            iconTint = IconGreen,
+            iconBg   = BgGreen,
+            title    = "Theme",
+            value    = currentThemeLabel,
+            onClick  = { showThemeSheet = true }
         )
         SettingsRow(
-            icon       = Icons.Outlined.AttachMoney,
-            iconTint   = IconGreen,
-            iconBg     = BgGreen,
-            title      = "Currency",
-            value      = "${currentCurrency.code} ${currentCurrency.symbol}",
-            onClick    = { showCurrencySheet = true }
+            icon     = Icons.Outlined.AttachMoney,
+            iconTint = IconGreen,
+            iconBg   = BgGreen,
+            title    = "Currency",
+            value    = "${currentCurrency.code} ${currentCurrency.symbol}",
+            onClick  = { showCurrencySheet = true }
         )
         SettingsRow(
-            icon       = Icons.Outlined.Tag,
-            iconTint   = IconBlue,
-            iconBg     = BgBlue,
-            title      = "Number Format",
-            value      = numFormatLabel,
-            onClick    = { showNumberFormatSheet = true }
+            icon     = Icons.Outlined.Tag,
+            iconTint = IconBlue,
+            iconBg   = BgBlue,
+            title    = "Number Format",
+            value    = numFormatLabel,
+            onClick  = { showNumberFormatSheet = true }
         )
 
         Spacer(Modifier.height(20.dp))
@@ -220,36 +217,36 @@ fun SettingsScreen(
         SettingsSectionLabel("Finance")
 
         SettingsRow(
-            icon    = Icons.Outlined.Category,
+            icon     = Icons.Outlined.Category,
             iconTint = IconGreen,
-            iconBg  = BgGreen,
-            title   = "Categories",
+            iconBg   = BgGreen,
+            title    = "Categories",
             subtitle = "Expense & income",
-            onClick = { onNavigate(Routes.CATEGORIES) }
+            onClick  = { onNavigate(Routes.CATEGORIES) }
         )
         SettingsRow(
-            icon    = Icons.Outlined.PieChart,
+            icon     = Icons.Outlined.PieChart,
             iconTint = IconAmber,
-            iconBg  = BgAmber,
-            title   = "Budgets",
+            iconBg   = BgAmber,
+            title    = "Budgets",
             subtitle = "Monthly limits",
-            onClick = onBudgetsClick
+            onClick  = onBudgetsClick
         )
         SettingsRow(
-            icon    = Icons.Outlined.Repeat,
+            icon     = Icons.Outlined.Repeat,
             iconTint = IconBlue,
-            iconBg  = BgBlue,
-            title   = "Recurring",
+            iconBg   = BgBlue,
+            title    = "Recurring",
             subtitle = "Auto transactions",
-            onClick = { onNavigate(Routes.RECURRING) }
+            onClick  = { onNavigate(Routes.RECURRING) }
         )
         SettingsRow(
-            icon    = Icons.Outlined.BookmarkBorder,
+            icon     = Icons.Outlined.BookmarkBorder,
             iconTint = IconPurple,
-            iconBg  = BgPurple,
-            title   = "Templates",
+            iconBg   = BgPurple,
+            title    = "Templates",
             subtitle = "Saved transactions",
-            onClick = { onNavigate(Routes.TEMPLATES) }
+            onClick  = { onNavigate(Routes.TEMPLATES) }
         )
 
         Spacer(Modifier.height(20.dp))
@@ -262,11 +259,8 @@ fun SettingsScreen(
             iconTint = IconAmber,
             iconBg   = BgAmber,
             title    = "Daily Reminder",
-            // Show time only when enabled — subtitle doubles as the status hint
-            subtitle = if (reminderEnabled) reminderTimeLabel
-            else "Remind you to log daily",
+            subtitle = if (reminderEnabled) reminderTimeLabel else "Remind you to log daily",
             checked  = reminderEnabled,
-            // Tapping the row while ON opens the time picker
             onClick  = { if (reminderEnabled) showTimePicker = true },
             onCheckedChange = { enabled ->
                 if (enabled) {
@@ -293,20 +287,35 @@ fun SettingsScreen(
         SettingsSectionLabel("Data")
 
         SettingsRow(
-            icon    = Icons.Outlined.FileUpload,
+            icon     = Icons.Outlined.FileUpload,
             iconTint = IconBlue,
-            iconBg  = BgBlue,
-            title   = "Export Data",
+            iconBg   = BgBlue,
+            title    = "Export Data",
             subtitle = "JSON · CSV",
-            onClick = { showExportSheet = true }
+            onClick  = { showExportSheet = true }
         )
         SettingsRow(
-            icon    = Icons.Outlined.FileDownload,
+            icon     = Icons.Outlined.FileDownload,
             iconTint = IconGreen,
-            iconBg  = BgGreen,
-            title   = "Import Data",
+            iconBg   = BgGreen,
+            title    = "Import Data",
             subtitle = "Restore backup",
-            onClick = { showImportSheet = true }
+            onClick  = { showImportSheet = true }
+        )
+
+        // ── Import Transactions row (v1.3.0) ──────────────────────────────────
+        // Uses teal colour to visually distinguish it from the green "Import Data"
+        // row above. The "value = NEW" shows in primary colour before the chevron,
+        // matching the existing SettingsRow signature exactly.
+        // Remove value = "NEW" in v1.4.0 once the feature is established.
+        SettingsRow(
+            icon     = Icons.Default.AccountBalance,
+            iconTint = IconTeal,
+            iconBg   = BgTeal,
+            title    = "Import Transactions",
+            subtitle = "Bank account & credit card statements • Support varies by format",
+            value    = "NEW",
+            onClick  = { onNavigate(Routes.IMPORT_HUB) }
         )
 
         Spacer(Modifier.height(20.dp))
@@ -314,27 +323,22 @@ fun SettingsScreen(
         // ── APP ───────────────────────────────────────────────────────────────
         SettingsSectionLabel("App")
 
-        // Support row — special brand-accented treatment to make it stand out
-        // without being obnoxious. Green tint border, glowing dot, own background.
         SupportRow(onClick = { onNavigate(Routes.SUPPORT) })
 
         SettingsRow(
-            icon    = Icons.Outlined.Info,
+            icon     = Icons.Outlined.Info,
             iconTint = IconPurple,
-            iconBg  = BgPurple,
-            title   = "About",
-            // Show version inline so users don't have to open the page to check
+            iconBg   = BgPurple,
+            title    = "About",
             subtitle = "v${BuildConfig.VERSION_NAME} · Changelog",
-            onClick = { onNavigate(Routes.ABOUT) }
+            onClick  = { onNavigate(Routes.ABOUT) }
         )
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Dialogs and Bottom Sheets
-    // Nothing below this line changes layout — all logic preserved as-is.
+    // Dialogs and Bottom Sheets — unchanged from previous version
     // ─────────────────────────────────────────────────────────────────────────
 
-    // ── Time Picker ───────────────────────────────────────────────────────────
     if (showTimePicker) {
         val timePickerState = rememberTimePickerState(
             initialHour   = reminderHour,
@@ -368,22 +372,17 @@ fun SettingsScreen(
                         )
                     }
                 }) {
-                    // FIXED: was NothingRed — now uses theme primary (VinesGreen)
                     Text("Set", color = MaterialTheme.colorScheme.primary)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showTimePicker = false }) {
-                    Text(
-                        "Cancel",
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
                 }
             }
         )
     }
 
-    // ── Currency Sheet ────────────────────────────────────────────────────────
     if (showCurrencySheet) {
         PickerBottomSheet(title = "Currency", onDismiss = { showCurrencySheet = false }) {
             Currency.entries.forEach { currency ->
@@ -399,17 +398,14 @@ fun SettingsScreen(
         }
     }
 
-    // ── Theme Sheet ───────────────────────────────────────────────────────────
     if (showThemeSheet) {
         PickerBottomSheet(title = "Theme", onDismiss = { showThemeSheet = false }) {
-            // Maps each ThemeMode enum value to its display label.
-            // ULTRA_DARK is shown as "Extra Dark" — more user-friendly than the enum name.
             ThemeMode.entries.forEach { mode ->
                 val label = when (mode) {
-                    ThemeMode.SYSTEM     -> "System (follow device)"
+                    ThemeMode.SYSTEM     -> "System Default"
                     ThemeMode.LIGHT      -> "Light"
                     ThemeMode.DARK       -> "Dark"
-                    ThemeMode.ULTRA_DARK -> "Extra Dark  (OLED)"
+                    ThemeMode.ULTRA_DARK -> "Extra Dark (OLED)"
                 }
                 PickerRow(
                     label      = label,
@@ -423,7 +419,6 @@ fun SettingsScreen(
         }
     }
 
-    // ── Number Format Sheet ───────────────────────────────────────────────────
     if (showNumberFormatSheet) {
         PickerBottomSheet(
             title     = "Number Format",
@@ -442,7 +437,6 @@ fun SettingsScreen(
         }
     }
 
-    // ── Export Sheet ──────────────────────────────────────────────────────────
     if (showExportSheet) {
         PickerBottomSheet(title = "Export Data", onDismiss = { showExportSheet = false }) {
             Text(
@@ -473,7 +467,6 @@ fun SettingsScreen(
         }
     }
 
-    // ── Import Sheet ──────────────────────────────────────────────────────────
     if (showImportSheet) {
         PickerBottomSheet(title = "Import Data", onDismiss = { showImportSheet = false }) {
             ExportOption(
@@ -503,7 +496,6 @@ fun SettingsScreen(
         }
     }
 
-    // ── Import Preview Sheet ──────────────────────────────────────────────────
     if (showImportPreview && importPreview != null) {
         ModalBottomSheet(onDismissRequest = {
             showImportPreview = false
@@ -521,9 +513,9 @@ fun SettingsScreen(
 
                 if (preview.accounts > 0)     Text("Accounts: ${preview.accounts}")
                 if (preview.categories > 0)   Text("Categories: ${preview.categories}")
-                if (preview.budgets > 0)      Text("Budgets: ${preview.budgets}")
-                if (preview.transactions > 0) Text("Transactions: ${preview.transactions}")
-                if (preview.validRows > 0)    Text("Valid rows: ${preview.validRows}")
+                if (preview.budgets > 0)       Text("Budgets: ${preview.budgets}")
+                if (preview.transactions > 0)  Text("Transactions: ${preview.transactions}")
+                if (preview.validRows > 0)     Text("Valid rows: ${preview.validRows}")
                 if (preview.skippedRows > 0) {
                     Text(
                         "Skipped rows: ${preview.skippedRows}",
@@ -576,7 +568,6 @@ fun SettingsScreen(
         }
     }
 
-    // ── Import progress overlay ───────────────────────────────────────────────
     importProgress?.let { progress ->
         Box(
             modifier         = Modifier
@@ -613,13 +604,9 @@ fun SettingsScreen(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Private composables
+// Private composables — unchanged
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Section label — small uppercase text above a group of rows.
- * Uses onBackground at reduced opacity so it recedes behind the rows.
- */
 @Composable
 private fun SettingsSectionLabel(text: String) {
     Text(
@@ -630,15 +617,6 @@ private fun SettingsSectionLabel(text: String) {
     )
 }
 
-/**
- * Standard settings row.
- *
- * Layout: [Icon] [Title + optional subtitle]  [optional value] [›]
- *
- * The icon sits in a small rounded square with a tinted background.
- * The value (if provided) is shown in primary green before the chevron —
- * so users can see what's currently set without opening the sheet.
- */
 @Composable
 private fun SettingsRow(
     icon     : ImageVector,
@@ -658,9 +636,8 @@ private fun SettingsRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Coloured icon container
         Box(
-            modifier        = Modifier
+            modifier         = Modifier
                 .size(34.dp)
                 .clip(RoundedCornerShape(9.dp))
                 .background(iconBg),
@@ -674,7 +651,6 @@ private fun SettingsRow(
             )
         }
 
-        // Title + subtitle
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text  = title,
@@ -690,7 +666,6 @@ private fun SettingsRow(
             }
         }
 
-        // Current value — green, aligned right before the chevron
         if (value != null) {
             Text(
                 text  = value,
@@ -699,7 +674,6 @@ private fun SettingsRow(
             )
         }
 
-        // Chevron
         Icon(
             imageVector        = Icons.Outlined.ChevronRight,
             contentDescription = null,
@@ -709,12 +683,6 @@ private fun SettingsRow(
     }
 }
 
-/**
- * Settings row with a trailing Switch.
- * Two separate touch targets:
- *   - Row body  → onClick  (e.g. open time picker)
- *   - Switch    → onCheckedChange (toggle on/off)
- */
 @Composable
 private fun SettingsRowToggle(
     icon            : ImageVector,
@@ -765,7 +733,6 @@ private fun SettingsRowToggle(
             }
         }
 
-        // FIXED: checkedTrackColor was NothingRed — now uses theme primary (VinesGreen)
         Switch(
             checked         = checked,
             onCheckedChange = onCheckedChange,
@@ -779,11 +746,6 @@ private fun SettingsRowToggle(
     }
 }
 
-/**
- * Special "Support" row — stands apart from regular rows with a
- * faint green tint background and branded accent border.
- * Signals importance without being aggressive.
- */
 @Composable
 private fun SupportRow(onClick: () -> Unit) {
     Row(
@@ -796,7 +758,6 @@ private fun SupportRow(onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Glowing dot — a small brand signal without full icon weight
         Box(
             modifier = Modifier
                 .size(8.dp)
@@ -828,9 +789,6 @@ private fun SupportRow(onClick: () -> Unit) {
     Spacer(Modifier.height(4.dp))
 }
 
-/**
- * Reusable bottom sheet wrapper used by all picker sheets.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun PickerBottomSheet(
@@ -854,10 +812,6 @@ private fun PickerBottomSheet(
     }
 }
 
-/**
- * Single selectable row inside a picker bottom sheet.
- * Selected state: green tint background + green text + checkmark.
- */
 @Composable
 private fun PickerRow(
     label      : String,
@@ -894,9 +848,6 @@ private fun PickerRow(
     }
 }
 
-/**
- * Used inside Export and Import sheets to show a two-line option card.
- */
 @Composable
 private fun ExportOption(
     title       : String,
