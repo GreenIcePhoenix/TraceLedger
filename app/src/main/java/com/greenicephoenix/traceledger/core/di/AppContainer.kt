@@ -27,8 +27,11 @@ import com.greenicephoenix.traceledger.feature.accountimport.repository.Statemen
 import com.greenicephoenix.traceledger.feature.accountimport.viewmodel.StatementImportViewModelFactory
 import com.greenicephoenix.traceledger.feature.sms.repository.SmsQueueRepository
 import com.greenicephoenix.traceledger.feature.sms.repository.SmsRuleRepository
+import com.greenicephoenix.traceledger.feature.sms.store.SmsLearningStore
 import com.greenicephoenix.traceledger.feature.sms.viewmodel.SmsReviewViewModel
 import com.greenicephoenix.traceledger.feature.sms.viewmodel.SmsSettingsViewModel
+import com.greenicephoenix.traceledger.feature.sms.viewmodel.CustomRulesViewModel
+import com.greenicephoenix.traceledger.feature.sms.viewmodel.AddEditRuleViewModel
 
 class AppContainer(private val context: Context) {
 
@@ -96,10 +99,13 @@ class AppContainer(private val context: Context) {
     val categoriesViewModelFactory = CategoriesViewModelFactory(categoryRepository)
     val statisticsViewModelFactory = StatisticsViewModelFactory(transactionRepository)
 
-    val dashboardViewModelFactory = DashboardViewModelFactory(
-        transactionRepository = transactionRepository,
-        recurringRepository   = recurringTransactionRepository
-    )
+    val dashboardViewModelFactory by lazy {
+        DashboardViewModelFactory(
+            transactionRepository = transactionRepository,
+            recurringRepository   = recurringTransactionRepository,
+            smsQueueRepository    = smsQueueRepository   // ← ADDED
+        )
+    }
 
     val recurringViewModelFactory  = RecurringTransactionsViewModelFactory(recurringTransactionRepository)
     val addEditRecurringFactory    = AddEditRecurringViewModelFactory(recurringTransactionRepository)
@@ -121,12 +127,13 @@ class AppContainer(private val context: Context) {
     // --- SMS Repositories ---
     val smsQueueRepository: SmsQueueRepository by lazy {
         SmsQueueRepository(
-            smsPendingDao = database.smsPendingTransactionDao(),
+            smsPendingDao    = database.smsPendingTransactionDao(),
             smsCustomRuleDao = database.smsCustomRuleDao(),
-            transactionDao = database.transactionDao(),
-            accountDao = database.accountDao(),
-            categoryDao = database.categoryDao(),
-            context = appContext,
+            transactionDao   = database.transactionDao(),
+            accountDao       = database.accountDao(),
+            categoryDao      = database.categoryDao(),
+            context          = context,
+            learningStore    = smsLearningStore,   // ← ADD
         )
     }
 
@@ -134,12 +141,16 @@ class AppContainer(private val context: Context) {
         SmsRuleRepository(dao = database.smsCustomRuleDao())
     }
 
+    val smsLearningStore: SmsLearningStore by lazy {
+        SmsLearningStore(context)
+    }
+
     // --- SMS ViewModel Factories ---
     val smsSettingsViewModelFactory = object : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
             SmsSettingsViewModel(
-                application = appContext as Application,
+                application = context.applicationContext as Application,
                 smsQueueRepository = smsQueueRepository,
                 settingsDataStore = settingsDataStore,
             ) as T
@@ -149,9 +160,20 @@ class AppContainer(private val context: Context) {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T =
             SmsReviewViewModel(
-                repository = smsQueueRepository,
-                accountDao = database.accountDao(),
-                categoryDao = database.categoryDao(),
+                repository    = smsQueueRepository,
+                learningStore = smsLearningStore,   // ← ADD
             ) as T
+    }
+
+    val customRulesViewModelFactory = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T =
+            CustomRulesViewModel(smsRuleRepository) as T
+    }
+
+    val addEditRuleViewModelFactory = object : ViewModelProvider.Factory {
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(modelClass: Class<T>): T =
+            AddEditRuleViewModel(smsRuleRepository) as T
     }
 }

@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import androidx.core.content.ContextCompat
 
 data class SmsSettingsUiState(
     val isRealtimeEnabled: Boolean = false,
@@ -75,11 +76,11 @@ class SmsSettingsViewModel(
      * Scans the SMS inbox for past financial transactions.
      * Requires READ_SMS permission — the UI layer must verify before calling.
      */
-    fun startInboxScan(daysBack: Int = 90) {
+    fun startInboxScan(startMs: Long, endMs: Long = System.currentTimeMillis()) {
         viewModelScope.launch {
             _state.update { it.copy(inboxScanState = InboxScanState.Scanning(0, 0)) }
             try {
-                val count = smsQueueRepository.scanInbox(daysBack) { current, total ->
+                val count = smsQueueRepository.scanInbox(startMs, endMs) { current, total ->
                     _state.update {
                         it.copy(inboxScanState = InboxScanState.Scanning(current, total))
                     }
@@ -98,8 +99,18 @@ class SmsSettingsViewModel(
     }
 
     private fun isReceiverEnabled(context: Context): Boolean {
+        // Gate 1: RECEIVE_SMS permission must be granted.
+        // Without this, the toggle is always OFF even if the component is
+        // somehow in an enabled state (e.g. after reinstall, leftover state).
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context, android.Manifest.permission.RECEIVE_SMS
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (!hasPermission) return false
+
+        // Gate 2: the receiver component must have been explicitly enabled by us
         val component = ComponentName(context, SmsTransactionReceiver::class.java)
-        val state = context.packageManager.getComponentEnabledSetting(component)
+        val state     = context.packageManager.getComponentEnabledSetting(component)
         return state == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
     }
 }

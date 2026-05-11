@@ -2,71 +2,58 @@ package com.greenicephoenix.traceledger.feature.sms.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.greenicephoenix.traceledger.core.database.dao.AccountDao
-import com.greenicephoenix.traceledger.core.database.dao.CategoryDao
 import com.greenicephoenix.traceledger.core.database.entity.SmsPendingTransactionEntity
-import com.greenicephoenix.traceledger.domain.model.AccountUiModel
-import com.greenicephoenix.traceledger.domain.model.CategoryUiModel
 import com.greenicephoenix.traceledger.feature.sms.repository.SmsQueueRepository
+import com.greenicephoenix.traceledger.feature.sms.store.SmsLearningStore
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
-data class SmsReviewUiState(
-    val items: List<SmsPendingTransactionEntity> = emptyList(),
-    val accounts: List<AccountUiModel> = emptyList(),
-    val categories: List<CategoryUiModel> = emptyList(),
-    val isLoading: Boolean = true,
-    /** Set when the user saves a transaction — shows a brief snackbar */
-    val lastSavedDescription: String? = null,
-)
-
 class SmsReviewViewModel(
     private val repository: SmsQueueRepository,
-    private val accountDao: AccountDao,
-    private val categoryDao: CategoryDao,
+    private val learningStore: SmsLearningStore,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(SmsReviewUiState())
-    val state: StateFlow<SmsReviewUiState> = _state.asStateFlow()
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    init {
-        viewModelScope.launch {
-            // Combine pending items + accounts + categories into one state
-            combine(
-                repository.observePending(),
-                accountDao.getAllAccountsAsFlow(),
-                categoryDao.getAllCategoriesAsFlow(),
-            ) { items, accounts, categories ->
-                _state.update { current ->
-                    current.copy(
-                        items = items,
-                        accounts = accounts.map { it.toUiModel() },
-                        categories = categories.map { it.toUiModel() },
-                        isLoading = false
-                    )
-                }
-            }.collect()
-        }
-    }
+    val pendingItems: StateFlow<List<SmsPendingTransactionEntity>> =
+        repository.observePending()
+            .onEach { _isLoading.value = false }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private val _lastSavedDescription = MutableStateFlow<String?>(null)
+    val lastSavedDescription: StateFlow<String?> = _lastSavedDescription.asStateFlow()
+
+    // ── Actions ───────────────────────────────────────────────────────────────
 
     fun acceptTransaction(
         item: SmsPendingTransactionEntity,
-        accountId: Long,
-        categoryId: Long?,
-        note: String = ""
+        accountId: String,
+        categoryId: String?,
     ) {
         viewModelScope.launch {
+            // ── Issue 5: App learns from user's correction ────────────────────
+            // If user chose a DIFFERENT account than suggested → remember for this sender
+            if (accountId != item.suggestedAccountId) {
+                learningStore.learnAccountForSender(item.sender, accountId)
+            }
+            // If user chose a DIFFERENT category than suggested → remember for this description
+            categoryId?.let { catId ->
+                if (catId != item.suggestedCategoryId) {
+                    learningStore.learnCategoryForDescription(item.parsedDescription, catId)
+                }
+            }
+
             repository.acceptTransaction(
-                pendingId = item.id,
-                accountId = accountId,
-                categoryId = categoryId,
-                amount = item.parsedAmount,
+                pendingId   = item.id,
+                accountId   = accountId,
+                categoryId  = categoryId,
+                amount      = item.parsedAmount,
                 description = item.parsedDescription,
-                date = item.parsedDate,
-                type = item.parsedType,
-                note = note
+                dateMsEpoch = item.parsedDate,
+                type        = item.parsedType,
             )
-            _state.update { it.copy(lastSavedDescription = item.parsedDescription) }
+            _lastSavedDescription.value = item.parsedDescription
         }
     }
 
@@ -79,6 +66,6 @@ class SmsReviewViewModel(
     }
 
     fun clearSavedMessage() {
-        _state.update { it.copy(lastSavedDescription = null) }
+        _lastSavedDescription.value = null
     }
 }

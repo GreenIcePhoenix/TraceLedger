@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.greenicephoenix.traceledger.domain.model.CategoryType
 import com.greenicephoenix.traceledger.domain.model.CategoryUiModel
+import androidx.compose.foundation.BorderStroke
 
 @Composable
 fun CategoriesScreen(
@@ -181,17 +182,21 @@ private fun CategoryTypeSelector(
 // ─────────────────────────────────────────────────────────────────────────────
 @Composable
 private fun AddCategoryCard(isLightTheme: Boolean, onClick: () -> Unit) {
-    val baseSurface     = MaterialTheme.colorScheme.surface
-    val gradientColors  = if (isLightTheme) listOf(baseSurface, baseSurface)
-    else listOf(Color(0xFF1A1A1A), Color(0xFF0F0F0F))
+    val gradientColors = if (isLightTheme)
+        listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surfaceVariant)
+    else
+        listOf(Color(0xFF1A1A1A), Color(0xFF0F0F0F))
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .height(60.dp)
             .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        shape  = RoundedCornerShape(20.dp)
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        shape  = RoundedCornerShape(20.dp),
+        border = if (isLightTheme)
+            BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+        else null
     ) {
         Box(
             modifier = Modifier
@@ -218,9 +223,10 @@ private fun CategoryCard(
     isLightTheme: Boolean,
     onClick: () -> Unit
 ) {
-    val baseSurface    = MaterialTheme.colorScheme.surface
-    val gradientColors = if (isLightTheme) listOf(baseSurface, baseSurface)
-    else listOf(Color(0xFF1A1A1A), Color(0xFF0F0F0F))
+    val gradientColors = if (isLightTheme)
+        listOf(MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.surfaceVariant)
+    else
+        listOf(Color(0xFF1A1A1A), Color(0xFF0F0F0F))
 
     Card(
         modifier  = Modifier
@@ -229,7 +235,10 @@ private fun CategoryCard(
             .clickable { onClick() },
         shape     = RoundedCornerShape(18.dp),
         colors    = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border    = if (isLightTheme)
+            BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f))
+        else null
     ) {
         Box(
             modifier = Modifier

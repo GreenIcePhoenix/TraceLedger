@@ -18,4 +18,12 @@ class SmsRuleRepository(
     suspend fun updateRule(rule: SmsCustomRuleEntity) = dao.update(rule)
 
     suspend fun deleteRule(rule: SmsCustomRuleEntity) = dao.delete(rule)
+
+    /**
+     * Insert if id == 0 (new rule), replace if id > 0 (editing existing rule).
+     * The DAO uses OnConflictStrategy.REPLACE so both cases work with a single insert call.
+     */
+    suspend fun addOrUpdateRule(rule: SmsCustomRuleEntity) {
+        dao.insert(rule)
+    }
 }

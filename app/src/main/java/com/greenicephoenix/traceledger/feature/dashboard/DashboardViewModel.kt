@@ -7,6 +7,7 @@ import com.greenicephoenix.traceledger.core.repository.RecurringTransactionRepos
 import com.greenicephoenix.traceledger.core.repository.TransactionRepository
 import com.greenicephoenix.traceledger.domain.model.TransactionType
 import com.greenicephoenix.traceledger.domain.model.TransactionUiModel
+import com.greenicephoenix.traceledger.feature.sms.repository.SmsQueueRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import java.math.BigDecimal
@@ -15,7 +16,9 @@ import java.time.YearMonth
 @OptIn(ExperimentalCoroutinesApi::class)
 class DashboardViewModel(
     private val transactionRepository: TransactionRepository,
-    private val recurringRepository: RecurringTransactionRepository
+    private val recurringRepository: RecurringTransactionRepository,
+    // ← ADDED: injected so we can show the SMS pending badge on the dashboard
+    private val smsQueueRepository: SmsQueueRepository,
 ) : ViewModel() {
 
     private val currentMonth  = YearMonth.now()
@@ -90,14 +93,8 @@ class DashboardViewModel(
             InsightEngine.netWorthTrend(net)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    // ─── Spending Forecast ────────────────────────────────────────────────────────
+    // ── Spending Forecast ─────────────────────────────────────────────────────
 
-    /**
-     * Emits a SpendingForecast when conditions are met (day 3–25, non-zero spend),
-     * or null when the forecast should not be shown.
-     * Uses monthlyExpense (current) and lastMonthExpense (previous) which are
-     * already computed as StateFlows above.
-     */
     val spendingForecast: StateFlow<InsightEngine.SpendingForecast?> =
         combine(monthlyExpense, lastMonthExpense) { current, last ->
             InsightEngine.spendingForecast(
@@ -106,19 +103,29 @@ class DashboardViewModel(
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    // In DashboardViewModel:
-    val smsPendingCount: StateFlow<Int> = smsQueueRepository
-        .observePendingCount()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+    // ── SMS pending badge ─────────────────────────────────────────────────────
+    // Shows a chip on the dashboard when unreviewed SMS transactions are waiting.
+    // Emits 0 when the SMS feature is unused — no cost when feature is off.
+
+    val smsPendingCount: StateFlow<Int> =
+        smsQueueRepository.observePendingCount()
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), 0)
 }
+
+// ── Factory ───────────────────────────────────────────────────────────────────
 
 class DashboardViewModelFactory(
     private val transactionRepository: TransactionRepository,
-    private val recurringRepository: RecurringTransactionRepository
+    private val recurringRepository: RecurringTransactionRepository,
+    private val smsQueueRepository: SmsQueueRepository,   // ← ADDED
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         require(modelClass == DashboardViewModel::class.java)
-        return DashboardViewModel(transactionRepository, recurringRepository) as T
+        return DashboardViewModel(
+            transactionRepository = transactionRepository,
+            recurringRepository   = recurringRepository,
+            smsQueueRepository    = smsQueueRepository,   // ← ADDED
+        ) as T
     }
 }

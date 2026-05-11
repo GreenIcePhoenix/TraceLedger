@@ -4,61 +4,52 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 
 /**
- * Represents a single SMS that has been parsed and is waiting for the user
- * to review it before it becomes a real Transaction.
- *
- * KEY FIELDS:
- *  - contentHash: MD5 of (sender + body). Used to prevent the same SMS from being
- *    queued twice if the broadcast fires more than once (can happen on some OEMs).
- *  - isProcessed: true once the user has accepted/rejected. Rows are kept for 30
- *    days then cleaned up, so the user can see history.
- *  - isAccepted: only meaningful when isProcessed = true.
- *  - accountLastFour: the 4-digit account suffix extracted from the SMS. We use this
- *    to suggest which TraceLedger account this transaction belongs to.
+ * One SMS that parsed successfully and is waiting for user review.
+ * ID types match the rest of the app — String UUIDs, not Longs.
+ * Amount stored as Double (sufficient precision for SMS-parsed values;
+ * converted to BigDecimal when writing the final TransactionEntity).
  */
 @Entity(tableName = "sms_pending_transactions")
 data class SmsPendingTransactionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
 
-    /** The original system SMS ID — used for deduplication */
+    /** Original system SMS ID — used only for deduplication on inbox scan */
     val smsId: Long = -1L,
 
-    /** Full original SMS text — shown to user during review */
+    /** Full original SMS text shown to user during review */
     val smsBody: String,
 
-    /** Sender ID, e.g. "VK-HDFCBK" */
     val sender: String,
 
-    /** Unix timestamp (ms) when the SMS was received */
+    /** Unix ms when SMS was received — used as fallback transaction date */
     val receivedAt: Long,
 
-    // --- Parsed fields ---
+    // ── Parsed fields ────────────────────────────────────────────────────────
+
     val parsedAmount: Double,
     val parsedDescription: String,
-    /** "EXPENSE" or "INCOME" */
+
+    /** "EXPENSE" or "INCOME" — matches TransactionType.name */
     val parsedType: String,
-    /** Unix timestamp (ms) parsed from SMS date, or receivedAt as fallback */
+
+    /** Unix ms parsed from SMS date text; falls back to receivedAt */
     val parsedDate: Long,
 
-    /** Suggested category from AutoCategorizer — null if no match */
-    val suggestedCategoryId: Long? = null,
+    // ── Suggestions (String UUIDs matching the rest of the app) ─────────────
 
-    /** Suggested account from last-4 matching — null if no match */
-    val suggestedAccountId: Long? = null,
+    /** Suggested category id from AutoCategorizer — null if no match */
+    val suggestedCategoryId: String? = null,
 
-    /** Last 4 digits of account/card extracted from SMS */
+    /** Suggested account id — null (no account number stored in AccountEntity) */
+    val suggestedAccountId: String? = null,
+
+    /** Last 4 digits extracted from SMS — informational only for display */
     val accountLastFour: String? = null,
 
-    /** True once user has reviewed (accepted or rejected) */
     val isProcessed: Boolean = false,
-
-    /** True if user accepted this as a transaction */
     val isAccepted: Boolean = false,
 
-    /**
-     * Hash of (sender + smsBody) — prevents duplicate entries.
-     * Using a simple concatenation hash is sufficient here.
-     */
+    /** MD5 of (sender + body) — prevents duplicate queue entries */
     val contentHash: String = "",
 
     val createdAt: Long = System.currentTimeMillis()

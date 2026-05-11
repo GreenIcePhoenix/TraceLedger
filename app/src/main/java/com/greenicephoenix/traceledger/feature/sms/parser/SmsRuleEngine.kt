@@ -64,10 +64,13 @@ class SmsRuleEngine {
         val senderUpper = sender.uppercase()
         val bodyLower = body.lowercase()
 
-        // Reject OTP messages immediately
+        // Gate 1: Reject OTP messages
         if (BuiltInSmsRules.OTP_KEYWORDS.any { bodyLower.contains(it) }) return false
 
-        // Reject promotional messages
+        // Gate 2: Reject future/informational/statement messages   ← NEW
+        if (BuiltInSmsRules.EXCLUSION_PATTERNS.any { bodyLower.contains(it) }) return false
+
+        // Gate 3: Reject promotional messages
         if (BuiltInSmsRules.PROMO_KEYWORDS.count { bodyLower.contains(it) } >= 2) return false
 
         // Accept if sender is a known financial institution
@@ -101,6 +104,9 @@ class SmsRuleEngine {
 
         for (rule in customRules) {
             if (!senderLower.contains(rule.senderPattern.lowercase())) continue
+
+            // If this custom rule is an exclusion rule, immediately discard the SMS
+            if (rule.isExclusionRule) return SmsParseResult.NotFinancial
 
             return if (rule.isAdvancedMode && rule.rawRegex.isNotBlank()) {
                 parseWithAdvancedCustomRule(body, timestamp, rule)
@@ -390,6 +396,59 @@ class SmsRuleEngine {
             bankInfo.senderContains.any { senderUpper.contains(it.uppercase()) }
         }
     }
+
+    /**
+     * ADD this public method to SmsRuleEngine.
+     * Used by AddEditRuleViewModel to test rules before saving.
+     * Bypasses the sender-match and isFinancialSms gates — just tests the
+     *  parsing logic so the user can verify their rule extracts the right fields.
+     */
+    fun testCustomRule(body: String, rule: SmsCustomRuleEntity, timestamp: Long): SmsParseResult {
+        if (rule.isExclusionRule) return SmsParseResult.NotFinancial
+        return if (rule.isAdvancedMode && rule.rawRegex.isNotBlank()) {
+            parseWithAdvancedCustomRule(body, timestamp, rule)
+        } else {
+            parseWithSimpleCustomRule(body, timestamp, rule)
+        }
+    }
+
+    /**
+     * Scans the SMS BODY for a known bank name.
+     * Used as a fallback when sender-based detection fails (e.g. UPI credit
+     * notifications from PhonePe/GPay that mention "ICICI bank" in the body).
+     *
+     * Only matches fragments ≥ 4 characters to avoid false positives with
+     * short names like "SBI" or "UCO" that could appear in unrelated words.
+     */
+    fun detectBankInfoFromBody(body: String): BuiltInSmsRules.BankSenderInfo? {
+        val bodyLower = body.lowercase()
+        // Try longer bank names first to avoid shadowing — e.g. "Federal Bank"
+        // should win over a hypothetical shorter match
+        return BuiltInSmsRules.KNOWN_SENDERS
+            .sortedByDescending { it.bankName.length }
+            .firstOrNull { bankInfo ->
+                val fragment = bankInfo.bankName.lowercase()
+                    .replace(" credit card", "")
+                    .replace(" bank", "")
+                    .replace(" card", "")
+                    .trim()
+                    .split(" ")
+                    .firstOrNull { it.length >= 4 }
+                    ?: return@firstOrNull false
+                bodyLower.contains(fragment)
+            }
+    }
+
+    /**
+     * Returns true if the SMS body contains an account/card number pattern.
+     * Used to decide whether body-based bank detection should override sender-based.
+     *
+     * Accepts 3–6 digits after the account prefix to handle banks that show
+     * partial numbers like "xx160" (3 digits) as well as the standard "xx2444" (4 digits).
+     */
+    fun hasAccountInBody(body: String): Boolean =
+        Regex("""(?:[Xx]{2,4}|\*{2,4})[0-9]{3,6}""").containsMatchIn(body) ||
+                Regex("""[Aa]/[Cc]\.?\s*(?:[Xx*]{0,4})[0-9]{3,6}""").containsMatchIn(body)
 
     // =========================================================================
     //  PRIVATE HELPERS

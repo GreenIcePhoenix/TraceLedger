@@ -24,7 +24,6 @@ import com.greenicephoenix.traceledger.core.database.dao.SmsPendingTransactionDa
 import com.greenicephoenix.traceledger.core.database.dao.SmsCustomRuleDao
 import com.greenicephoenix.traceledger.core.database.entity.SmsPendingTransactionEntity
 import com.greenicephoenix.traceledger.core.database.entity.SmsCustomRuleEntity
-import com.greenicephoenix.traceledger.core.database.migrations.MIGRATION_11_12
 
 @Database(
     entities = [
@@ -37,7 +36,7 @@ import com.greenicephoenix.traceledger.core.database.migrations.MIGRATION_11_12
         SmsPendingTransactionEntity::class,   // ← NEW
         SmsCustomRuleEntity::class,
     ],
-    version = 12,
+    version = 14,
     exportSchema = true
 )
 @TypeConverters(RoomConverters::class)
@@ -80,7 +79,9 @@ abstract class TraceLedgerDatabase : RoomDatabase() {
                         MIGRATION_8_9,
                         MIGRATION_9_10,
                         MIGRATION_10_11,
-                        MIGRATION_11_12
+                        MIGRATION_11_12,
+                        MIGRATION_12_13,
+                        MIGRATION_13_14
                     )
 
             if (BuildConfig.DEBUG) {

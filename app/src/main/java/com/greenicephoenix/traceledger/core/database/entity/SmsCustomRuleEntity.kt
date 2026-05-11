@@ -3,62 +3,50 @@ package com.greenicephoenix.traceledger.core.database.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 
-/**
- * A user-defined SMS parsing rule.
- *
- * TWO MODES:
- *  1. Simple (isAdvancedMode = false):
- *     Uses senderPattern, amountPrefix, debitKeywords, creditKeywords, merchantRegex.
- *     The rule engine builds a regex from these parts.
- *     Example: sender="HDFCBK", amountPrefix="Rs.", debitKeyword="debited"
- *
- *  2. Advanced (isAdvancedMode = true):
- *     Uses rawRegex — a full Java/Kotlin regex with named groups:
- *     (?P<amount>...) (?P<merchant>...) (?P<type>...)
- *     This mode is for power users.
- *
- * PRIORITY:
- *  Built-in rules have priority 0–9. Custom rules default to priority 10
- *  so they always win. User can increase priority further.
- */
 @Entity(tableName = "sms_custom_rules")
 data class SmsCustomRuleEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
 
-    /** Human-readable name, e.g. "My office canteen wallet" */
+    /** Human-readable label e.g. "My office canteen wallet" */
     val name: String,
 
     /** The sender ID must CONTAIN this string (case-insensitive) */
     val senderPattern: String,
 
-    /** Simple mode: keyword that appears just before the amount, e.g. "Rs." or "INR" */
+    /** Keyword just before the amount, e.g. "Rs." or "INR" */
     val amountPrefix: String = "",
 
-    /** Comma-separated keywords that indicate a debit/expense, e.g. "debited,spent,paid" */
+    /** Comma-separated debit indicators, e.g. "debited,spent" */
     val debitKeywords: String = "",
 
-    /** Comma-separated keywords that indicate a credit/income, e.g. "credited,received" */
+    /** Comma-separated credit indicators, e.g. "credited,received" */
     val creditKeywords: String = "",
 
-    /** Regex/keyword to extract the merchant name after */
+    /** Keyword after which the merchant name follows, e.g. "Info:" */
     val merchantRegex: String = "",
 
-    /** Pre-set category for all transactions matching this rule */
-    val defaultCategoryId: Long? = null,
+    /** String UUID — pre-selects a category on the review screen */
+    val defaultCategoryId: String? = null,   // ← String UUID, not Long
 
-    /** Pre-set account for all transactions matching this rule */
-    val defaultAccountId: Long? = null,
+    /** String UUID — pre-selects an account on the review screen */
+    val defaultAccountId: String? = null,    // ← String UUID, not Long
 
     val isEnabled: Boolean = true,
 
-    /** Higher number = checked first. Defaults to 10 (beats all built-in rules at 0–9) */
+    /** Higher = checked first. Custom rules default to 10, beating all built-in rules. */
     val priority: Int = 10,
 
-    /** If true, use rawRegex instead of the simple fields */
+    /** If true, ignore parsing fields — use rawRegex (Phase 2) */
     val isAdvancedMode: Boolean = false,
 
-    /** Full regex pattern with named groups for advanced mode */
     val rawRegex: String = "",
+
+    /**
+     * If true, any SMS from the matching sender is immediately discarded.
+     * Overrides all parsing fields. Used to silence senders that only send
+     * statements, spam, or alerts you never want in the ledger.
+     */
+    val isExclusionRule: Boolean = false,
 
     val createdAt: Long = System.currentTimeMillis()
 )

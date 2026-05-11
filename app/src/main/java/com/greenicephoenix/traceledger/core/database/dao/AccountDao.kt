@@ -62,6 +62,28 @@ interface AccountDao {
     @Query("DELETE FROM accounts")
     suspend fun deleteAll()
 
-    @Query("SELECT * FROM accounts WHERE SUBSTR(accountNumber, -4) = :lastFour LIMIT 1")
-    suspend fun findByLastFour(lastFour: String): AccountEntity?
+    /**
+     * Finds the first account whose name contains [fragment] (case-insensitive)
+     * AND matches the given [type] (AccountType.name string).
+     * Used by SmsQueueRepository for bank-name → account type matching.
+     * Example: findByNameContainingAndType("hdfc", "CREDIT_CARD")
+     */
+    @Query("""
+        SELECT * FROM accounts
+        WHERE LOWER(name) LIKE '%' || LOWER(:fragment) || '%'
+        AND type = :type
+        LIMIT 1
+    """)
+    suspend fun findByNameContainingAndType(fragment: String, type: String): AccountEntity?
+
+    /**
+     * Fallback: finds any account whose name contains [fragment], ignoring type.
+     * Used when no account of the expected type is found.
+     */
+    @Query("""
+        SELECT * FROM accounts
+        WHERE LOWER(name) LIKE '%' || LOWER(:fragment) || '%'
+        LIMIT 1
+    """)
+    suspend fun findByNameContaining(fragment: String): AccountEntity?
 }

@@ -37,6 +37,17 @@ import com.greenicephoenix.traceledger.core.navigation.Routes
 import com.greenicephoenix.traceledger.core.notifications.ReminderScheduler
 import com.greenicephoenix.traceledger.core.ui.theme.ThemeManager
 import com.greenicephoenix.traceledger.core.ui.theme.ThemeMode
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.ui.platform.LocalUriHandler
+import com.greenicephoenix.traceledger.core.util.AppLinks
+import com.greenicephoenix.traceledger.feature.update.UpdateDialog
+import com.greenicephoenix.traceledger.feature.update.UpdateInfo
+import com.greenicephoenix.traceledger.feature.update.checkForUpdate
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 
 enum class ImportType { JSON, CSV }
@@ -44,26 +55,38 @@ enum class ImportType { JSON, CSV }
 // ── Icon accent colours ───────────────────────────────────────────────────────
 // These are decorative only — not part of the Material3 theme.
 private val IconGreen  = Color(0xFF2ECC71)
-private val IconBlue   = Color(0xFF638FD4)
+//private val IconBlue   = Color(0xFF638FD4)
+private val IconBlue = Color(0xFF2196F3)
 private val IconAmber  = Color(0xFFF59E0B)
 private val IconPurple = Color(0xFF9575CD)
 // Teal used exclusively for the Import Transactions row — "data in" visual cue
 private val IconTeal   = Color(0xFF00BFA5)
 
 private val BgGreen  = Color(0xFF2ECC71).copy(alpha = 0.12f)
-private val BgBlue   = Color(0xFF638FD4).copy(alpha = 0.12f)
+private val BgBlue   = IconBlue.copy(alpha = 0.12f)
 private val BgAmber  = Color(0xFFF59E0B).copy(alpha = 0.12f)
 private val BgPurple = Color(0xFF9575CD).copy(alpha = 0.12f)
 private val BgTeal   = Color(0xFF00BFA5).copy(alpha = 0.12f)
+
+// ── Update check state ────────────────────────────────────────────────────────
+private sealed class UpdateState {
+    object Idle                                : UpdateState()
+    object Checking                            : UpdateState()
+    object UpToDate                            : UpdateState()
+    data class Available(val info: UpdateInfo) : UpdateState()
+    data class Error(val msg: String)          : UpdateState()
+}
+
+// ── External URL constants ────────────────────────────────────────────────────
+private const val URL_PRIVACY = "https://traceledger.pages.dev/privacy.html"
+private const val URL_TERMS   = "https://traceledger.pages.dev/terms.html"
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBudgetsClick: () -> Unit,
     onNavigate: (String) -> Unit,
-    // NOTE: onExportSelected, onImportContinue, onImportUriReady are kept for
-    // backward compatibility with NavGraph but are not called inside this screen.
-    // They will be removed in a future cleanup pass.
+    smsPendingCount: Int = 0,
     onExportSelected: (ExportFormat) -> Unit,
     onExportUriReady: (ExportFormat, Uri) -> Unit,
     onImportContinue: () -> Unit,
@@ -74,6 +97,8 @@ fun SettingsScreen(
 ) {
     val context        = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val uriHandler  = LocalUriHandler.current
+    var updateState by remember { mutableStateOf<UpdateState>(UpdateState.Idle) }
     val settingsStore  = remember { SettingsDataStore(context) }
 
     // ── Sheet / dialog visibility ─────────────────────────────────────────────
@@ -324,24 +349,103 @@ fun SettingsScreen(
             iconTint = IconPurple,
             iconBg   = BgPurple,
             title    = "SMS Detection",
-            subtitle = "",
-            value    = "NEW",
-            onClick = { onNavigate(Routes.SMS_SETTINGS) }
+            subtitle = "Auto-detect bank & wallet SMS",
+            value    = if (smsPendingCount > 0) "$smsPendingCount pending" else "NEW",
+            onClick  = { onNavigate(Routes.SMS_SETTINGS) }
         )
 
         Spacer(Modifier.height(20.dp))
 
-        // ── APP ───────────────────────────────────────────────────────────────
+        // ── SYSTEM ────────────────────────────────────────────────────────
+        SettingsSectionLabel("System")
+
+        // What's New — navigates to the full changelog screen
+        SettingsRow(
+            icon     = Icons.Outlined.NewReleases,
+            iconTint = IconPurple,
+            iconBg   = BgPurple,
+            title    = "What's New",
+            subtitle = "v${BuildConfig.VERSION_NAME} release notes",
+            onClick  = { onNavigate(Routes.CHANGELOG) }
+        )
+
+        // Check for Updates — live subtitle + animated progress bar
+        CheckForUpdatesRow(
+            state   = updateState,
+            iconTint = IconBlue,
+            iconBg   = BgBlue,
+            onClick = {
+                if (updateState !is UpdateState.Checking) {
+                    coroutineScope.launch {
+                        updateState = UpdateState.Checking
+                        try {
+                            val result = withContext(Dispatchers.IO) { checkForUpdate() }
+                            updateState = if (result != null)
+                                UpdateState.Available(result)
+                            else
+                                UpdateState.UpToDate
+                        } catch (e: Exception) {
+                            updateState = UpdateState.Error(e.message ?: "Check failed")
+                        }
+                    }
+                }
+            }
+        )
+
+        SettingsRow(
+            icon     = Icons.Outlined.Language,
+            iconTint = IconBlue,
+            iconBg   = BgBlue,
+            title    = "Website",
+            subtitle = "traceledger.pages.dev",
+            onClick  = { uriHandler.openUri(AppLinks.WEBSITE) }
+        )
+        SettingsRow(
+            icon     = Icons.Outlined.PrivacyTip,
+            iconTint = IconBlue,
+            iconBg   = BgBlue,
+            title    = "Privacy Policy",
+            subtitle = "How we handle your data",
+            onClick  = { uriHandler.openUri(URL_PRIVACY) }
+        )
+        SettingsRow(
+            icon     = Icons.Outlined.Gavel,
+            iconTint = IconBlue,
+            iconBg   = BgBlue,
+            title    = "Terms of Use",
+            subtitle = "Usage terms and conditions",
+            onClick  = { uriHandler.openUri(URL_TERMS) }
+        )
+
+        Spacer(Modifier.height(20.dp))
+
+        // ── APP ───────────────────────────────────────────────────────────
         SettingsSectionLabel("App")
 
         SupportRow(onClick = { onNavigate(Routes.SUPPORT) })
 
         SettingsRow(
+            icon     = Icons.Outlined.Forum,
+            iconTint = IconGreen,
+            iconBg   = BgGreen,
+            title    = "Discord",
+            subtitle = "Join the community",
+            onClick  = { uriHandler.openUri(AppLinks.DISCORD) }
+        )
+        SettingsRow(
+            icon     = Icons.Outlined.HelpOutline,
+            iconTint = IconAmber,
+            iconBg   = BgAmber,
+            title    = "Help & FAQ",
+            subtitle = "Common questions & tips",
+            onClick  = { onNavigate(Routes.HELP) }
+        )
+        SettingsRow(
             icon     = Icons.Outlined.Info,
             iconTint = IconPurple,
             iconBg   = BgPurple,
             title    = "About",
-            subtitle = "v${BuildConfig.VERSION_NAME} · Changelog",
+            subtitle = "v${BuildConfig.VERSION_NAME} · TraceLedger",
             onClick  = { onNavigate(Routes.ABOUT) }
         )
     }
@@ -612,6 +716,15 @@ fun SettingsScreen(
             pendingImportUri = null
         }
     }
+
+    // ── ADD THIS ──────────────────────────────────────────────────────────────
+    // Show update dialog when a new version is available
+    if (updateState is UpdateState.Available) {
+        UpdateDialog(
+            updateInfo = (updateState as UpdateState.Available).info,
+            onDismiss  = { updateState = UpdateState.Idle }
+        )
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -783,7 +896,7 @@ private fun SupportRow(onClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text  = "UPI · PayPal — buy me a coffee",
+                text  = "UPI · PayPal",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
             )
@@ -882,6 +995,55 @@ private fun ExportOption(
                 text  = description,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            )
+        }
+    }
+
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CheckForUpdatesRow — Settings row with live subtitle and animated progress bar
+// ─────────────────────────────────────────────────────────────────────────────
+@Composable
+private fun CheckForUpdatesRow(
+    state    : UpdateState,
+    iconTint : Color,
+    iconBg   : Color,
+    onClick  : () -> Unit
+) {
+    // Dynamic subtitle reflects the current check state
+    val subtitle = when (state) {
+        is UpdateState.Idle      -> "v${BuildConfig.VERSION_NAME} installed"
+        is UpdateState.Checking  -> "Checking..."
+        is UpdateState.UpToDate  -> "You're up to date"
+        is UpdateState.Available -> "v${state.info.version} available — tap to download"
+        is UpdateState.Error     -> "Check failed — tap to retry"
+    }
+
+    Column {
+        // Reuse the same visual layout as SettingsRow
+        SettingsRow(
+            icon     = Icons.Outlined.Update,
+            iconTint = iconTint,
+            iconBg   = iconBg,
+            title    = "Check for Updates",
+            subtitle = subtitle,
+            onClick  = onClick
+        )
+
+        // Slim progress bar slides in while checking, hides otherwise
+        AnimatedVisibility(
+            visible = state is UpdateState.Checking,
+            enter   = expandVertically(),
+            exit    = shrinkVertically()
+        ) {
+            LinearProgressIndicator(
+                modifier   = Modifier
+                    .fillMaxWidth()
+                    .height(2.dp)
+                    .padding(horizontal = 4.dp),
+                color      = MaterialTheme.colorScheme.primary,
+                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
             )
         }
     }

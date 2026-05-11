@@ -121,6 +121,68 @@ object BuiltInSmsRules {
     )
 
     // =========================================================================
+    //  EXCLUSION PATTERNS — Issue 3
+    //
+    //  If ANY of these phrases appear in the SMS body, the message is discarded
+    //  immediately regardless of whether it contains an amount or bank keyword.
+    //
+    //  These cover:
+    //   - Future/scheduled debit reminders (not yet executed)
+    //   - Statement notifications (informational, not a transaction)
+    //   - Refund initiated (money not yet credited)
+    //   - Bill/payment due alerts (reminder, not a debit)
+    //   - Mandate registration confirmations
+    //
+    //  IMPORTANT: Keep phrases specific enough to avoid false positives.
+    //  "will be debited" is safe; plain "debit" is not (too broad).
+    // =========================================================================
+
+    val EXCLUSION_PATTERNS = listOf(
+        // Future debits — these are reminders, not completed transactions
+        "will be debited",
+        "to be debited",
+        "shall be debited",
+        "is due for debit",
+        "scheduled for debit",
+
+        // Card/account statement notifications
+        "card statement",
+        "account statement",
+        "e-statement",
+        "statement generated",
+        "statement is ready",
+        "statement has been",
+        "statement is sent",
+
+        // Refund started but not yet credited
+        "refund initiated",
+        "refund will be",
+        "refund is being",
+        "reversal initiated",
+        "refund reference number",
+
+        // Bill due reminders (informational, no money moved yet)
+        "payment is due",
+        "bill is due",
+        "minimum due",
+        "minimum payment",
+        "min payment",
+        "min due",
+
+        // UPI / NACH mandate setup confirmations
+        "mandate registered",
+        "mandate is registered",
+        "mandate has been",
+        "nach mandate",
+
+        // Card management — not transactions
+        "card has been blocked",
+        "card is blocked",
+        "pin has been",
+        "limit has been",
+    )
+
+    // =========================================================================
     //  ACCOUNT LAST-4 PATTERNS
     //  Different banks format this differently. Try all patterns.
     // =========================================================================

@@ -147,6 +147,60 @@ fun DashboardScreen(
             }
         }
 
+        // ── SMS PENDING BADGE ─────────────────────────────────────────────────
+        // Shown only when there are unreviewed SMS transactions in the queue.
+        // Tapping navigates to the SMS review screen.
+        if (smsPendingCount > 0) {
+            item(span = { GridItemSpan(2) }) {
+                Card(
+                    onClick  = { onNavigate(Routes.SMS_REVIEW) },
+                    shape    = RoundedCornerShape(14.dp),
+                    colors   = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier              = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment     = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment     = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            // Pill showing count
+                            Surface(
+                                color  = MaterialTheme.colorScheme.primary,
+                                shape  = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(
+                                    text     = "$smsPendingCount",
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                    style    = MaterialTheme.typography.labelMedium,
+                                    color    = MaterialTheme.colorScheme.onPrimary
+                                )
+                            }
+                            Text(
+                                text  = "SMS transactions to review",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                        Icon(
+                            imageVector        = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint               = MaterialTheme.colorScheme.onPrimaryContainer
+                                .copy(alpha = 0.5f),
+                            modifier           = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+        }
+
         // ── TOTAL BALANCE ─────────────────────────────────────────────────────
         item(span = { GridItemSpan(2) }) {
             Card(
