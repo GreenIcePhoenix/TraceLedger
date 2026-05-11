@@ -1,6 +1,6 @@
 {
   "version": "1.3.0",
   "releaseNotes": "SMS Detection, Statement Parsing, Custom SMS Rules, Settings Redesign",
-  "apkUrl": "https://github.com/GreenIcePhoenix/TraceLedger/releases/download/v1.3.0/TraceLedger_v1.3.0.apk",
-  "apkSizeBytes": 26453328
+  "apkUrl": "https://github.com/GreenIcePhoenix/TraceLedger/releases/download/v1.3.0/TraceLedger-1.3.0.apk",
+  "apkSizeBytes": 26453520
 }

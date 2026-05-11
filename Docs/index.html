@@ -490,33 +490,13 @@
 
     <div class="reveal" style="margin-top: 1.5rem;">
       <a href="https://greenicephoenix.pages.dev/"
-        target="_blank"
-        rel="noopener noreferrer"
-        style="
-          display: inline-flex;
-          align-items: center;
-          gap: 0.6rem;
-          padding: 0.9rem 1.2rem;
-          border: 1px solid var(--border-dim);
-          border-radius: 14px;
-          background: rgba(46, 204, 113, 0.05);
-          text-decoration: none;
-          transition: all 0.2s ease;
-        "
-        onmouseover="this.style.borderColor='rgba(46,204,113,0.35)';this.style.background='rgba(46,204,113,0.08)'"
-        onmouseout="this.style.borderColor='var(--border-dim)';this.style.background='rgba(46,204,113,0.05)'">
-        
-        <span style="font-size: 1.1rem;">🧩</span>
-
-        <span style="
-          color: var(--text-mid);
-          font-size: 0.95rem;
-          line-height: 1.4;
-        ">
+         target="_blank"
+         rel="noopener noreferrer"
+         class="explore-link">
+        <span aria-hidden="true">🧩</span>
+        <span class="explore-link__text">
           Explore more apps and experiments by
-          <span class="text-accent" style="font-weight: 600;">
-            GreenIcePhoenix →
-          </span>
+          <span class="explore-link__brand">GreenIcePhoenix →</span>
         </span>
       </a>
     </div>
@@ -557,6 +537,109 @@
           </div>
         </li>
       </ul>
+
+      <!-- ── TROUBLESHOOTING ──────────────────────────────────────────── -->
+      <div style="margin-top: 2rem;">
+        <p style="
+          font-family: var(--font-mono);
+          font-size: 0.7rem;
+          letter-spacing: 1.5px;
+          color: var(--text-dim);
+          margin-bottom: 1.2rem;
+        ">TROUBLESHOOTING</p>
+
+        <!-- Issue 1: Play Protect block -->
+        <div style="
+          border: 1px solid rgba(255, 180, 0, 0.25);
+          border-radius: 16px;
+          padding: 1.4rem 1.6rem;
+          margin-bottom: 1rem;
+          background: rgba(255, 180, 0, 0.04);
+        ">
+          <p style="
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            color: rgba(255, 180, 0, 0.85);
+            margin-bottom: 0.7rem;
+          ">⚠ &nbsp;GETTING "APP BLOCKED TO PROTECT YOUR DEVICE"?</p>
+          <p style="
+            font-family: var(--font-body);
+            font-size: 0.88rem;
+            color: var(--text-dim);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+          ">
+            This happens because TraceLedger requests SMS permissions (used for optional bank transaction detection). Google Play Protect flags any sideloaded app that declares SMS access — even if you never use that feature. It is a false alarm. Here is how to get past it:
+          </p>
+          <ol style="
+            font-family: var(--font-body);
+            font-size: 0.88rem;
+            color: var(--text-mid);
+            line-height: 2;
+            padding-left: 1.3rem;
+            margin: 0;
+          ">
+            <li>Open the <strong>Google Play Store</strong> app.</li>
+            <li>Tap your <strong>profile picture</strong> in the top-right corner.</li>
+            <li>Tap <strong>Play Protect</strong>, then tap the <strong>Settings gear ⚙</strong> in the top-right.</li>
+            <li>Turn off <strong>"Scan apps with Play Protect"</strong>.</li>
+            <li>Go back to your Downloads folder and install TraceLedger normally.</li>
+            <li>Once installed, go back to Play Protect settings and <strong>turn Scan back on</strong>. TraceLedger is already installed — scanning will not affect it.</li>
+          </ol>
+        </div>
+
+        <!-- Issue 2: SMS access denied -->
+        <div style="
+          border: 1px solid rgba(124, 77, 255, 0.25);
+          border-radius: 16px;
+          padding: 1.4rem 1.6rem;
+          background: rgba(124, 77, 255, 0.04);
+        ">
+          <p style="
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+            color: rgba(124, 77, 255, 0.9);
+            margin-bottom: 0.7rem;
+          ">⚠ &nbsp;SMS DETECTION NOT WORKING AFTER INSTALL?</p>
+          <p style="
+            font-family: var(--font-body);
+            font-size: 0.88rem;
+            color: var(--text-dim);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+          ">
+            Android restricts SMS permissions for apps installed outside the Play Store. If TraceLedger says SMS access was denied even after you granted it, follow these steps once to unlock it:
+          </p>
+          <ol style="
+            font-family: var(--font-body);
+            font-size: 0.88rem;
+            color: var(--text-mid);
+            line-height: 2;
+            padding-left: 1.3rem;
+            margin: 0 0 1rem 0;
+          ">
+            <li>Open your phone's <strong>Settings</strong> app.</li>
+            <li>Go to <strong>Apps</strong> (or "App Management") and find <strong>TraceLedger</strong> in the list.</li>
+            <li>Tap the <strong>three-dot menu ⋮</strong> in the top-right corner of the TraceLedger app page.</li>
+            <li>Tap <strong>"Allow restricted settings"</strong> and confirm.</li>
+            <li>Open TraceLedger → <strong>Settings → SMS Detection</strong> and enable it. The permission prompt will now work correctly.</li>
+          </ol>
+          <p style="
+            font-family: var(--font-body);
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            line-height: 1.5;
+            margin: 0;
+            padding-top: 0.8rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+          ">
+            This is a one-time step required by Android for any sideloaded app that uses SMS. SMS detection is completely optional — TraceLedger works fully without it.
+          </p>
+        </div>
+      </div>
+
     </div>
 
   </div>
@@ -625,7 +708,7 @@
       if (badgeEl && version) badgeEl.textContent = `V${version.toUpperCase()} — AVAILABLE NOW`;
       if (downloadBtn && apkUrl) {
         downloadBtn.href = apkUrl;
-        downloadBtn.textContent = version ? `↓ DOWNLOAD APK — v${version}` : '↓ DOWNLOAD APK';
+        //downloadBtn.textContent = version ? `↓ DOWNLOAD APK — v${version}` : '↓ DOWNLOAD APK';
       }
       if (versionNote && version) {
         const parts = [`v${version}`, 'Android 8.0+', size, 'No sign-up required'];
