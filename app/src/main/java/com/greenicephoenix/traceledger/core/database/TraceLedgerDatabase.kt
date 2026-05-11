@@ -20,6 +20,10 @@ import com.greenicephoenix.traceledger.core.database.dao.RecurringTransactionDao
 import com.greenicephoenix.traceledger.feature.templates.data.TransactionTemplateDao
 import com.greenicephoenix.traceledger.feature.templates.data.TransactionTemplateEntity
 import com.greenicephoenix.traceledger.core.database.migrations.*
+import com.greenicephoenix.traceledger.core.database.dao.SmsPendingTransactionDao
+import com.greenicephoenix.traceledger.core.database.dao.SmsCustomRuleDao
+import com.greenicephoenix.traceledger.core.database.entity.SmsPendingTransactionEntity
+import com.greenicephoenix.traceledger.core.database.entity.SmsCustomRuleEntity
 
 @Database(
     entities = [
@@ -28,9 +32,11 @@ import com.greenicephoenix.traceledger.core.database.migrations.*
         BudgetEntity::class,
         CategoryEntity::class,
         RecurringTransactionEntity::class,
-        TransactionTemplateEntity::class
+        TransactionTemplateEntity::class,
+        SmsPendingTransactionEntity::class,   // ← NEW
+        SmsCustomRuleEntity::class,
     ],
-    version = 11,
+    version = 14,
     exportSchema = true
 )
 @TypeConverters(RoomConverters::class)
@@ -42,6 +48,8 @@ abstract class TraceLedgerDatabase : RoomDatabase() {
     abstract fun categoryDao(): CategoryDao
     abstract fun recurringTransactionDao(): RecurringTransactionDao
     abstract fun transactionTemplateDao(): TransactionTemplateDao
+    abstract fun smsPendingTransactionDao(): SmsPendingTransactionDao
+    abstract fun smsCustomRuleDao(): SmsCustomRuleDao
 
     companion object {
 
@@ -70,7 +78,10 @@ abstract class TraceLedgerDatabase : RoomDatabase() {
                         MIGRATION_7_8,
                         MIGRATION_8_9,
                         MIGRATION_9_10,
-                        MIGRATION_10_11
+                        MIGRATION_10_11,
+                        MIGRATION_11_12,
+                        MIGRATION_12_13,
+                        MIGRATION_13_14
                     )
 
             if (BuildConfig.DEBUG) {

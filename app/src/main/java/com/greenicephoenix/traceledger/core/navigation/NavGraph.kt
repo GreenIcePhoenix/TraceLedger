@@ -1,7 +1,6 @@
 package com.greenicephoenix.traceledger.core.navigation
 
 import android.net.Uri
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
@@ -46,6 +45,16 @@ import com.greenicephoenix.traceledger.feature.transactions.HistoryScreen
 import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewModel
 import com.greenicephoenix.traceledger.feature.transactions.TransactionsViewModelFactory
 import com.greenicephoenix.traceledger.feature.accountimport.ui.ImportResultScreen
+import com.greenicephoenix.traceledger.feature.sms.ui.AddEditRuleScreen
+import com.greenicephoenix.traceledger.feature.sms.ui.CustomRulesScreen
+import com.greenicephoenix.traceledger.feature.sms.ui.SmsReviewScreen
+import com.greenicephoenix.traceledger.feature.sms.ui.SmsSettingsScreen
+import com.greenicephoenix.traceledger.feature.sms.viewmodel.SmsReviewViewModel
+import com.greenicephoenix.traceledger.feature.sms.viewmodel.SmsSettingsViewModel
+import com.greenicephoenix.traceledger.feature.sms.viewmodel.CustomRulesViewModel
+import com.greenicephoenix.traceledger.feature.sms.viewmodel.AddEditRuleViewModel
+import com.greenicephoenix.traceledger.feature.help.HelpScreen
+import com.greenicephoenix.traceledger.feature.about.ChangelogScreen
 import kotlinx.coroutines.launch
 
 @Composable
@@ -276,9 +285,14 @@ fun TraceLedgerNavGraph(
         /* ── SETTINGS ──────────────────────────────────────────────────────── */
         composable(Routes.SETTINGS) {
             val scope = rememberCoroutineScope()
+            // Collect the SMS pending count here so the Settings row stays live
+            val smsPendingCount by app.container.smsQueueRepository
+                .observePendingCount()
+                .collectAsState(initial = 0)
             SettingsScreen(
                 onBudgetsClick   = { navController.navigate(Routes.BUDGETS) },
                 onNavigate       = { route -> navController.navigate(route) },
+                smsPendingCount  = smsPendingCount,
                 onExportSelected = { },
                 onExportUriReady = { format, uri ->
                     scope.launch {
@@ -405,6 +419,16 @@ fun TraceLedgerNavGraph(
         /* ── ABOUT ─────────────────────────────────────────────────────────── */
         composable(Routes.ABOUT) {
             AboutScreen(onBack = { navController.popBackStack() })
+        }
+
+        /* ── CHANGELOG ──────────────────────────────────────────────────────── */
+        composable(Routes.CHANGELOG) {
+            ChangelogScreen(onBack = { navController.popBackStack() })
+        }
+
+        /* ── HELP & FAQ ─────────────────────────────────────────────────────── */
+        composable(Routes.HELP) {
+            HelpScreen(onBack = { navController.popBackStack() })
         }
 
         /* ── RECURRING ─────────────────────────────────────────────────────── */
@@ -594,6 +618,76 @@ fun TraceLedgerNavGraph(
                         launchSingleTop = true
                     }
                 }
+            )
+        }
+
+        // ADD these two composable destinations inside your NavHost { ... } block:
+
+        composable(Routes.SMS_SETTINGS) {
+            val viewModel: SmsSettingsViewModel = viewModel(
+                factory = app.container.smsSettingsViewModelFactory
+            )
+            SmsSettingsScreen(
+                viewModel = viewModel,
+                onNavigate = { route -> navController.navigate(route) },
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToReview = { navController.navigate(Routes.SMS_REVIEW) }
+            )
+        }
+
+        composable(Routes.SMS_REVIEW) {
+            val viewModel: SmsReviewViewModel = viewModel(
+                factory = app.container.smsReviewViewModelFactory
+            )
+            SmsReviewScreen(
+                viewModel      = viewModel,
+                accounts       = accounts,    // already available — graph-scoped
+                categories     = categories,  // already available — graph-scoped
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        /* ── SMS CUSTOM RULES LIST ─────────────────────────────────────────────── */
+        composable(Routes.SMS_CUSTOM_RULES) {
+            val vm: CustomRulesViewModel = viewModel(factory = app.container.customRulesViewModelFactory)
+            CustomRulesScreen(
+                viewModel      = vm,
+                onNavigateBack = { navController.popBackStack() },
+                onAddRule      = { navController.navigate(Routes.SMS_ADD_RULE) },
+                onEditRule     = { rule -> navController.navigate(Routes.smsEditRuleFor(rule.id)) }
+            )
+        }
+
+        /* ── ADD RULE ───────────────────────────────────────────────────────────── */
+        composable(Routes.SMS_ADD_RULE) {
+            val vm: AddEditRuleViewModel = viewModel(factory = app.container.addEditRuleViewModelFactory)
+            AddEditRuleScreen(
+                viewModel      = vm,
+                accounts       = accounts,
+                categories     = categories,
+                isEditMode     = false,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        /* ── EDIT RULE ──────────────────────────────────────────────────────────── */
+        composable(
+            route     = Routes.SMS_EDIT_RULE,
+            arguments = listOf(navArgument("ruleId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val ruleId = backStackEntry.arguments?.getLong("ruleId") ?: return@composable
+            val vm: AddEditRuleViewModel = viewModel(factory = app.container.addEditRuleViewModelFactory)
+            // Load the rule once
+            val allRules by app.container.smsRuleRepository.observeRules().collectAsState(initial = emptyList())
+            LaunchedEffect(ruleId, allRules) {
+                allRules.firstOrNull { it.id == ruleId }?.let { vm.loadRule(it) }
+            }
+            AddEditRuleScreen(
+                viewModel      = vm,
+                accounts       = accounts,
+                categories     = categories,
+                isEditMode     = true,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }

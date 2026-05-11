@@ -22,6 +22,8 @@ object Routes {
     const val BUDGETS              = "budgets"
     const val ADD_EDIT_BUDGET      = "add-edit-budget"
     const val ABOUT                = "about"
+    const val HELP                 = "help"
+    const val CHANGELOG            = "changelog"
     const val RECURRING            = "recurring"
     const val ADD_RECURRING        = "add_recurring"
     const val EDIT_RECURRING       = "edit_recurring/{recurringId}"
@@ -40,6 +42,13 @@ object Routes {
     const val IMPORT_HUB    = "import_hub"
     const val IMPORT_REVIEW = "import_review/{accountId}"
     const val IMPORT_RESULT = "import_result/{imported}/{skipped}/{duplicates}"
+    const val SMS_SETTINGS = "sms_settings"
+    const val SMS_REVIEW   = "sms_review"
+    const val SMS_CUSTOM_RULES = "sms_custom_rules"
+    const val SMS_ADD_RULE     = "sms_add_rule"
+    const val SMS_EDIT_RULE    = "sms_edit_rule/{ruleId}"
+
+    fun smsEditRuleFor(ruleId: Long) = "sms_edit_rule/$ruleId"
 
     /** Build a concrete IMPORT_REVIEW route for a given accountId. */
     fun importReviewFor(accountId: String) = "import_review/$accountId"
