@@ -25,7 +25,7 @@ package com.greenicephoenix.traceledger.core.util
  */
 object AppLinks {
     const val WEBSITE        = "https://traceledger.pages.dev"
-    const val DISCORD        = "https://discord.gg/MYFfxqvKCQ"
+    const val DISCORD        = "https://discord.gg/WguVY8wmzT"
     const val GITHUB         = "https://github.com/NRoy9/TraceLedger"
     const val PRIVACY_POLICY = "https://traceledger.pages.dev/privacy"
     const val TERMS          = "https://traceledger.pages.dev/terms"

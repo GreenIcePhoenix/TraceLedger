@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -14,12 +13,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.greenicephoenix.traceledger.domain.model.AccountUiModel
 import com.greenicephoenix.traceledger.domain.model.CategoryUiModel
 import com.greenicephoenix.traceledger.feature.sms.viewmodel.AddEditRuleViewModel
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import com.greenicephoenix.traceledger.feature.sms.viewmodel.RuleTesterState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -160,42 +161,132 @@ fun AddEditRuleScreen(
             // ── Section 2: Parsing (only shown for non-exclusion rules) ────────
             if (!form.isExclusionRule) {
                 FormSection(title = "PARSING") {
-                    OutlinedTextField(
-                        value         = form.amountPrefix,
-                        onValueChange = viewModel::updateAmountPrefix,
-                        label         = { Text("Amount keyword (optional)") },
-                        placeholder   = { Text("e.g. Rs., INR, ₹") },
-                        supportingText = { Text("The word just before the amount in the SMS", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                        modifier      = Modifier.fillMaxWidth(),
-                        shape         = RoundedCornerShape(12.dp)
-                    )
-                    OutlinedTextField(
-                        value         = form.debitKeywords,
-                        onValueChange = viewModel::updateDebitKeywords,
-                        label         = { Text("Debit keywords (optional)") },
-                        placeholder   = { Text("e.g. debited,spent,paid") },
-                        supportingText = { Text("Comma-separated. Presence → EXPENSE", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                        modifier      = Modifier.fillMaxWidth(),
-                        shape         = RoundedCornerShape(12.dp)
-                    )
-                    OutlinedTextField(
-                        value         = form.creditKeywords,
-                        onValueChange = viewModel::updateCreditKeywords,
-                        label         = { Text("Credit keywords (optional)") },
-                        placeholder   = { Text("e.g. credited,received") },
-                        supportingText = { Text("Comma-separated. Presence → INCOME", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                        modifier      = Modifier.fillMaxWidth(),
-                        shape         = RoundedCornerShape(12.dp)
-                    )
-                    OutlinedTextField(
-                        value         = form.merchantKeyword,
-                        onValueChange = viewModel::updateMerchantKeyword,
-                        label         = { Text("Merchant keyword (optional)") },
-                        placeholder   = { Text("e.g. Info:, Merchant:, at ") },
-                        supportingText = { Text("Text after this keyword is used as the description", color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                        modifier      = Modifier.fillMaxWidth(),
-                        shape         = RoundedCornerShape(12.dp)
-                    )
+
+                    // ── Mode toggle ───────────────────────────────────────────
+                    Row(
+                        modifier              = Modifier.fillMaxWidth(),
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Advanced mode",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                "Use a custom regex pattern instead of keywords",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked         = form.isAdvancedMode,
+                            onCheckedChange = viewModel::updateIsAdvancedMode
+                        )
+                    }
+
+                    // ── Simple mode — keyword fields ──────────────────────────
+                    AnimatedVisibility(
+                        visible = !form.isAdvancedMode,
+                        enter   = expandVertically(),
+                        exit    = shrinkVertically()
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            OutlinedTextField(
+                                value          = form.amountPrefix,
+                                onValueChange  = viewModel::updateAmountPrefix,
+                                label          = { Text("Amount keyword (optional)") },
+                                placeholder    = { Text("e.g. Rs., INR, ₹") },
+                                supportingText = { Text("The word just before the amount in the SMS", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                modifier       = Modifier.fillMaxWidth(),
+                                shape          = RoundedCornerShape(12.dp)
+                            )
+                            OutlinedTextField(
+                                value          = form.debitKeywords,
+                                onValueChange  = viewModel::updateDebitKeywords,
+                                label          = { Text("Debit keywords (optional)") },
+                                placeholder    = { Text("e.g. debited,spent,paid") },
+                                supportingText = { Text("Comma-separated. Presence → EXPENSE", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                modifier       = Modifier.fillMaxWidth(),
+                                shape          = RoundedCornerShape(12.dp)
+                            )
+                            OutlinedTextField(
+                                value          = form.creditKeywords,
+                                onValueChange  = viewModel::updateCreditKeywords,
+                                label          = { Text("Credit keywords (optional)") },
+                                placeholder    = { Text("e.g. credited,received") },
+                                supportingText = { Text("Comma-separated. Presence → INCOME", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                modifier       = Modifier.fillMaxWidth(),
+                                shape          = RoundedCornerShape(12.dp)
+                            )
+                            OutlinedTextField(
+                                value          = form.merchantKeyword,
+                                onValueChange  = viewModel::updateMerchantKeyword,
+                                label          = { Text("Merchant keyword (optional)") },
+                                placeholder    = { Text("e.g. Info:, Merchant:, at ") },
+                                supportingText = { Text("Text after this keyword is used as the description", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                modifier       = Modifier.fillMaxWidth(),
+                                shape          = RoundedCornerShape(12.dp)
+                            )
+                        }
+                    }
+
+                    // ── Advanced mode — raw regex field ───────────────────────
+                    AnimatedVisibility(
+                        visible = form.isAdvancedMode,
+                        enter   = expandVertically(),
+                        exit    = shrinkVertically()
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+                            // Regex input
+                            OutlinedTextField(
+                                value          = form.rawRegex,
+                                onValueChange  = viewModel::updateRawRegex,
+                                label          = { Text("Regex pattern") },
+                                placeholder    = { Text("(?<amount>[\\d,]+).*(?<description>.+)") },
+                                isError        = form.regexError != null,
+                                supportingText = form.regexError?.let {
+                                    { Text(it, color = MaterialTheme.colorScheme.error) }
+                                } ?: { Text("Kotlin regex with named capture groups", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                                minLines       = 3,
+                                modifier       = Modifier.fillMaxWidth(),
+                                shape          = RoundedCornerShape(12.dp),
+                                textStyle      = MaterialTheme.typography.bodySmall.copy(
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                                )
+                            )
+
+                            // Named groups reference card
+                            Surface(
+                                color    = MaterialTheme.colorScheme.primary.copy(alpha = 0.06f),
+                                shape    = RoundedCornerShape(10.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier            = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        "NAMED CAPTURE GROUPS",
+                                        style         = MaterialTheme.typography.labelSmall,
+                                        color         = MaterialTheme.colorScheme.primary,
+                                        letterSpacing = 0.8.sp
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    RegexGroupRow("(?<amount>...)",      "Transaction amount — digits, commas, dots")
+                                    RegexGroupRow("(?<description>...)", "Merchant / description text")
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(
+                                        "Direction (EXPENSE / INCOME) is still detected from debit / credit " +
+                                                "keywords in the matched text. Use the tester below to verify.",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // ── Section 3: Defaults ───────────────────────────────────────
@@ -463,8 +554,30 @@ private fun CategoryDropdown(
     }
 }
 
-// ── Form section wrapper ──────────────────────────────────────────────────────
+@Composable
+private fun RegexGroupRow(group: String, description: String) {
+    Row(
+        modifier              = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment     = Alignment.Top
+    ) {
+        Text(
+            text       = group,
+            style      = MaterialTheme.typography.labelSmall.copy(
+                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+            ),
+            color      = MaterialTheme.colorScheme.primary,
+            modifier   = Modifier.widthIn(min = 160.dp)
+        )
+        Text(
+            text  = description,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
 
+// ── Form section wrapper ──────────────────────────────────────────────────────
 @Composable
 private fun FormSection(title: String, content: @Composable ColumnScope.() -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

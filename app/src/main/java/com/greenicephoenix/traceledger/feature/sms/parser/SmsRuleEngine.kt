@@ -4,9 +4,7 @@ import com.greenicephoenix.traceledger.core.database.entity.SmsCustomRuleEntity
 import com.greenicephoenix.traceledger.feature.sms.model.ParsedSmsTransaction
 import com.greenicephoenix.traceledger.feature.sms.model.SmsParseResult
 import com.greenicephoenix.traceledger.feature.sms.model.SmsTransactionType
-import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Locale
 
 /**
  * The core SMS parsing engine.
@@ -324,23 +322,58 @@ class SmsRuleEngine {
             // Remove trailing punctuation
             merchant = merchant.trimEnd('.', ',', ';', ':', '-', ' ')
 
-            // Clean UPI VPA: "AMAZON@UPI" → "Amazon", "9876543210@PAYTM" → drops if it's a phone number
-            if (merchant.contains("@")) {
+            // Clean parenthetical VPA: "ZOMATO INDIA (zomato@icici)" → "ZOMATO INDIA"
+            // Must check this BEFORE the plain-VPA cleaner to avoid incorrect truncation
+            if (merchant.contains("(") && merchant.contains("@") && merchant.contains(")")) {
+                val beforeParen = merchant.substringBefore("(").trim()
+                if (beforeParen.length >= 3) merchant = beforeParen
+            }
+            // Clean plain UPI VPA: "AMAZON@UPI" → "Amazon"
+            // Skip if the part before @ is a phone number (10 digits)
+            else if (merchant.contains("@")) {
                 val vpaPart = merchant.substringBefore("@").trim()
-                // Skip if it's a phone number (10 digits)
                 if (!vpaPart.matches(Regex("""[0-9]{10}"""))) {
                     merchant = vpaPart
                 }
             }
 
-            // Skip short/noisy extractions
+            // Skip short or purely numeric extractions
             if (merchant.length >= 2 && !merchant.matches(Regex("""[0-9]+"""))) {
                 return merchant.capitalizeWords()
             }
         }
 
-        // Fallback: return a shortened version of the SMS body
-        return body.take(60).trimEnd()
+        // ── Fallback 1: UPI VPA anywhere in body ─────────────────────────────
+        // Catches PhonePe/GPay SMS where the VPA wasn't preceded by a keyword.
+        // Format: merchant@bankcode (e.g. zomato@icici, amazonpay@apl)
+        Regex("""([A-Za-z][A-Za-z0-9._-]{1,30})@[A-Za-z]{2,15}""")
+            .find(body)
+            ?.groupValues?.get(1)
+            ?.trim()
+            ?.takeIf { candidate ->
+                candidate.length >= 3 && !candidate.matches(Regex("""[0-9]{10}"""))
+            }
+            ?.let { return it.capitalizeWords() }
+
+        // ── Fallback 2: "to/for MERCHANT on/using/via" ────────────────────────
+        // Catches NEFT/UPI notifications: "Rs.500 sent to ZOMATO INDIA on 01-Jan"
+        // Filter: skip if candidate is all digits/X/* (account number, not merchant)
+        Regex(
+            """(?:to|for)\s+([A-Za-z][A-Za-z0-9 &.'()\-]{2,40}?)\s+(?:on\s+\d|using\s|via\s|through\s|call\s)""",
+            RegexOption.IGNORE_CASE
+        )
+            .find(body)
+            ?.groupValues?.get(1)
+            ?.trim()
+            ?.takeIf { candidate ->
+                candidate.length >= 3 && !candidate.matches(Regex("""[0-9X*\s]+"""))
+            }
+            ?.let { return it.capitalizeWords() }
+
+        // ── Fallback 3: no merchant found ─────────────────────────────────────
+        // Return empty — parseWithBuiltInRules() will use the bank name instead.
+        // This is cleaner than returning the first 60 chars of the SMS body.
+        return ""
     }
 
     /**
