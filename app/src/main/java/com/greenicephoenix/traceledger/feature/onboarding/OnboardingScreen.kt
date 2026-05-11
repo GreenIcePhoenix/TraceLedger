@@ -24,6 +24,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.greenicephoenix.traceledger.core.ui.theme.SovereignViolet
+import androidx.compose.material.icons.filled.FlashOn
 import kotlinx.coroutines.launch
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -37,30 +38,46 @@ private data class OnboardingPage(
 )
 
 private val pages = listOf(
+
+    // Page 1 — Brand / identity
     OnboardingPage(
-        icon      = Icons.Default.AccountBalance,
-        iconTint  = SovereignViolet,
-        headline  = "WELCOME TO\nTRACELEDGER",
-        body      = "A fast, private finance tracker.\nNo cloud. No ads. Just your money."
+        icon     = Icons.Default.AccountBalance,
+        iconTint = SovereignViolet,
+        headline = "WELCOME TO\nTRACELEDGER",
+        body     = "A fast, private finance tracker for Android.\nNo cloud. No ads. No accounts. Ever."
     ),
+
+    // Page 2 — Accounts & transactions
     OnboardingPage(
-        icon      = Icons.AutoMirrored.Filled.TrendingUp,
-        iconTint  = SovereignViolet,
-        headline  = "TRACK EVERY\nRUPEE",
-        body      = "Log expenses, income and transfers across multiple accounts in seconds."
+        icon     = Icons.AutoMirrored.Filled.TrendingUp,
+        iconTint = SovereignViolet,
+        headline = "TRACK EVERY\nRUPEE",
+        body     = "Bank, wallet, cash, and credit card accounts - all in one place. Log expenses, income, and transfers in seconds. Full history with search and filters."
     ),
+
+    // Page 3 — Budgets, statistics, recurring, templates, widget
     OnboardingPage(
-        icon      = Icons.Default.BarChart,
-        iconTint  = SovereignViolet,
-        headline  = "UNDERSTAND\nYOUR SPENDING",
-        body      = "Budgets, insights and charts that show exactly where your money goes each month."
+        icon     = Icons.Default.BarChart,
+        iconTint = SovereignViolet,
+        headline = "BUDGETS &\nINSIGHTS",
+        body     = "Monthly budgets with early warnings before you overspend. Charts and trends updated in real time. Recurring rules, reusable templates, and a home screen widget."
     ),
+
+    // Page 4 — SMS detection & statement import
     OnboardingPage(
-        icon      = Icons.Default.Lock,
-        iconTint  = SovereignViolet,
-        headline  = "PRIVATE\nBY DESIGN",
-        body      = "All data is stored only on your device. TraceLedger never connects to the internet."
-    )
+        icon     = Icons.Default.FlashOn,
+        iconTint = SovereignViolet,
+        headline = "CAPTURE WITHOUT\nTYPING",
+        body     = "Detect bank SMS and turn them into transactions automatically. Import full statements from PDF or CSV. Review everything before it is saved - nothing happens without your approval."
+    ),
+
+    // Page 5 — Privacy promise (always last)
+    OnboardingPage(
+        icon     = Icons.Default.Lock,
+        iconTint = SovereignViolet,
+        headline = "PRIVATE\nBY DESIGN",
+        body     = "All data lives only on your device. Internet required only to check updates. No analytics, no tracking, no data ever leaves your phone."
+    ),
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
