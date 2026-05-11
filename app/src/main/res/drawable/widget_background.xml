@@ -1,4 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<selector xmlns:android="http://schemas.android.com/apk/res/android">
+<!--
+    Rounded rectangle background for the widget.
+    Android system draws this as the widget's background shape.
+    We keep it transparent here and set the actual color via Glance modifiers in code
+    so it can adapt to light/dark mode. This file primarily provides the rounded corners.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
 
-</selector>
+    <!-- Rounded corners — 16dp matches Material3 card corner radius -->
+    <corners android:radius="16dp" />
+
+</shape>

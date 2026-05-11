@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">TraceLedger</string>
+    <string name="widget_description">Balance and monthly summary at a glance</string>
 </resources>

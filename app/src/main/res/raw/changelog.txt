@@ -1,3 +1,12 @@
+# 1.2.0
+[Palette] GIP Theme Rebrand :: TraceLedger now uses the GreenIcePhoenix Sovereign Violet accent across all interactive elements — a cleaner, finance-neutral identity.
+[Palette] New App Icon :: TraceLedger has a new icon aligned with the GreenIcePhoenix ecosystem — Vines Green on Void Deep, built for adaptive icon launchers.
+[Lightbulb] Extra Dark Mode :: New OLED-optimised Extra Dark theme joins System, Light, and Dark in Settings → Appearance.
+[AccountBalance] Home Screen Widget :: Add a TraceLedger widget to your home screen showing total balance and this month's income, expense and net at a glance.
+[TrendingUp] Spending Forecast :: Dashboard now shows a projected month-end spend based on your daily average so far.
+[Repeat] Transaction Templates :: Save any transaction as a template and replay it in one tap from the Add Transaction screen.
+[Category] Settings Redesign :: Settings reorganised into clear sections with inline current values — see your currency, theme and format without opening any sheet.
+
 # 1.1.0
 [NotificationsActive] Daily Reminder :: Set a daily notification to remind you to log your transactions. Choose any time from Settings → Notifications.
 [SystemUpdate] Auto Update Checker :: TraceLedger now checks for new releases on launch and lets you download and install updates directly.

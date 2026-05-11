@@ -1,30 +1,28 @@
 [versions]
-agp = "8.13.2"
-kotlin = "2.0.21"
+agp = "9.1.0"
+kotlin = "2.2.10"
 coreKtx = "1.17.0"
 junit = "4.13.2"
 junitVersion = "1.3.0"
 espressoCore = "3.7.0"
 lifecycleRuntimeKtx = "2.10.0"
 activityCompose = "1.12.2"
-
-# FIX: Updated from 2024.09.00 to 2025.05.00
-# The BOM manages all androidx.compose.* library versions automatically.
-# Updating this one line updates them all.
+glance = "1.1.1"
 composeBom = "2025.05.00"
-
-# IMPORTANT: "compose" variable name is kept as-is.
-# The app build.gradle.kts references this by name for material-icons-extended
-# which is not covered by the BOM and needs an explicit version.
 compose = "1.7.8"
-
-# Keep original variable names — build.gradle.kts references these by name.
-# Only the version values are updated.
 material3 = "1.3.2"
 navigation = "2.8.9"
 room = "2.7.1"
 kotlinx-serialization-json = "1.7.3"
 datastore = "1.1.4"
+pdfbox = "2.0.25.0"
+
+# Apache POI — XLS (old binary) + encrypted XLSX support.
+# Apache 2.0 license. Play Store safe.
+# poi         = core, handles .xls files
+# poi-ooxml   = handles .xlsx and DECRYPTS encrypted .xls/.xlsx files
+# Both are needed for full spreadsheet support.
+poi = "5.2.5"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -33,8 +31,6 @@ androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "j
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
-
-# BOM manages all androidx.compose.* versions — no version= needed on these.
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
 androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
@@ -43,24 +39,23 @@ androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "u
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
 androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
-
-# These keep the same variable names the build.gradle.kts already uses.
 compose-ui = { group = "androidx.compose.ui", name = "ui", version.ref = "compose" }
 compose-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview", version.ref = "compose" }
 material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3" }
-
 navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigation" }
-
 room-runtime = { group = "androidx.room", name = "room-runtime", version.ref = "room" }
 room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
-
-# material-icons-extended is NOT in the BOM so it needs an explicit version.
 material-icons = { group = "androidx.compose.material", name = "material-icons-extended", version.ref = "compose" }
-
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization-json" }
+glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
+glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
+pdfbox = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfbox" }
 
+# Apache POI — spreadsheet support
+poi-core = { group = "org.apache.poi", name = "poi",       version.ref = "poi" }
+poi-ooxml = { group = "org.apache.poi", name = "poi-ooxml", version.ref = "poi" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

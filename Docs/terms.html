@@ -1,273 +1,299 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
   <title>Terms of Use — TraceLedger</title>
+  <meta name="description" content="TraceLedger terms of use. Plain English. No tricks.">
+  <meta name="robots" content="noindex, follow">
+
+  <meta name="theme-color" content="#030503">
+  <link rel="icon" type="image/jpeg" href="GIP_logo.png">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Outfit:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="tl-style.css">
+
   <style>
+    /* ═══════════════════════════════════════════════════
+       TRACELEDGER — VINES (EARTH) + SOVEREIGN VIOLET THEME
+    ═══════════════════════════════════════════════════ */
     :root {
-      --black: #000;
-      --g900: #0c0c0c;
-      --g800: #181818;
-      --g400: #6b6b6b;
-      --g300: #999;
-      --white: #fff;
-      --red: #e53935;
-      --red-a10: rgba(229,57,53,.10);
-      --f-dot: 'Share Tech Mono', monospace;
-      --f-mono: 'Space Mono', monospace;
-      --f-body: 'DM Sans', sans-serif;
-    }
+      --bg-deep:        #030503;
+      --bg-surface:     #081008;
+      --bg-glass:       rgba(8, 16, 8, 0.7);
+      --border-dim:     rgba(46, 204, 113, 0.15);
+      --border-hover:   rgba(46, 204, 113, 0.35);
+      
+      --accent:         #2ECC71; /* Emerald/Vines */
+      --accent-dim:     rgba(46, 204, 113, 0.12);
+      --emerald: #2ECC71;
+      --cryo: #00D4FF;
+      --ember: #FF6B1A;
+      --violet:         #7C4DFF; /* Sovereign Violet */
+      --violet-dim:     rgba(124, 77, 255, 0.2);
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
+      --text-pure:      #FFFFFF;
+      --text-mid:       rgba(255,255,255,0.75);
+      --text-dim:       rgba(255,255,255,0.45);
 
-    body {
-      background: var(--black);
-      color: var(--white);
-      font-family: var(--f-body);
-      font-weight: 300;
-      line-height: 1.7;
-      -webkit-font-smoothing: antialiased;
-    }
+      --grad-tri:       linear-gradient(135deg, var(--emerald) 0%, var(--cryo) 50%, var(--ember) 100%);
 
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background: repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,.03) 3px, rgba(0,0,0,.03) 4px);
-      pointer-events: none;
-      z-index: 999;
+      --font-display:   'Cinzel', serif;
+      --font-body:      'Outfit', sans-serif;
+      --font-mono:      'Share Tech Mono', monospace;
     }
-
-    nav {
-      position: sticky; top: 0;
-      background: rgba(0,0,0,.92);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--g800);
-      height: 56px;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 28px;
-      z-index: 100;
-    }
-
-    .brand {
-      font-family: var(--f-dot);
-      font-size: 13px;
-      color: var(--white);
-      text-decoration: none;
-      letter-spacing: .1em;
-    }
-    .brand span { color: var(--red); }
-
-    .back {
-      font-family: var(--f-mono);
-      font-size: 10px;
-      color: var(--g400);
-      text-decoration: none;
-      letter-spacing: .14em;
-      text-transform: uppercase;
-      transition: color .2s;
-    }
-    .back:hover { color: var(--white); }
-
-    main {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 72px 28px 96px;
-    }
-
-    .page-tag {
-      font-family: var(--f-mono);
-      font-size: 10px;
-      color: var(--red);
-      letter-spacing: .22em;
-      text-transform: uppercase;
-      display: flex; align-items: center; gap: 10px;
-      margin-bottom: 20px;
-    }
-    .page-tag::before {
-      content: '';
-      display: block;
-      width: 24px; height: 1px;
-      background: var(--red);
-    }
-
-    h1 {
-      font-family: var(--f-dot);
-      font-size: clamp(32px, 6vw, 56px);
-      color: var(--white);
-      line-height: 1.1;
-      margin-bottom: 12px;
-    }
-
-    .updated {
-      font-family: var(--f-mono);
-      font-size: 11px;
-      color: var(--g400);
-      letter-spacing: .12em;
-      margin-bottom: 48px;
-    }
-
-    .lead {
-      font-size: 17px;
-      color: var(--g300);
-      line-height: 1.75;
-      margin-bottom: 56px;
-      padding: 24px;
-      background: var(--red-a10);
-      border-left: 3px solid var(--red);
-      border-radius: 0 8px 8px 0;
-    }
-
-    section {
-      margin-bottom: 44px;
-      padding-bottom: 44px;
-      border-bottom: 1px solid var(--g800);
-    }
-    section:last-of-type { border-bottom: none; }
-
-    h2 {
-      font-family: var(--f-mono);
-      font-size: 11px;
-      color: var(--red);
-      letter-spacing: .2em;
-      text-transform: uppercase;
-      margin-bottom: 16px;
-    }
-
-    p {
-      font-size: 15px;
-      color: var(--g300);
-      line-height: 1.8;
-      margin-bottom: 14px;
-    }
-    p:last-child { margin-bottom: 0; }
-
-    footer {
-      border-top: 1px solid var(--g800);
-      padding: 32px 28px;
-      text-align: center;
-    }
-    .foot-note {
-      font-family: var(--f-mono);
-      font-size: 10px;
-      color: var(--g400);
-      letter-spacing: .14em;
-    }
-    .foot-note a { color: var(--red); text-decoration: none; }
-    .foot-note a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
 
-<nav>
-  <a href="/" class="brand">TRACE<span>LEDGER</span></a>
-  <a href="/" class="back">← Back to home</a>
+<canvas id="engine-canvas"></canvas>
+<div class="noise-overlay"></div>
+
+<nav class="nav" role="navigation" aria-label="Main navigation">
+  <div class="nav__inner">
+    
+    <div class="nav__logos">
+      <a href="https://greenicephoenix.pages.dev/" class="nav__logo-brand" aria-label="GreenIcePhoenix Home">
+        <img src="GIP_logo.png" alt="G.I.P Icon" style="height: 38px; object-fit: fill; border-radius: 4px;">
+        <span class="nav__logo-text brand-text">G.I.P</span>
+      </a>
+      <div class="nav__logo-app">
+        <a href="index.html" style="display: flex; align-items: center; gap: 8px;">
+          <span class="nav__logo-text text-accent">TRACELEDGER</span>
+        </a>
+      </div>
+    </div>
+
+    <ul class="nav__links" id="nav-links" role="list">
+      <li><a href="index.html#features" class="nav__link">FEATURES</a></li>
+      <li><a href="index.html#how" class="nav__link">HOW IT WORKS</a></li>
+      <li><a href="index.html#download" class="nav__link">DOWNLOAD</a></li>
+    </ul>
+
+    <button class="nav__hamburger" id="hamburger" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav-links">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
 </nav>
 
-<main>
-  <p class="page-tag">Legal</p>
-  <h1>TERMS<br>OF USE</h1>
-  <p class="updated">Last updated: March 2026</p>
+<main class="policy-page" id="main-content">
+  <div class="wrap" style="max-width: 800px;">
 
-  <div class="lead">
-    By installing and using TraceLedger, you agree to these terms. They're short,
-    written in plain language, and designed to protect you — not us.
+    <header class="policy-header reveal">
+      <p class="policy-header__label">LEGAL DOCUMENT</p>
+      <h1 class="policy-header__title">Terms of Use</h1>
+      <p class="policy-header__meta">
+        Last updated: March 2026<br>
+        Developer: GreenIcePhoenix &nbsp;·&nbsp; Package: com.greenicephoenix.traceledger
+      </p>
+    </header>
+
+    <div class="policy-highlight reveal">
+      <p>
+        <strong>By installing and using TraceLedger, you agree to these terms.</strong> They're short, written in plain language, and designed to protect you — not us.
+      </p>
+    </div>
+
+    <section class="policy-section reveal">
+      <h2 class="policy-section__title">1. Acceptance</h2>
+      <p>These Terms of Use govern your use of the TraceLedger Android application. If you do not agree with any part of these terms, please uninstall the app.</p>
+    </section>
+
+    <section class="policy-section reveal">
+      <h2 class="policy-section__title">2. Intended Use</h2>
+      <p>TraceLedger is a personal finance management tool intended for personal, non-commercial use. You may use the app to track your own income, expenses, accounts, and budgets.</p>
+      <p>You may not use the app for illegal purposes or to store data belonging to others without their consent.</p>
+    </section>
+
+    <section class="policy-section reveal">
+      <h2 class="policy-section__title">3. Your Data</h2>
+      <p>All data you enter into TraceLedger is stored locally on your device. You are solely responsible for the accuracy of the data you enter and for maintaining your own backups.</p>
+      <p>We strongly recommend using the JSON export feature regularly to back up your data. We are not liable for data loss caused by uninstalling the app, device failure, or any other circumstance.</p>
+    </section>
+
+    <section class="policy-section reveal">
+      <h2 class="policy-section__title">4. Financial Disclaimer</h2>
+      <p>TraceLedger is a personal tracking tool only. It does not provide financial advice, investment recommendations, or tax guidance.</p>
+      <p>The figures shown in the app reflect only the data you have entered. Always verify your balances with your actual bank statements. TraceLedger is not a substitute for professional financial advice.</p>
+    </section>
+
+    <section class="policy-section reveal">
+      <h2 class="policy-section__title">5. Intellectual Property</h2>
+      <p>TraceLedger and all associated source code, design, and assets are the intellectual property of the developer. All rights are reserved.</p>
+      <p>The app is provided to you as a compiled binary for personal use. You may not decompile, reverse-engineer, modify, or redistribute the app or any part of it without explicit written permission from the developer.</p>
+      <p>You may not create derivative works based on TraceLedger or use its name, branding, or design in other projects without permission.</p>
+    </section>
+
+    <section class="policy-section reveal">
+      <h2 class="policy-section__title">6. No Warranty</h2>
+      <p>TraceLedger is provided "as is" without warranty of any kind, express or implied. We make no guarantees regarding uptime, accuracy, fitness for a particular purpose, or freedom from bugs.</p>
+      <p>Use the app at your own discretion.</p>
+    </section>
+
+    <section class="policy-section reveal">
+      <h2 class="policy-section__title">7. Limitation of Liability</h2>
+      <p>To the maximum extent permitted by law, the developers of TraceLedger shall not be liable for any indirect, incidental, special, or consequential damages arising from your use of the app, including but not limited to data loss or financial decisions made based on app data.</p>
+    </section>
+
+    <section class="policy-section reveal">
+      <h2 class="policy-section__title">8. Updates to These Terms</h2>
+      <p>These terms may be updated with new app versions. The effective date at the top will reflect the latest revision. Continued use of the app after an update constitutes acceptance of the revised terms.</p>
+    </section>
+
+    <section class="policy-section reveal">
+      <h2 class="policy-section__title">9. Contact</h2>
+      <p>For questions about these terms, reach out via our Discord server.</p>
+    </section>
+
+    <div class="policy-contact reveal">
+      <h2 class="policy-contact__title">CONTACT</h2>
+      <p>
+        Discord: <a href="https://discord.gg/WguVY8wmzT" target="_blank" style="color: var(--accent);">GreenIcePhoenix Server</a><br>
+        Email: <a href="mailto:greenicephoenix@gmail.com" style="color: var(--text-dim); text-decoration: none;">greenicephoenix@gmail.com</a>
+      </p>
+    </div>
+
   </div>
-
-  <section>
-    <h2>1. Acceptance</h2>
-    <p>These Terms of Use govern your use of the TraceLedger Android application.
-      If you do not agree with any part of these terms, please uninstall the app.</p>
-  </section>
-
-  <section>
-    <h2>2. Intended Use</h2>
-    <p>TraceLedger is a personal finance management tool intended for personal,
-      non-commercial use. You may use the app to track your own income, expenses,
-      accounts, and budgets.</p>
-    <p>You may not use the app for illegal purposes or to store data belonging to
-      others without their consent.</p>
-  </section>
-
-  <section>
-    <h2>3. Your Data</h2>
-    <p>All data you enter into TraceLedger is stored locally on your device. You are
-      solely responsible for the accuracy of the data you enter and for maintaining your
-      own backups.</p>
-    <p>We strongly recommend using the JSON export feature regularly to back up your
-      data. We are not liable for data loss caused by uninstalling the app, device
-      failure, or any other circumstance.</p>
-  </section>
-
-  <section>
-    <h2>4. Financial Disclaimer</h2>
-    <p>TraceLedger is a personal tracking tool only. It does not provide financial
-      advice, investment recommendations, or tax guidance.</p>
-    <p>The figures shown in the app reflect only the data you have entered. Always
-      verify your balances with your actual bank statements. TraceLedger is not a
-      substitute for professional financial advice.</p>
-  </section>
-
-  <!--
-    Section 5 — updated when repo went private.
-    Previous wording: "TraceLedger is open-source software. The source code is
-    available on GitHub."
-    This is no longer accurate. The repo is now private and the code is proprietary.
-    The section now accurately describes the licensing terms.
-  -->
-  <section>
-    <h2>5. Intellectual Property</h2>
-    <p>TraceLedger and all associated source code, design, and assets are the
-      intellectual property of the developer. All rights are reserved.</p>
-    <p>The app is provided to you as a compiled binary for personal use. You may not
-      decompile, reverse-engineer, modify, or redistribute the app or any part of it
-      without explicit written permission from the developer.</p>
-    <p>You may not create derivative works based on TraceLedger or use its name,
-      branding, or design in other projects without permission.</p>
-  </section>
-
-  <section>
-    <h2>6. No Warranty</h2>
-    <p>TraceLedger is provided "as is" without warranty of any kind, express or
-      implied. We make no guarantees regarding uptime, accuracy, fitness for a
-      particular purpose, or freedom from bugs.</p>
-    <p>Use the app at your own discretion.</p>
-  </section>
-
-  <section>
-    <h2>7. Limitation of Liability</h2>
-    <p>To the maximum extent permitted by law, the developers of TraceLedger shall
-      not be liable for any indirect, incidental, special, or consequential damages
-      arising from your use of the app, including but not limited to data loss or
-      financial decisions made based on app data.</p>
-  </section>
-
-  <section>
-    <h2>8. Updates to These Terms</h2>
-    <p>These terms may be updated with new app versions. The effective date at the top
-      will reflect the latest revision. Continued use of the app after an update
-      constitutes acceptance of the revised terms.</p>
-  </section>
-
-  <section>
-    <h2>9. Contact</h2>
-    <p>For questions about these terms, reach out via our
-      <a href="https://discord.gg/MYFfxqvKCQ" style="color:var(--red);">Discord server</a>.</p>
-  </section>
 </main>
 
-<footer>
-  <p class="foot-note">
-    <a href="/">TraceLedger</a>
-    &nbsp;·&nbsp;
-    <a href="/privacy">Privacy Policy</a>
-    &nbsp;·&nbsp;
-    No personal data collected. Ever.
-  </p>
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer__inner">
+      
+      <div class="footer__brand">
+        <div class="footer__logo">
+          <img src="GIP_logo.png" alt="Brand Icon" style="height:38px; object-fit:fill; border-radius: 4px;">
+          <span class="footer__logo-text brand-text">GREENICEPHOENIX</span>
+        </div>
+        <p class="footer__tagline">"No cloud. No ads. No tracking. Ever."</p>
+      </div>
+
+      <div class="footer__links">
+        <div>
+          <p class="footer__col-title">APP</p>
+          <ul class="footer__col-links">
+            <li><a href="index.html#features" class="footer__col-link">Features</a></li>
+            <li><a href="index.html#privacy" class="footer__col-link">Privacy</a></li>
+            <li><a href="index.html#how" class="footer__col-link">How It Works</a></li>
+            <li><a href="index.html#download" class="footer__col-link">Download</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="footer__col-title">COMMUNITY</p>
+          <ul class="footer__col-links">
+            <li><a href="https://discord.gg/WguVY8wmzT" class="footer__col-link" target="_blank">Discord</a></li>
+            <li><a href="https://discord.gg/WguVY8wmzT" class="footer__col-link" target="_blank">Report a Bug</a></li>
+            <li><a href="https://github.com/GreenIcePhoenix/TraceLedger/" class="footer__col-link" target="_blank">GitHub</a></li>
+            <li><a href="https://greenicephoenix.pages.dev/" class="footer__col-link" target="_blank" rel="noopener noreferrer">Other Projects</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="footer__col-title">LEGAL</p>
+          <ul class="footer__col-links">
+            <li><a href="privacy.html" class="footer__col-link">Privacy Policy</a></li>
+            <li><a href="terms.html" class="footer__col-link" style="color: var(--accent);">Terms of Service</a></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
 </footer>
 
+<script>
+  const hamburger = document.getElementById('hamburger');
+  const navLinks = document.getElementById('nav-links');
+  hamburger.addEventListener('click', () => {
+    const isOpen = navLinks.classList.toggle('open');
+    hamburger.setAttribute('aria-expanded', isOpen.toString());
+  });
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  const canvas = document.getElementById('engine-canvas');
+  const ctx = canvas.getContext('2d');
+  
+  const isMobile = window.innerWidth < 768;
+  if (isMobile) {
+    canvas.style.display = 'none';
+  } else {
+    let w, h;
+    function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize);
+    resize();
+
+    const nodes = [];
+    const numNodes = Math.min(80, Math.floor((w * h) / 15000));
+
+    for (let i = 0; i < numNodes; i++) {
+      const rand = Math.random();
+      let colorStr = 'rgba(46,204,113,'; // Vines Emerald
+      if (rand > 0.90) colorStr = 'rgba(124,77,255,'; // Sovereign Violet
+      else if (rand > 0.70) colorStr = 'rgba(139,195,74,'; // Earthy Green
+
+      nodes.push({
+        x: Math.random() * w, y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
+        r: Math.random() * 2 + 1,
+        color: colorStr,
+        isVineLeaf: Math.random() > 0.6 
+      });
+    }
+
+    let isVisible = true;
+    document.addEventListener("visibilitychange", () => { isVisible = !document.hidden; });
+
+    function draw() {
+      if (!isVisible) { requestAnimationFrame(draw); return; } 
+
+      ctx.clearRect(0, 0, w, h);
+      
+      nodes.forEach(n => {
+        if (n.isVineLeaf) {
+          n.y += (Math.random() * 0.8 + 0.3);
+          n.x += Math.sin(n.y * 0.03) * 0.7;
+          if (n.y > h + 10) { n.y = -10; n.x = Math.random() * w; }
+        } else {
+          n.x += n.vx; n.y += n.vy;
+          if (n.x < 0 || n.x > w) n.vx *= -1;
+          if (n.y < 0 || n.y > h) n.vy *= -1;
+        }
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+        ctx.fillStyle = n.color + (n.isVineLeaf ? '0.7)' : '0.4)');
+        ctx.fill();
+        
+        if (!n.isVineLeaf) {
+          nodes.forEach(n2 => {
+            if (!n2.isVineLeaf) {
+              const dist = Math.hypot(n.x - n2.x, n.y - n2.y);
+              if (dist < 120) {
+                ctx.beginPath();
+                ctx.moveTo(n.x, n.y);
+                ctx.lineTo(n2.x, n2.y);
+                ctx.strokeStyle = `rgba(124, 77, 255, ${0.15 * (1 - dist/120)})`; 
+                ctx.stroke();
+              }
+            }
+          });
+        }
+      });
+      requestAnimationFrame(draw);
+    }
+    draw();
+  }
+</script>
 </body>
 </html>

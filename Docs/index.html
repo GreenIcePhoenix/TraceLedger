@@ -1,725 +1,744 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-    <!--
-      TRACELEDGER — Landing Page
-      Author: GreenIcePhoenix
-      Package: com.greenicephoenix.traceledger
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>TraceLedger — Private Finance Tracker for Android</title>
+  <meta name="description" content="Track every rupee, offline. No cloud, no ads, no accounts. A privacy-first expense tracker with budgets, statistics, and recurring transactions. Free forever.">
+  <meta name="keywords" content="expense tracker, budget app, android finance app, offline finance, private expense tracker, traceledger, rupee tracker, no cloud finance">
+  <meta name="author" content="GreenIcePhoenix">
 
-      Font strategy (both OFL licensed — safe for commercial use):
-        Share Tech Mono → dot matrix heading aesthetic
-        DM Sans         → clean readable body text
-    -->
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TraceLedger — Private Finance Tracker for Android</title>
-    <meta name="description" content="Track every rupee, offline. No cloud, no ads, no accounts. A privacy-first expense tracker with budgets, statistics, and recurring transactions. Free forever.">
-    <meta name="keywords" content="expense tracker, budget app, android finance app, offline finance, private expense tracker, traceledger, rupee tracker, no cloud finance">
-    <meta name="author" content="GreenIcePhoenix">
-    <meta property="og:title" content="TraceLedger — Private Finance Tracker">
-    <meta property="og:description" content="Track every rupee, offline. No cloud, no ads, no accounts. Free forever.">
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="https://traceledger.pages.dev">
-    <meta name="theme-color" content="#000000">
-    <link rel="canonical" href="https://traceledger.pages.dev">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+  <meta property="og:title" content="TraceLedger — Private Finance Tracker">
+  <meta property="og:description" content="Track every rupee, offline. No cloud, no ads, no accounts. Free forever.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://traceledger.pages.dev">
+  <meta name="theme-color" content="#030503">
 
-    <style>
-        :root {
-          --bg:           #000000;
-          --surface:      #0D0D0D;
-          --surface-2:    #161616;
-          --border:       #1E1E1E;
-          --border-light: #2E2E2E;
-          --text:         #FFFFFF;
-          --muted:        #888888;
-          --faint:        #444444;
-          --accent:       #E53935;
-          --accent-dim:   rgba(229,57,53,0.10);
-          --green:        #4CAF50;
-          --font-mono: 'Share Tech Mono','Courier New',monospace;
-          --font-body: 'DM Sans','Helvetica Neue',sans-serif;
-          --nav-h: 64px;
-          --max-w: 1120px;
-          --r: 4px; --r-lg: 8px; --r-xl: 16px;
-          --t-fast: 150ms ease; --t-base: 250ms ease;
-        }
-        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-        html{scroll-behavior:smooth;font-size:16px;-webkit-text-size-adjust:100%;}
-        body{
-          background:var(--bg);color:var(--text);
-          font-family:var(--font-body);font-size:1rem;line-height:1.6;
-          min-height:100vh;overflow-x:hidden;
-          background-image:radial-gradient(circle,#1a1a1a 1px,transparent 1px);
-          background-size:24px 24px;
-        }
-        a{color:inherit;text-decoration:none;}
-        img{display:block;max-width:100%;}
-        ul,ol{list-style:none;}
-        button{cursor:pointer;border:none;background:none;font-family:inherit;}
-        h1,h2,h3,h4{font-family:var(--font-mono);font-weight:400;line-height:1.2;}
-        h1{font-size:clamp(2rem,5vw,3.5rem);}
-        h2{font-size:clamp(1.5rem,3.5vw,2.4rem);}
-        h3{font-size:clamp(1rem,2.5vw,1.3rem);}
-        p{color:var(--muted);line-height:1.75;}
-        .accent{color:var(--accent);}
-        .dim{color:var(--faint);}
-        .label{font-family:var(--font-mono);font-size:0.68rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--accent);}
-        .wrap{max-width:var(--max-w);margin:0 auto;padding:0 32px;}
-        .section{padding:96px 0;}
-        .section--alt{background:var(--surface);}
+  <link rel="icon" type="image/jpeg" href="GIP_logo.png">
 
-        /* ── BOOT ────────────────────────────────────────────────── */
-        #boot{
-          position:fixed;inset:0;z-index:9000;background:var(--bg);
-          display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;
-          transition:opacity .5s ease,visibility .5s ease;
-        }
-        #boot.done{opacity:0;visibility:hidden;pointer-events:none;}
-        .boot-logo{font-family:var(--font-mono);font-size:clamp(1.4rem,4vw,2.2rem);letter-spacing:.12em;}
-        .boot-logo em{color:var(--accent);font-style:normal;}
-        .boot-lines{font-family:var(--font-mono);font-size:.7rem;color:var(--faint);letter-spacing:.12em;display:flex;flex-direction:column;gap:6px;min-width:300px;}
-        .boot-line{opacity:0;}.boot-line.show{animation:bootFade .22s ease forwards;}
-        .boot-line .ok{color:var(--accent);margin-right:10px;}.boot-line .skip{color:#333;margin-right:10px;}
-        .boot-bar-wrap{width:260px;height:2px;background:var(--surface-2);border-radius:2px;overflow:hidden;}
-        .boot-bar{height:100%;background:var(--accent);width:0%;transition:width .1s linear;}
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Outfit:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 
-        /* ── NAV ─────────────────────────────────────────────────── */
-        .nav{position:fixed;top:0;left:0;right:0;height:var(--nav-h);z-index:500;border-bottom:1px solid var(--border);background:rgba(0,0,0,.88);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
-        .nav__inner{max-width:var(--max-w);margin:0 auto;padding:0 32px;height:100%;display:flex;align-items:center;justify-content:space-between;}
-        .nav__brand{font-family:var(--font-mono);font-size:.92rem;letter-spacing:.14em;}
-        .nav__brand span{color:var(--accent);}
-        .nav__links{display:flex;align-items:center;gap:32px;}
-        .nav__link{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.12em;color:var(--muted);transition:color var(--t-fast);}
-        .nav__link:hover{color:var(--text);}
-        .nav__cta{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--text);color:var(--bg);font-family:var(--font-mono);font-size:.7rem;letter-spacing:.14em;border-radius:var(--r);transition:opacity var(--t-fast);}
-        .nav__cta:hover{opacity:.85;}
-        .nav__burger{display:none;flex-direction:column;justify-content:center;gap:5px;padding:8px;min-width:44px;min-height:44px;align-items:center;}
-        .nav__burger span{display:block;width:22px;height:2px;background:var(--text);border-radius:1px;transition:transform var(--t-base),opacity var(--t-base);}
+  <link rel="stylesheet" href="tl-style.css">
 
-        /* ── BADGE ───────────────────────────────────────────────── */
-        .badge{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border:1px solid var(--border-light);border-radius:100px;font-family:var(--font-mono);font-size:.68rem;letter-spacing:.14em;color:var(--muted);}
-        .badge .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulseDot 2s infinite;}
+  <style>
+    /* ═══════════════════════════════════════════════════
+       TRACELEDGER — VINES (EARTH) + SOVEREIGN VIOLET THEME
+    ═══════════════════════════════════════════════════ */
+    :root {
+      /* Earthy/Vines dark background */
+      --bg-deep:        #030503;
+      --bg-surface:     #081008;
+      --bg-glass:       rgba(8, 16, 8, 0.7);
+      --border-dim:     rgba(46, 204, 113, 0.15);
+      --border-hover:   rgba(46, 204, 113, 0.35);
 
-        /* ── BUTTONS ─────────────────────────────────────────────── */
-        .btn{display:inline-flex;align-items:center;gap:8px;padding:13px 28px;font-family:var(--font-mono);font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;border-radius:var(--r);transition:transform .18s ease,box-shadow .18s ease,opacity .15s ease;white-space:nowrap;}
-        .btn-red{background:var(--accent);color:#fff;}
-        .btn-red:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(229,57,53,.35);}
-        .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border-light);}
-        .btn-ghost:hover{border-color:var(--muted);color:var(--text);}
+      --emerald: #2ECC71;
+      --cryo: #00D4FF;
+      --ember: #FF6B1A;
+      
+      /* The Mix: Vines (Green) as Primary, Violet as Secondary Action */
+      --accent:         #2ECC71; /* Emerald/Vines */
+      --accent-dim:     rgba(46, 204, 113, 0.12);
+      --violet:         #7C4DFF; /* Sovereign Violet */
+      --violet-dim:     rgba(124, 77, 255, 0.2);
 
-        /* ── HERO ────────────────────────────────────────────────── */
-        .hero{min-height:100vh;display:flex;align-items:center;padding-top:var(--nav-h);position:relative;overflow:hidden;}
-        .hero::before{content:'';position:absolute;bottom:-200px;left:-200px;width:700px;height:700px;background:radial-gradient(circle,rgba(229,57,53,.07) 0%,transparent 65%);pointer-events:none;}
-        .hero__inner{position:relative;z-index:1;width:100%;max-width:var(--max-w);margin:0 auto;padding:80px 32px;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;}
-        .hero__badge{margin-bottom:20px;}
-        .hero__title{font-size:clamp(2.2rem,5vw,4rem);line-height:1.08;margin-bottom:20px;}
-        .hero__sub{font-size:1.02rem;color:var(--muted);line-height:1.75;max-width:480px;margin-bottom:28px;}
-        .hero__btns{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:40px;}
-        .hero__stats{display:flex;border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;}
-        .hstat{flex:1;padding:16px 20px;border-right:1px solid var(--border);}
-        .hstat:last-child{border-right:none;}
-        .hstat-n{font-family:var(--font-mono);font-size:1.45rem;display:block;margin-bottom:3px;}
-        .hstat-l{font-family:var(--font-mono);font-size:.6rem;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);}
+      --text-pure:      #FFFFFF;
+      --text-mid:       rgba(255,255,255,0.75);
+      --text-dim:       rgba(255,255,255,0.45);
 
-        /* App preview panel */
-        .hero__panel{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--border-light);border-radius:var(--r-xl);overflow:hidden;}
-        .panel-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
-        .panel-header-label{font-family:var(--font-mono);font-size:.6rem;letter-spacing:.2em;color:var(--faint);}
-        .panel-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulseDot 2s infinite;}
-        .panel-body{padding:20px;}
-        .panel-small-label{font-family:var(--font-mono);font-size:.58rem;letter-spacing:.2em;color:var(--faint);margin-bottom:4px;}
-        .panel-balance{font-family:var(--font-mono);font-size:1.9rem;margin-bottom:16px;}
-        .panel-row{display:flex;gap:8px;margin-bottom:8px;}
-        .panel-card{flex:1;padding:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-lg);}
-        .panel-card-label{font-family:var(--font-mono);font-size:.58rem;letter-spacing:.18em;color:var(--faint);margin-bottom:3px;}
-        .panel-card-val{font-family:var(--font-mono);font-size:.9rem;}
-        .panel-card-val.in{color:var(--green);}
-        .panel-card-val.out{color:var(--accent);}
-        .panel-bar-bg{height:3px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:10px;}
-        .panel-bar{height:100%;background:var(--accent);border-radius:2px;animation:barGrow 2s ease-out forwards;}
+      --grad-tri: linear-gradient(135deg, var(--emerald) 0%, var(--cryo) 50%, var(--ember) 100%);
 
-        /* Ticker */
-        .ticker{position:absolute;bottom:0;left:0;right:0;border-top:1px solid var(--border);padding:8px 0;overflow:hidden;}
-        .ticker-track{display:flex;gap:56px;animation:tickerScroll 32s linear infinite;width:max-content;white-space:nowrap;}
-        .ticker-item{font-family:var(--font-mono);font-size:.63rem;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);}
-        .ticker-sep{color:var(--accent);margin:0 8px;}
-
-        /* ── FEATURES ────────────────────────────────────────────── */
-        .feat-header{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:end;margin-bottom:52px;}
-        .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r-xl);overflow:hidden;}
-        .feat-card{background:var(--surface);padding:28px 24px;position:relative;overflow:hidden;transition:background var(--t-base);}
-        .feat-card::after{content:'';position:absolute;top:0;left:0;width:100%;height:3px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .35s ease;}
-        .feat-card:hover{background:var(--surface-2);}.feat-card:hover::after{transform:scaleX(1);}
-        .feat-card--wide{grid-column:span 2;}
-        .feat-card__n{position:absolute;top:12px;right:14px;font-family:var(--font-mono);font-size:.62rem;letter-spacing:.1em;color:var(--faint);}
-        .feat-card__icon{width:42px;height:42px;background:var(--accent-dim);border:1px solid rgba(229,57,53,.18);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px;margin-bottom:16px;}
-        .feat-card__title{font-family:var(--font-mono);font-size:.85rem;letter-spacing:.04em;color:var(--text);margin-bottom:8px;}
-        .feat-card__desc{font-size:.865rem;color:var(--muted);line-height:1.65;}
-
-        /* ── PRIVACY ─────────────────────────────────────────────── */
-        .privacy-layout{display:grid;grid-template-columns:5fr 7fr;gap:96px;align-items:center;position:relative;}
-        .privacy-layout::before{content:'';position:absolute;top:-200px;right:-200px;width:700px;height:700px;background:radial-gradient(circle,rgba(229,57,53,.04) 0%,transparent 65%);pointer-events:none;z-index:0;}
-        .privacy-manifesto{font-family:var(--font-mono);font-size:clamp(1.1rem,2.4vw,1.7rem);line-height:1.65;position:relative;z-index:1;}
-        .privacy-badges{display:grid;grid-template-columns:1fr 1fr;gap:10px;position:relative;z-index:1;}
-        .priv-badge{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;transition:border-color var(--t-base),transform var(--t-base);}
-        .priv-badge:hover{border-color:var(--border-light);transform:translateY(-2px);}
-        .priv-badge__icon{font-size:17px;margin-bottom:8px;}
-        .priv-badge__title{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.06em;color:var(--text);margin-bottom:3px;}
-        .priv-badge__sub{font-size:.76rem;color:var(--faint);}
-
-        /* ── HOW IT WORKS ────────────────────────────────────────── */
-        .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r-xl);overflow:hidden;margin-top:48px;}
-        .step{background:var(--surface);padding:28px 22px;transition:background var(--t-base);}
-        .step:hover{background:var(--surface-2);}
-        .step__n{font-family:var(--font-mono);font-size:2.1rem;color:rgba(229,57,53,.22);display:block;margin-bottom:14px;}
-        .step__title{font-family:var(--font-mono);font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text);margin-bottom:8px;}
-        .step__desc{font-size:.865rem;color:var(--muted);line-height:1.65;}
-
-        /* Install steps */
-        .install-wrap{margin-top:40px;max-width:540px;margin-left:auto;margin-right:auto;}
-        .install-label{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.2em;color:var(--faint);text-align:center;margin-bottom:16px;}
-        .install-step{display:flex;gap:18px;align-items:flex-start;padding:16px 0;border-top:1px solid var(--border);}
-        .install-step:last-child{border-bottom:1px solid var(--border);}
-        .install-step__n{font-family:var(--font-mono);font-size:.7rem;color:var(--accent);min-width:24px;padding-top:2px;flex-shrink:0;}
-        .install-step__body strong{display:block;font-family:var(--font-mono);font-size:.78rem;color:var(--text);margin-bottom:4px;}
-        .install-step__body p{font-size:.83rem;color:var(--muted);margin:0;}
-
-        /* ── DOWNLOAD CTA ────────────────────────────────────────── */
-        .dl-card{background:var(--surface);border:1px solid var(--border);border-radius:24px;padding:88px 56px;text-align:center;position:relative;overflow:hidden;max-width:740px;margin:0 auto;}
-        .dl-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:repeating-linear-gradient(90deg,var(--accent) 0,var(--accent) 4px,transparent 4px,transparent 10px);}
-        .dl-card::after{content:'';position:absolute;bottom:-180px;left:50%;transform:translateX(-50%);width:500px;height:400px;background:radial-gradient(ellipse,rgba(229,57,53,.08) 0%,transparent 70%);pointer-events:none;}
-        .dl-title{font-family:var(--font-mono);font-size:clamp(1.6rem,4vw,2.8rem);line-height:1.15;margin-bottom:14px;position:relative;z-index:1;}
-        .dl-sub{font-size:1rem;color:var(--muted);line-height:1.75;margin-bottom:36px;position:relative;z-index:1;}
-        .dl-btns{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;position:relative;z-index:1;}
-        #dl-meta{font-family:var(--font-mono);font-size:.63rem;letter-spacing:.14em;color:var(--faint);margin-top:16px;position:relative;z-index:1;}
-
-        /* ── FOOTER ──────────────────────────────────────────────── */
-        .footer{border-top:1px solid var(--border);padding:40px 0 24px;}
-        .footer__inner{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:48px;margin-bottom:32px;}
-        .footer__brand-logo{font-family:var(--font-mono);font-size:.88rem;letter-spacing:.14em;margin-bottom:10px;}
-        .footer__brand-logo span{color:var(--accent);}
-        .footer__tagline{font-size:.82rem;color:var(--faint);}
-        .footer__col-title{font-family:var(--font-mono);font-size:.62rem;letter-spacing:.2em;color:var(--faint);margin-bottom:12px;}
-        .footer__col-links{display:flex;flex-direction:column;gap:8px;}
-        .footer__col-link{font-size:.86rem;color:var(--muted);transition:color var(--t-fast);}
-        .footer__col-link:hover{color:var(--text);}
-        .footer__bottom{display:flex;align-items:center;justify-content:space-between;padding-top:16px;border-top:1px solid var(--border);}
-        .footer__copy{font-family:var(--font-mono);font-size:.62rem;color:var(--faint);letter-spacing:.1em;}
-        .footer__legal{display:flex;gap:20px;}
-        .footer__legal-link{font-family:var(--font-mono);font-size:.62rem;color:var(--faint);letter-spacing:.1em;transition:color var(--t-fast);}
-        .footer__legal-link:hover{color:var(--muted);}
-
-        /* ── ANIMATIONS ──────────────────────────────────────────── */
-        .animate-in{opacity:0;transform:translateY(16px);transition:opacity .55s ease,transform .55s ease;}
-        .animate-in.visible{opacity:1;transform:translateY(0);}
-
-        @keyframes bootFade{from{opacity:0;transform:translateX(-6px);}to{opacity:1;transform:translateX(0);}}
-        @keyframes pulseDot{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.5;transform:scale(.8);}}
-        @keyframes tickerScroll{from{transform:translateX(0);}to{transform:translateX(-50%);}}
-        @keyframes barGrow{from{width:0%;}to{width:68%;}}
-
-        /* ── RESPONSIVE ──────────────────────────────────────────── */
-        @media(max-width:900px){
-          .nav__links{display:none;}.nav__burger{display:flex;}
-          .hero__inner{grid-template-columns:1fr;text-align:center;gap:40px;}
-          .hero__panel{margin:0 auto;}.hero__btns{justify-content:center;}
-          .hero__sub{margin:0 auto 28px;}.hero__stats{flex-wrap:wrap;}
-          .feat-header{grid-template-columns:1fr;gap:20px;}
-          .feat-grid{grid-template-columns:1fr 1fr;}
-          .feat-card--wide{grid-column:span 2;}
-          .privacy-layout{grid-template-columns:1fr;gap:48px;}
-          .steps{grid-template-columns:1fr 1fr;}
-          .footer__inner{grid-template-columns:1fr 1fr;}
-        }
-
-        @media(max-width:600px){
-          .wrap{padding:0 16px;}
-          .section{padding:64px 0;}
-          .feat-grid{grid-template-columns:1fr;}.feat-card--wide{grid-column:span 1;}
-          .privacy-badges{grid-template-columns:1fr;}
-          .steps{grid-template-columns:1fr;}
-          .footer__inner{grid-template-columns:1fr;}
-          .footer__bottom{flex-direction:column;gap:12px;text-align:center;}
-          .footer__legal{justify-content:center;}
-          .dl-card{padding:56px 24px;border-radius:16px;}
-          .hero__inner{padding:60px 16px;}
-
-          .nav__links.open{
-            display:flex!important;flex-direction:column;align-items:stretch;
-            position:fixed;top:var(--nav-h);left:0;
-            width:100vw;height:calc(100vh - var(--nav-h));
-            background:#000;border-top:1px solid var(--border);
-            padding:28px 20px 48px;gap:0;z-index:9999;
-            overflow-y:auto;-webkit-overflow-scrolling:touch;
-          }
-          .nav__links.open li{display:block;width:100%;}
-          .nav__links.open .nav__link{
-            display:block;width:100%;padding:16px 0;
-            font-family:var(--font-mono);font-size:1rem;
-            letter-spacing:.15em;color:var(--text);
-            border-bottom:1px solid var(--border);
-          }
-          .nav__links.open .nav__cta{
-            display:flex;justify-content:center;width:100%;
-            margin-top:20px;padding:14px 24px;font-size:.85rem;
-            background:var(--text);color:var(--bg);border-radius:var(--r);
-          }
-        }
-    </style>
+      --font-display:   'Cinzel', serif;
+      --font-body:      'Outfit', sans-serif;
+      --font-mono:      'Share Tech Mono', monospace;
+    }
+  </style>
 </head>
 <body>
 
-<!-- BOOT SEQUENCE -->
-<div id="boot">
-    <div class="boot-logo">TRACE<em>LEDGER</em></div>
-    <div class="boot-lines" id="bootLines"></div>
-    <div class="boot-bar-wrap"><div class="boot-bar" id="bootBar"></div></div>
-</div>
+<canvas id="engine-canvas"></canvas>
+<div class="noise-overlay"></div>
 
-<!-- NAV -->
 <nav class="nav" role="navigation" aria-label="Main navigation">
-    <div class="nav__inner">
-        <a href="/" class="nav__brand">TRACE<span>LEDGER</span></a>
-        <ul class="nav__links" id="navLinks" role="list">
-            <li><a href="#features" class="nav__link">FEATURES</a></li>
-            <li><a href="#privacy"  class="nav__link">PRIVACY</a></li>
-            <li><a href="#how"      class="nav__link">HOW IT WORKS</a></li>
-            <li><a href="https://discord.gg/MYFfxqvKCQ" class="nav__link" target="_blank" rel="noopener noreferrer">DISCORD</a></li>
-            <li><a href="#download" class="nav__cta">GET THE APP ↓</a></li>
-        </ul>
-        <button class="nav__burger" id="burger" aria-label="Toggle menu" aria-expanded="false" aria-controls="navLinks">
-            <span></span><span></span><span></span>
-        </button>
+  <div class="nav__inner">
+    
+    <div class="nav__logos">
+      <a href="https://greenicephoenix.pages.dev/" class="nav__logo-brand" aria-label="GreenIcePhoenix Home">
+        <img src="GIP_logo.png" alt="G.I.P Icon" style="height: 38px; object-fit: fill; border-radius: 4px;">
+        <span class="nav__logo-text brand-text">G.I.P</span>
+      </a>
+      <div class="nav__logo-app">
+        <span class="nav__logo-text text-accent">TRACELEDGER</span>
+      </div>
     </div>
+
+    <ul class="nav__links" id="nav-links" role="list">
+      <li><a href="#features" class="nav__link">FEATURES</a></li>
+      <li><a href="#privacy" class="nav__link">PRIVACY</a></li>
+      <li><a href="#how" class="nav__link">HOW IT WORKS</a></li>
+      <li><a href="https://discord.gg/WguVY8wmzT" class="nav__link" target="_blank" rel="noopener noreferrer">DISCORD</a></li>
+      <li><a href="#download" class="nav__cta">GET THE APP ↓</a></li>
+    </ul>
+
+    <button class="nav__hamburger" id="hamburger" aria-label="Toggle menu" aria-expanded="false" aria-controls="nav-links">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
 </nav>
 
-<!-- HERO -->
 <section class="hero" id="home">
-    <div class="hero__inner">
-        <div class="hero__content">
-            <div class="hero__badge">
-        <span class="badge" id="hero-badge">
-          <span class="dot"></span>V1.1.0 — AVAILABLE NOW
+  <div class="wrap hero__inner">
+
+    <div class="hero__content reveal">
+      <div class="hero__eyebrow">
+        <span class="badge">
+          <span class="dot" aria-hidden="true"></span>
+          <span id="hero-version-badge">V1.3.0 — AVAILABLE NOW</span>
         </span>
-            </div>
-            <h1 class="hero__title">
-                MONEY<br>
-                <span class="dim">TRACKED.</span><br>
-                <span class="accent">PRIVATE.</span>
-            </h1>
-            <p class="hero__sub">
-                A fast, minimal expense tracker for Android. Log every rupee, understand
-                your spending — with zero data ever leaving your device.
-                No accounts. No cloud. No compromise.
-            </p>
-            <div class="hero__btns">
-                <a href="https://traceledger.pages.dev/TraceLedger-1.1.0.apk"
-                   id="dl-btn-hero" class="btn btn-red" download>↓ DOWNLOAD APK</a>
-                <a href="#features" class="btn btn-ghost">EXPLORE FEATURES →</a>
-            </div>
-            <div class="hero__stats">
-                <div class="hstat">
-                    <span class="hstat-n">0<span class="accent">B</span></span>
-                    <span class="hstat-l">Data sent to servers</span>
-                </div>
-                <div class="hstat">
-                    <span class="hstat-n"><span class="accent">∞</span></span>
-                    <span class="hstat-l">Transactions stored</span>
-                </div>
-                <div class="hstat">
-                    <span class="hstat-n">100<span class="accent">%</span></span>
-                    <span class="hstat-l">Offline capable</span>
-                </div>
-                <div class="hstat">
-                    <span class="hstat-n">0<span class="accent">₹</span></span>
-                    <span class="hstat-l">Cost, forever</span>
-                </div>
-            </div>
-        </div>
+      </div>
 
-        <!-- App UI preview -->
-        <div style="display:flex;justify-content:center;" aria-hidden="true">
-            <div class="hero__panel">
-                <div class="panel-header">
-                    <span class="panel-header-label">OVERVIEW · THIS MONTH</span>
-                    <span class="panel-dot"></span>
-                </div>
-                <div class="panel-body">
-                    <div class="panel-small-label">TOTAL BALANCE</div>
-                    <div class="panel-balance">₹2,45,680</div>
-                    <div class="panel-row">
-                        <div class="panel-card">
-                            <div class="panel-card-label">IN</div>
-                            <div class="panel-card-val in">₹82,000</div>
-                        </div>
-                        <div class="panel-card">
-                            <div class="panel-card-label">OUT</div>
-                            <div class="panel-card-val out">₹31,450</div>
-                        </div>
-                        <div class="panel-card">
-                            <div class="panel-card-label">NET</div>
-                            <div class="panel-card-val in">+₹50,550</div>
-                        </div>
-                    </div>
-                    <div class="panel-card" style="margin-top:8px;">
-                        <div class="panel-card-label">MONTHLY BUDGET</div>
-                        <div class="panel-card-val" style="font-size:.8rem;color:#666;">₹31,450 of ₹46,000 — 68%</div>
-                        <div class="panel-bar-bg"><div class="panel-bar"></div></div>
-                    </div>
-                </div>
-            </div>
+      <h1 class="hero__title">
+	<span class="hero__void-symbol brand-text" aria-hidden="true"><img src="TraceLedger_logo.png" alt="G.I.P Icon" style="height: 80px;object-fit: inherit;"></span>
+        MONEY TRACKED.<br>
+        <span class="text-accent">PRIVATE.</span>
+      </h1>
+
+      <p class="hero__tagline">
+        A fast, minimal expense tracker for Android. Log every rupee, understand your spending — with zero data ever leaving your device. No accounts. No cloud. No compromise.
+      </p>
+
+      <div class="hero__actions">
+        <a href="#download" id="dl-btn-hero" class="btn btn--primary">DOWNLOAD APK ↓</a>
+        <a href="#features" class="btn btn--ghost">EXPLORE FEATURES →</a>
+      </div>
+
+      <div class="hero__stats">
+        <div>
+          <div class="hero__stat-value text-accent">0B</div>
+          <div class="hero__stat-label">Data Sent</div>
         </div>
+        <div>
+          <div class="hero__stat-value text-accent">∞</div>
+          <div class="hero__stat-label">Transactions</div>
+        </div>
+        <div>
+          <div class="hero__stat-value text-accent">100%</div>
+          <div class="hero__stat-label">Offline-first</div>
+        </div>
+        <div>
+          <div class="hero__stat-value text-accent">0₹</div>
+          <div class="hero__stat-label">Cost, forever</div>
+        </div>
+      </div>
     </div>
 
-    <!-- Scrolling ticker -->
-    <div class="ticker" aria-hidden="true">
-        <div class="ticker-track">
-            <span class="ticker-item">No Cloud<span class="ticker-sep">◆</span></span>
-            <span class="ticker-item">No Ads<span class="ticker-sep">◆</span></span>
-            <span class="ticker-item">Offline First<span class="ticker-sep">◆</span></span>
-            <span class="ticker-item">No Tracking<span class="ticker-sep">◆</span></span>
-            <span class="ticker-item">Privacy First<span class="ticker-sep">◆</span></span>
-            <span class="ticker-item">Android 8.0+<span class="ticker-sep">◆</span></span>
-            <span class="ticker-item">Free Forever<span class="ticker-sep">◆</span></span>
-            <span class="ticker-item">Indian-First Design<span class="ticker-sep">◆</span></span>
-            <span class="ticker-item">No Cloud<span class="ticker-sep">◆</span></span>
-            <span class="ticker-item">No Ads<span class="ticker-sep">◆</span></span>
-            <span class="ticker-item">Offline First<span class="ticker-sep">◆</span></span>
-            <span class="ticker-item">No Tracking<span class="ticker-sep">◆</span></span>
-            <span class="ticker-item">Privacy First<span class="ticker-sep">◆</span></span>
-            <span class="ticker-item">Android 8.0+<span class="ticker-sep">◆</span></span>
-            <span class="ticker-item">Free Forever<span class="ticker-sep">◆</span></span>
-            <span class="ticker-item">Indian-First Design<span class="ticker-sep">◆</span></span>
+    <div class="hero__visual reveal">
+      <div class="phone-mockup">
+        <div class="phone-mockup__notch"></div>
+        <div class="phone-mockup__status">
+          <span>2:59</span>
+          <span style="font-size: 0.5rem;">▼ ▲ ■</span>
         </div>
+
+        <div class="phone-mockup__content">
+          <div class="tl-app">
+            
+            <div class="tl-header">
+              <h1>OVERVIEW</h1>
+              <p>This month</p>
+            </div>
+
+            <div class="tl-card">
+              <div class="tl-label">TOTAL BALANCE</div>
+              <div class="tl-balance">₹65,000</div>
+              <div class="tl-row tl-space-between">
+                <span class="tl-green">In ₹50,000</span>
+                <span class="tl-red">Out ₹5,000</span>
+              </div>
+            </div>
+
+            <div class="tl-card">
+              <div class="tl-label">NET THIS MONTH</div>
+              <div class="tl-net">₹45,000</div>
+            </div>
+
+            <div class="tl-card tl-flex-center" style="padding: 16px;">
+              <span style="font-size: 1rem;">⊕</span> Set a monthly budget
+            </div>
+
+            <div class="tl-section-title">INSIGHTS</div>
+            
+            <div class="tl-card tl-row">
+              <span class="tl-green" style="margin-right: 12px; font-weight: bold;">↗</span> 
+              <span>You spent 100% less than last month</span>
+            </div>
+
+            <div class="tl-section-title">ACCOUNTS</div>
+            
+            <div class="tl-accounts-row">
+              <div class="tl-account-card add-btn tl-flex-center">
+                 <span class="text-violet" style="font-size: 1.5rem;">+</span>
+              </div>
+              <div class="tl-account-card">
+                 <div class="tl-row tl-space-between">
+                   <span style="font-size: 0.8rem;">🏦 HSBC</span>
+                   <span class="tl-green" style="background: rgba(46,204,113,0.1); border-radius: 50%; padding: 2px;">✓</span>
+                 </div>
+                 <div class="tl-acc-bal">₹65,000</div>
+                 <div class="tl-progress-bar"></div>
+              </div>
+            </div>
+
+            <div class="tl-section-title tl-space-between">
+              RECENT <span class="tl-violet-text">See all</span>
+            </div>
+            
+            <div class="tl-card tl-recent-list">
+              <div class="tl-recent-item">
+                <div class="tl-dot tl-dot-violet"></div>
+                <div class="tl-recent-info">
+                  <div class="tl-recent-title">Bills</div>
+                  <div class="tl-recent-sub">HSBC</div>
+                </div>
+                <div class="tl-recent-amount">
+                  <div class="tl-red" style="font-size: 0.8rem;">-₹5,000</div>
+                  <div class="tl-recent-sub">1 May</div>
+                </div>
+              </div>
+              
+              <div class="tl-recent-item">
+                <div class="tl-dot tl-dot-green"></div>
+                <div class="tl-recent-info">
+                  <div class="tl-recent-title">Salary</div>
+                  <div class="tl-recent-sub">HSBC</div>
+                </div>
+                <div class="tl-recent-amount">
+                  <div class="tl-green" style="font-size: 0.8rem;">+₹50,000</div>
+                  <div class="tl-recent-sub">1 May</div>
+                </div>
+              </div>
+            </div>
+            
+          </div>
+        </div>
+        
+        <!-- Bottom Nav Bar (Centered with proper proportions) -->
+        <div class="tl-bottom-nav">
+           <div class="tl-nav-item">
+             <div class="tl-nav-active">
+               <svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+             </div>
+           </div>
+           
+           <div class="tl-nav-item">
+             <div class="tl-nav-icon">
+               <svg viewBox="0 0 24 24"><path d="M4 6h2v2H4zm0 5h2v2H4zm0 5h2v2H4zm16-8V6H8v2zm0 5v-2H8v2zm0 5v-2H8v2z"/></svg>
+             </div>
+           </div>
+           
+           <div class="tl-nav-item">
+             <div class="tl-fab">
+               <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+             </div>
+           </div>
+           
+           <div class="tl-nav-item">
+             <div class="tl-nav-icon">
+               <svg viewBox="0 0 24 24"><path d="M10 20h4V4h-4v16zm-6 0h4v-8H4v8zM16 9v11h4V9h-4z"/></svg>
+             </div>
+           </div>
+           
+           <div class="tl-nav-item">
+             <div class="tl-nav-icon">
+               <svg viewBox="0 0 24 24"><path d="M19.43 12.98c.04-.32.07-.64.07-.98 0-.34-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98 0 .33.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
+             </div>
+           </div>
+           
+           <div class="tl-gesture-bar"></div>
+        </div>
+
+      </div>
     </div>
+
+  </div>
 </section>
 
-<!-- FEATURES -->
 <section class="section" id="features">
-    <div class="wrap">
-        <div class="feat-header animate-in">
-            <div>
-                <p class="label" style="margin-bottom:16px;">Features</p>
-                <h2>EVERYTHING<br>YOU NEED<span class="accent">.</span><br>NOTHING<br>YOU DON'T<span class="accent">.</span></h2>
-            </div>
-            <p style="font-size:.97rem;line-height:1.8;">
-                A complete personal finance toolkit. Accounts, budgets, statistics,
-                recurring rules, daily reminders, and smart insights — all stored
-                locally. No internet required after installation.
-            </p>
-        </div>
-
-        <div class="feat-grid">
-
-            <div class="feat-card feat-card--wide animate-in">
-                <span class="feat-card__n">01</span>
-                <div class="feat-card__icon">🏦</div>
-                <h3 class="feat-card__title">Accounts &amp; Transactions</h3>
-                <p class="feat-card__desc">
-                    Bank, Cash, Wallet, and Credit Card accounts — each with independent balance tracking that
-                    updates atomically on every transaction. Log Expenses, Income, and Transfers in seconds.
-                    Search across your history by amount, category, note, date, or type.
-                    Month-by-month view with totals and filters.
-                </p>
-            </div>
-
-            <div class="feat-card animate-in">
-                <span class="feat-card__n">02</span>
-                <div class="feat-card__icon">🎯</div>
-                <h3 class="feat-card__title">Budgets</h3>
-                <p class="feat-card__desc">
-                    Monthly spending limits per category.
-                    Dashboard warning at 75% — alert at 90%.
-                    You know before you overspend, not after.
-                </p>
-            </div>
-
-            <div class="feat-card animate-in">
-                <span class="feat-card__n">03</span>
-                <div class="feat-card__icon">📊</div>
-                <h3 class="feat-card__title">Statistics</h3>
-                <p class="feat-card__desc">
-                    Animated donut charts for expense and income by category.
-                    Daily cashflow bar chart. Category spending trends
-                    across months. Month-over-month comparison arrows.
-                </p>
-            </div>
-
-            <div class="feat-card animate-in">
-                <span class="feat-card__n">04</span>
-                <div class="feat-card__icon">🔁</div>
-                <h3 class="feat-card__title">Recurring Transactions</h3>
-                <p class="feat-card__desc">
-                    Automate subscriptions, EMIs, salary, and rent.
-                    Six frequencies: daily, weekly, monthly, quarterly,
-                    half-yearly, yearly. Pause and resume any rule at any time.
-                </p>
-            </div>
-
-            <div class="feat-card animate-in">
-                <span class="feat-card__n">05</span>
-                <div class="feat-card__icon">💡</div>
-                <h3 class="feat-card__title">Smart Insights</h3>
-                <p class="feat-card__desc">
-                    Spending vs last month, savings rate, recurring monthly cost,
-                    and net worth direction — surfaced automatically on your
-                    dashboard. No setup required.
-                </p>
-            </div>
-
-            <div class="feat-card animate-in">
-                <span class="feat-card__n">06</span>
-                <div class="feat-card__icon">🗂️</div>
-                <h3 class="feat-card__title">Custom Categories</h3>
-                <p class="feat-card__desc">
-                    40+ icon choices. Separate colour palettes for Expense and
-                    Income categories. Defaults included. Add, edit, or
-                    delete freely — protected by transaction links.
-                </p>
-            </div>
-
-            <div class="feat-card animate-in">
-                <span class="feat-card__n">07</span>
-                <div class="feat-card__icon">🔔</div>
-                <h3 class="feat-card__title">Daily Reminder</h3>
-                <p class="feat-card__desc">
-                    Set a custom time to be nudged to log your transactions.
-                    Uses AlarmManager — fires even in Doze mode.
-                    Off by default. Completely optional.
-                </p>
-            </div>
-
-            <div class="feat-card animate-in">
-                <span class="feat-card__n">08</span>
-                <div class="feat-card__icon">💱</div>
-                <h3 class="feat-card__title">Multi-Currency &amp; Number Format</h3>
-                <p class="feat-card__desc">
-                    INR, USD, EUR, GBP, JPY, AUD, CAD, SGD.
-                    Indian grouping (1,00,000) or International (100,000).
-                    Switch live — no restart needed.
-                </p>
-            </div>
-
-            <div class="feat-card feat-card--wide animate-in">
-                <span class="feat-card__n">09</span>
-                <div class="feat-card__icon">📦</div>
-                <h3 class="feat-card__title">Import / Export</h3>
-                <p class="feat-card__desc">
-                    Full JSON backup — all accounts, categories, budgets, and transactions in one file.
-                    Restore from any backup with a single tap. CSV export for spreadsheets.
-                    CSV import adds transactions additively. Your data is always portable — never locked in.
-                </p>
-            </div>
-
-            <div class="feat-card animate-in">
-                <span class="feat-card__n">10</span>
-                <div class="feat-card__icon">🌗</div>
-                <h3 class="feat-card__title">Light &amp; Dark Theme</h3>
-                <p class="feat-card__desc">
-                    True OLED black dark mode inspired by Nothing OS.
-                    Clean light mode for bright environments.
-                    Switch instantly from Settings.
-                </p>
-            </div>
-
-
-
-        </div>
+  <div class="wrap">
+    <div class="section-header reveal">
+      <p class="section-label">Features</p>
+      <h2 class="section-title">Everything you need.<br>Nothing you don't.</h2>
+      <p class="section-subtitle">A complete personal finance toolkit. Accounts, budgets, statistics, recurring rules, SMS detection, statement import, and smart insights — all stored locally. No internet required after installation.</p>
     </div>
+
+    <div class="features__grid">
+      <div class="feature-card feature-card--wide feature-card--highlighted reveal">
+        <div class="feature-card__icon">🏦</div>
+        <h3 class="feature-card__title">Accounts & Transactions</h3>
+        <p class="feature-card__desc">Bank, Cash, Wallet, and Credit Card accounts — each with independent balance tracking that updates atomically on every transaction. Log Expenses, Income, and Transfers in seconds. Search across your history by amount, category, note, date, or type. Month-by-month view with totals and filters.</p>
+      </div>
+
+      <div class="feature-card feature-card--highlighted reveal">
+        <div class="feature-card__icon">🎯</div>
+        <h3 class="feature-card__title">Budgets</h3>
+        <p class="feature-card__desc">Monthly spending limits per category. Dashboard warning at 75% — alert at 90%. You know before you overspend, not after.</p>
+      </div>
+
+      <div class="feature-card feature-card--highlighted reveal">
+        <div class="feature-card__icon">🔁</div>
+        <h3 class="feature-card__title">Recurring Transactions</h3>
+        <p class="feature-card__desc">Automate subscriptions, EMIs, salary, and rent. Six frequencies: daily, weekly, monthly, quarterly, half-yearly, yearly. Pause and resume any rule at any time.</p>
+      </div>
+
+      <div class="feature-card feature-card--wide feature-card--highlighted reveal">
+        <div class="feature-card__icon">📊</div>
+        <h3 class="feature-card__title">Statistics</h3>
+        <p class="feature-card__desc">Animated donut charts for expense and income by category. Daily cashflow bar chart. Category spending trends across months. Month-over-month comparison arrows.</p>
+      </div>
+
+      <div class="feature-card feature-card--highlighted reveal">
+        <div class="feature-card__icon">💡</div>
+        <h3 class="feature-card__title">Smart Insights</h3>
+        <p class="feature-card__desc">Spending vs last month, savings rate, recurring monthly cost, and net worth direction — surfaced automatically on your dashboard. No setup required.</p>
+      </div>
+
+      <div class="feature-card feature-card--highlighted reveal">
+        <div class="feature-card__icon">🗂</div>
+        <h3 class="feature-card__title">Custom Categories</h3>
+        <p class="feature-card__desc">40+ icon choices. Separate colour palettes for Expense and Income categories. Defaults included. Add, edit, or delete freely — protected by transaction links.</p>
+      </div>
+
+      <div class="feature-card feature-card--highlighted reveal">
+        <div class="feature-card__icon">🔔</div>
+        <h3 class="feature-card__title">Daily Reminder</h3>
+        <p class="feature-card__desc">Set a custom time to be nudged to log your transactions. Uses AlarmManager — fires even in Doze mode. Off by default. Completely optional.</p>
+      </div>
+
+      <div class="feature-card feature-card--wide feature-card--highlighted reveal">
+        <div class="feature-card__icon">📦</div>
+        <h3 class="feature-card__title">Import / Export</h3>
+        <p class="feature-card__desc">Full JSON backup — all accounts, categories, budgets, and transactions in one file. Restore from any backup with a single tap. CSV export for spreadsheets. CSV import adds transactions additively. Your data is always portable — never locked in.</p>
+      </div>
+
+      <div class="feature-card feature-card--highlighted reveal">
+        <div class="feature-card__icon">💱</div>
+        <h3 class="feature-card__title">Multi-Currency</h3>
+        <p class="feature-card__desc">INR, USD, EUR, GBP, JPY, AUD, CAD, SGD. Indian grouping (1,00,000) or International (100,000). Switch live — no restart needed.</p>
+      </div>
+
+      <div class="feature-card feature-card--highlighted reveal">
+        <div class="feature-card__icon">🌗</div>
+        <h3 class="feature-card__title">Light & Dark Theme</h3>
+        <p class="feature-card__desc">True OLED black dark mode inspired by Nothing OS. Clean light mode for bright environments. Switch instantly from Settings.</p>
+      </div>
+
+      <div class="feature-card feature-card--wide feature-card--highlighted reveal">
+        <div class="feature-card__icon">💬</div>
+        <h3 class="feature-card__title">SMS Transaction Detection</h3>
+        <p class="feature-card__desc">TraceLedger reads your bank SMS messages and turns them into transactions — entirely on device. Real-time detection or bulk inbox scan. Smart account matching, 40+ merchant patterns, and a learning engine that improves from your corrections. Nothing is saved without your explicit approval on the review screen.</p>
+      </div>
+
+      <div class="feature-card feature-card--wide feature-card--highlighted reveal">
+        <div class="feature-card__icon">📄</div>
+        <h3 class="feature-card__title">Statement Import</h3>
+        <p class="feature-card__desc">Import PDF or CSV bank statements directly. Fuzzy column detection handles any CSV format. Review every transaction before confirming. Duplicate detection skips entries already in your ledger.</p>
+      </div>
+
+      <div class="feature-card feature-card--highlighted reveal">
+        <div class="feature-card__icon">⚡</div>
+        <h3 class="feature-card__title">Templates & Widget</h3>
+        <p class="feature-card__desc">Save any transaction as a template and replay it in one tap. Home screen widget shows your total balance and this month's income, expense, and net — no need to open the app.</p>
+      </div>
+    </div>
+  </div>
 </section>
 
-<!-- PRIVACY -->
-<section class="section section--alt" id="privacy">
-    <div class="wrap">
-        <div class="privacy-layout">
-            <div style="position:relative;z-index:1;">
-                <p class="label" style="margin-bottom:20px;">Privacy</p>
-                <div class="privacy-manifesto animate-in">
-                    YOUR DATA<span class="accent">.</span><br>
-                    YOUR DEVICE<span class="accent">.</span><br>
-                    <span class="dim">YOUR RULES.</span>
-                </div>
-                <p style="margin-top:24px;max-width:400px;font-size:.95rem;" class="animate-in">
-                    Most finance apps upload your transactions to servers you don't control.
-                    TraceLedger stores nothing outside your phone. No accounts. No passwords. No data to sell.
-                </p>
-            </div>
-            <div class="privacy-badges animate-in">
-                <div class="priv-badge"><div class="priv-badge__icon">📵</div><div class="priv-badge__title">Offline First</div><div class="priv-badge__sub">All data stays on device</div></div>
-                <div class="priv-badge"><div class="priv-badge__icon">🚫</div><div class="priv-badge__title">Zero Analytics</div><div class="priv-badge__sub">No usage tracking</div></div>
-                <div class="priv-badge"><div class="priv-badge__icon">🔒</div><div class="priv-badge__title">Local SQLite</div><div class="priv-badge__sub">App-private storage only</div></div>
-                <div class="priv-badge"><div class="priv-badge__icon">👤</div><div class="priv-badge__title">No Account</div><div class="priv-badge__sub">Open app. Start tracking.</div></div>
-                <div class="priv-badge"><div class="priv-badge__icon">🆓</div><div class="priv-badge__title">Free Forever</div><div class="priv-badge__sub">No subscription. No paywall.</div></div>
-                <div class="priv-badge"><div class="priv-badge__icon">🚫</div><div class="priv-badge__title">No Third Parties</div><div class="priv-badge__sub">No SDKs. No ad networks.</div></div>
-            </div>
-        </div>
+<section class="section" id="privacy" style="background: var(--bg-surface); border-top: 1px solid var(--border-dim); border-bottom: 1px solid var(--border-dim);">
+  <div class="wrap">
+    <div class="section-header reveal">
+      <p class="section-label">Privacy</p>
+      <h2 class="section-title">YOUR DATA.<br>YOUR DEVICE.<br><span class="text-violet">YOUR RULES.</span></h2>
+      <p class="section-subtitle">Most finance apps upload your transactions to servers you don't control. TraceLedger stores nothing outside your phone. No accounts. No passwords. No data to sell.</p>
     </div>
+
+    <div class="promise__grid">
+      <div class="promise__item reveal">
+        <div class="promise__icon">📵</div>
+        <h3 class="promise__title">Offline First</h3>
+        <p class="promise__desc">All data stays on device. No internet required for core functionality.</p>
+      </div>
+
+      <div class="promise__item reveal">
+        <div class="promise__icon">🚫</div>
+        <h3 class="promise__title">Zero Analytics</h3>
+        <p class="promise__desc">No usage tracking, no telemetry, no crash reporters.</p>
+      </div>
+
+      <div class="promise__item reveal">
+        <div class="promise__icon">🔒</div>
+        <h3 class="promise__title">Local SQLite</h3>
+        <p class="promise__desc">App-private storage only. Protected by Android sandboxing.</p>
+      </div>
+
+      <div class="promise__item reveal">
+        <div class="promise__icon">👤</div>
+        <h3 class="promise__title">No Account</h3>
+        <p class="promise__desc">Open app. Start tracking. No sign-ups or emails needed.</p>
+      </div>
+
+      <div class="promise__item reveal">
+        <div class="promise__icon">🆓</div>
+        <h3 class="promise__title">Free Forever</h3>
+        <p class="promise__desc">No subscription. No paywall. Every feature is unlocked.</p>
+      </div>
+
+      <div class="promise__item reveal">
+        <div class="promise__icon">🛡</div>
+        <h3 class="promise__title">No Third Parties</h3>
+        <p class="promise__desc">No SDKs. No ad networks. Zero external interference.</p>
+      </div>
+    </div>
+  </div>
 </section>
 
-<!-- HOW IT WORKS -->
 <section class="section" id="how">
-    <div class="wrap">
-        <p class="label animate-in" style="margin-bottom:14px;">How It Works</p>
-        <h2 class="animate-in">UP AND RUNNING<br>IN SECONDS<span class="accent">.</span></h2>
-        <div class="steps animate-in">
-            <div class="step"><span class="step__n">01</span><div class="step__title">Install</div><p class="step__desc">Download the APK from this page. Enable "Install unknown apps" and sideload in under a minute. No Play Store needed.</p></div>
-            <div class="step"><span class="step__n">02</span><div class="step__title">Add Accounts</div><p class="step__desc">Create your bank accounts, wallets, and cash balances. Each tracks its own running balance automatically.</p></div>
-            <div class="step"><span class="step__n">03</span><div class="step__title">Log Transactions</div><p class="step__desc">Tap the + button. Pick a category, amount, and account. Done in under 5 seconds. Balances update instantly.</p></div>
-            <div class="step"><span class="step__n">04</span><div class="step__title">Understand</div><p class="step__desc">Charts, budgets, and insights update in real time. Know exactly where your money goes — every month.</p></div>
-        </div>
-
-        <div class="install-wrap animate-in">
-            <p class="install-label">DETAILED SIDELOAD INSTRUCTIONS</p>
-            <ol style="list-style:none;">
-                <li class="install-step"><span class="install-step__n">01</span><div class="install-step__body"><strong>DOWNLOAD THE APK</strong><p>Tap the download button. The APK saves to your Downloads folder.</p></div></li>
-                <li class="install-step"><span class="install-step__n">02</span><div class="install-step__body"><strong>ALLOW UNKNOWN SOURCES</strong><p>Settings → Apps → Special App Access → Install Unknown Apps. Enable for your browser or Files app.</p></div></li>
-                <li class="install-step"><span class="install-step__n">03</span><div class="install-step__body"><strong>OPEN THE APK</strong><p>Tap the APK in your Downloads folder or notification drawer and confirm installation.</p></div></li>
-                <li class="install-step"><span class="install-step__n">04</span><div class="install-step__body"><strong>DONE — OPEN TRACELEDGER</strong><p>A short onboarding will walk you through setup. No sign-up, no email, no permissions requested.</p></div></li>
-            </ol>
-        </div>
+  <div class="wrap">
+    <div class="section-header reveal">
+      <p class="section-label">How It Works</p>
+      <h2 class="section-title">Up and running<br>in seconds.</h2>
     </div>
+
+    <div class="install-guide reveal">
+      <h3 class="install-guide__title">THE FOUR STEPS</h3>
+
+      <ul class="install-steps">
+        <li class="install-step">
+          <span class="install-step__num">01</span>
+          <div class="install-step__body">
+            <h4>INSTALL</h4>
+            <p>Download the APK from this page. Enable "Install unknown apps" and sideload in under a minute. No Play Store needed.</p>
+          </div>
+        </li>
+
+        <li class="install-step">
+          <span class="install-step__num">02</span>
+          <div class="install-step__body">
+            <h4>ADD ACCOUNTS</h4>
+            <p>Create your bank accounts, wallets, and cash balances. Each tracks its own running balance automatically.</p>
+          </div>
+        </li>
+
+        <li class="install-step">
+          <span class="install-step__num">03</span>
+          <div class="install-step__body">
+            <h4>LOG TRANSACTIONS</h4>
+            <p>Tap the + button. Pick a category, amount, and account. Done in under 5 seconds. Balances update instantly.</p>
+          </div>
+        </li>
+
+        <li class="install-step">
+          <span class="install-step__num">04</span>
+          <div class="install-step__body">
+            <h4>UNDERSTAND</h4>
+            <p>Charts, budgets, and insights update in real time. Know exactly where your money goes — every month.</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
 </section>
 
-<!-- DOWNLOAD CTA -->
-<section class="section section--alt" id="download">
-    <div class="wrap">
-        <div class="dl-card animate-in">
-            <h2 class="dl-title">START TRACKING<br>YOUR MONEY<span class="accent">.</span></h2>
-            <p class="dl-sub">Free download. No subscription. No catch.<br>Install and start in under a minute.</p>
-            <div class="dl-btns">
-                <a href="https://traceledger.pages.dev/TraceLedger-1.1.0.apk"
-                   id="dl-btn-main" class="btn btn-red" download>↓ DOWNLOAD APK — v1.1.0</a>
-                <a href="/privacy" class="btn btn-ghost">PRIVACY POLICY →</a>
-            </div>
-            <p id="dl-meta">v1.1.0 · Android 8.0+ · No sign-up required</p>
-        </div>
+<section class="section" id="download" style="background: rgba(124, 77, 255, 0.05); border-top: 1px solid var(--border-dim);">
+  <div class="wrap download__inner">
+    <p class="section-label reveal">GET TRACELEDGER</p>
+    <h2 class="section-title reveal">Start tracking<br><span class="text-violet">your money.</span></h2>
+    <p class="section-subtitle reveal" style="margin-bottom: 2rem;">Free download. No subscription. No catch. Install and start in under a minute.</p>
+
+    <div class="download__actions reveal">
+      <a id="download-btn" href="https://github.com/GreenIcePhoenix/TraceLedger/releases/download/v1.3.0/TraceLedger-1.3.0.apk" class="btn btn--primary">
+        <span style="display: inline-flex;align-items: center;gap: 0.45rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 3v12"/>
+            <path d="M7 10l5 5 5-5"/>
+            <path d="M5 21h14"/>
+          </svg>
+          DOWNLOAD APK
+        </span>
+      </a>
+      <a href="https://github.com/GreenIcePhoenix/TraceLedger/" class="btn btn--ghost" target="_blank" rel="noopener noreferrer">
+        <span style="display: inline-flex;align-items: center;gap: 0.45rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 .5C5.65.5.5 5.65.5 12a11.5 11.5 0 0 0 7.86 10.92c.58.1.79-.25.79-.56v-2.02c-3.2.7-3.88-1.54-3.88-1.54-.52-1.33-1.28-1.68-1.28-1.68-1.05-.71.08-.7.08-.7 1.16.08 1.77 1.2 1.77 1.2 1.03 1.77 2.7 1.26 3.36.97.1-.75.4-1.26.72-1.55-2.55-.29-5.23-1.28-5.23-5.69 0-1.26.45-2.28 1.2-3.09-.12-.3-.52-1.5.11-3.12 0 0 .98-.31 3.2 1.18a11.2 11.2 0 0 1 5.82 0c2.22-1.5 3.2-1.18 3.2-1.18.63 1.62.23 2.82.11 3.12.75.81 1.2 1.83 1.2 3.09 0 4.42-2.69 5.39-5.25 5.67.41.36.77 1.08.77 2.17v3.22c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/>
+          </svg>
+          Visit GitHub
+        </span>
+      </a>
+      <a href="https://discord.gg/WguVY8wmzT" class="btn btn--ghost" target="_blank" rel="noopener noreferrer">
+        <span style="display: inline-flex;align-items: center;gap: 0.45rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M20.32 4.37A19.8 19.8 0 0 0 15.4 3l-.24.48a18.3 18.3 0 0 1 4.4 1.34 13.8 13.8 0 0 0-4.2-1.08c-.06 0-.12.03-.15.08l-.3.53a17.4 17.4 0 0 0-5.82 0l-.3-.53a.17.17 0 0 0-.15-.08 13.8 13.8 0 0 0-4.2 1.08A18.3 18.3 0 0 1 8.84 3.5L8.6 3A19.8 19.8 0 0 0 3.68 4.37a20.2 20.2 0 0 0-3.1 14.87c0 .07.04.13.1.17a19.9 19.9 0 0 0 6.1 3.1c.08.03.17 0 .22-.06l1.18-1.62a13 13 0 0 1-1.86-.9.17.17 0 0 1-.02-.28c.12-.1.24-.2.35-.3a14.2 14.2 0 0 0 12.1 0c.12.1.24.2.36.3a.17.17 0 0 1-.02.28 13 13 0 0 1-1.86.9l1.18 1.62c.05.07.14.1.22.06a19.9 19.9 0 0 0 6.1-3.1.2.2 0 0 0 .1-.17 20.2 20.2 0 0 0-3.1-14.87ZM9.75 15.5c-1.18 0-2.15-1.08-2.15-2.4 0-1.33.95-2.4 2.15-2.4 1.2 0 2.16 1.08 2.15 2.4 0 1.33-.95 2.4-2.15 2.4Zm4.5 0c-1.18 0-2.15-1.08-2.15-2.4 0-1.33.95-2.4 2.15-2.4 1.2 0 2.16 1.08 2.15 2.4 0 1.33-.95 2.4-2.15 2.4Z"/>
+          </svg>
+          Join Discord
+        </span>
+      </a>
     </div>
+
+    <p class="download__note reveal" id="download-version-note">v1.3.0 · Android 8.0+ · No sign-up required</p>
+
+    <div class="reveal" style="margin-top: 1.5rem;">
+      <a href="https://greenicephoenix.pages.dev/"
+        target="_blank"
+        rel="noopener noreferrer"
+        style="
+          display: inline-flex;
+          align-items: center;
+          gap: 0.6rem;
+          padding: 0.9rem 1.2rem;
+          border: 1px solid var(--border-dim);
+          border-radius: 14px;
+          background: rgba(46, 204, 113, 0.05);
+          text-decoration: none;
+          transition: all 0.2s ease;
+        "
+        onmouseover="this.style.borderColor='rgba(46,204,113,0.35)';this.style.background='rgba(46,204,113,0.08)'"
+        onmouseout="this.style.borderColor='var(--border-dim)';this.style.background='rgba(46,204,113,0.05)'">
+        
+        <span style="font-size: 1.1rem;">🧩</span>
+
+        <span style="
+          color: var(--text-mid);
+          font-size: 0.95rem;
+          line-height: 1.4;
+        ">
+          Explore more apps and experiments by
+          <span class="text-accent" style="font-weight: 600;">
+            GreenIcePhoenix →
+          </span>
+        </span>
+      </a>
+    </div>
+
+    <div class="install-guide reveal" style="margin-top: 3rem;">
+      <h3 class="install-guide__title">DETAILED SIDELOAD INSTRUCTIONS</h3>
+
+      <ul class="install-steps">
+        <li class="install-step">
+          <span class="install-step__num">01</span>
+          <div class="install-step__body">
+            <h4>DOWNLOAD THE APK</h4>
+            <p>Tap the download button above. The APK saves to your Downloads folder.</p>
+          </div>
+        </li>
+
+        <li class="install-step">
+          <span class="install-step__num">02</span>
+          <div class="install-step__body">
+            <h4>ALLOW UNKNOWN SOURCES</h4>
+            <p>Settings → Apps → Special App Access → Install Unknown Apps. Enable for your browser or Files app.</p>
+          </div>
+        </li>
+
+        <li class="install-step">
+          <span class="install-step__num">03</span>
+          <div class="install-step__body">
+            <h4>OPEN THE APK</h4>
+            <p>Tap the APK in your Downloads folder or notification drawer and confirm installation.</p>
+          </div>
+        </li>
+
+        <li class="install-step">
+          <span class="install-step__num">04</span>
+          <div class="install-step__body">
+            <h4>DONE — OPEN TRACELEDGER</h4>
+            <p>A short onboarding will walk you through setup. No sign-up, no email, no permissions requested.</p>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+  </div>
 </section>
 
-<!-- FOOTER -->
-<footer class="footer" role="contentinfo">
-    <div class="wrap">
-        <div class="footer__inner">
-            <div>
-                <div class="footer__brand-logo">TRACE<span>LEDGER</span></div>
-                <p class="footer__tagline">No cloud. No ads. No tracking. Ever.</p>
-            </div>
-            <div>
-                <p class="footer__col-title">APP</p>
-                <ul class="footer__col-links">
-                    <li><a href="#features" class="footer__col-link">Features</a></li>
-                    <li><a href="#privacy"  class="footer__col-link">Privacy</a></li>
-                    <li><a href="#how"      class="footer__col-link">How It Works</a></li>
-                    <li><a href="#download" class="footer__col-link">Download</a></li>
-                </ul>
-            </div>
-            <div>
-                <p class="footer__col-title">COMMUNITY</p>
-                <ul class="footer__col-links">
-                    <li><a href="https://discord.gg/MYFfxqvKCQ" class="footer__col-link" target="_blank" rel="noopener noreferrer">Discord</a></li>
-                </ul>
-            </div>
-            <div>
-                <p class="footer__col-title">LEGAL</p>
-                <ul class="footer__col-links">
-                    <li><a href="/privacy" class="footer__col-link">Privacy Policy</a></li>
-                    <li><a href="/terms"   class="footer__col-link">Terms of Use</a></li>
-                </ul>
-            </div>
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer__inner">
+      
+      <div class="footer__brand">
+        <div class="footer__logo">
+          <img src="GIP_logo.png" alt="Brand Icon" style="height:38px; object-fit:fill; border-radius: 4px;">
+          <span class="footer__logo-text brand-text">GREENICEPHOENIX</span>
         </div>
-        <div class="footer__bottom">
-            <p class="footer__copy">© 2026 GREENICEPHOENIX · TRACELEDGER</p>
-            <nav class="footer__legal" aria-label="Legal">
-                <a href="/privacy" class="footer__legal-link">PRIVACY POLICY</a>
-                <a href="/terms"   class="footer__legal-link">TERMS OF USE</a>
-            </nav>
+        <p class="footer__tagline">"No cloud. No ads. No tracking. Ever."</p>
+      </div>
+
+      <div class="footer__links">
+        <div>
+          <p class="footer__col-title">APP</p>
+          <ul class="footer__col-links">
+            <li><a href="#features" class="footer__col-link">Features</a></li>
+            <li><a href="#privacy" class="footer__col-link">Privacy</a></li>
+            <li><a href="#how" class="footer__col-link">How It Works</a></li>
+            <li><a href="#download" class="footer__col-link">Download</a></li>
+          </ul>
         </div>
+        <div>
+          <p class="footer__col-title">COMMUNITY</p>
+          <ul class="footer__col-links">
+            <li><a href="https://discord.gg/WguVY8wmzT" class="footer__col-link" target="_blank">Discord</a></li>
+            <li><a href="https://discord.gg/WguVY8wmzT" class="footer__col-link" target="_blank">Report a Bug</a></li>
+            <li><a href="https://github.com/GreenIcePhoenix/TraceLedger/" class="footer__col-link" target="_blank">GitHub</a></li>
+            <li><a href="https://greenicephoenix.pages.dev/" class="footer__col-link" target="_blank" rel="noopener noreferrer">Other Projects</a></li>
+          </ul>
+        </div>
+        <div>
+          <p class="footer__col-title">LEGAL</p>
+          <ul class="footer__col-links">
+            <li><a href="privacy.html" class="footer__col-link">Privacy Policy</a></li>
+            <li><a href="terms.html" class="footer__col-link">Terms of Service</a></li>
+          </ul>
+        </div>
+      </div>
     </div>
+  </div>
 </footer>
 
 <script>
-    // ── 1. BOOT SEQUENCE ────────────────────────────────────────────────────────
-    const bootMsgs = [
-      { p:'OK  ', t:'LOADING KERNEL...' },
-      { p:'OK  ', t:'MOUNTING LOCAL STORAGE...' },
-      { p:'OK  ', t:'PRIVACY LAYER ACTIVE...' },
-      { p:'... ', t:'CHECKING CLOUD SYNC...' },
-      { p:'SKIP', t:'CLOUD SYNC DISABLED \u2014 BY DESIGN', skip:true },
-      { p:'OK  ', t:'TRACELEDGER READY.' }
-    ];
-    const linesEl = document.getElementById('bootLines');
-    const barEl   = document.getElementById('bootBar');
-    const bootEl  = document.getElementById('boot');
-    let idx = 0;
-    const bootInt = setInterval(() => {
-      if (idx >= bootMsgs.length) { clearInterval(bootInt); setTimeout(() => bootEl.classList.add('done'), 400); return; }
-      const m = bootMsgs[idx];
-      const d = document.createElement('div');
-      d.className = 'boot-line';
-      d.innerHTML = `<span class="${m.skip ? 'skip' : 'ok'}">${m.p}</span>${m.t}`;
-      linesEl.appendChild(d);
-      requestAnimationFrame(() => d.classList.add('show'));
-      barEl.style.width = `${((idx + 1) / bootMsgs.length) * 100}%`;
-      idx++;
-    }, 280);
+  // ── VERSION FETCHER ─────────────────────────
+  (async function fetchVersionJson() {
+    const VERSION_URL = 'https://traceledger.pages.dev/release.json';
+    const FALLBACK_URL = 'https://github.com/GreenIcePhoenix/TraceLedger/releases/download/v1.3.0/TraceLedger-1.3.0.apk';
+    const badgeEl = document.getElementById('hero-version-badge');
+    const downloadBtn = document.getElementById('download-btn');
+    const versionNote = document.getElementById('download-version-note');
 
-    // ── 2. RELEASE.JSON FETCHER ──────────────────────────────────────────────────
-    // Reads version + APK URL from Cloudflare-hosted release.json.
-    // Falls back gracefully — buttons already point to the current APK.
-    (async () => {
-      try {
-        const res  = await fetch('https://traceledger.pages.dev/release.json', { headers:{'Cache-Control':'no-cache'} });
-        if (!res.ok) throw new Error();
-        const d    = await res.json();
-        const ver  = (d.version || '').trim();
-        const url  = (d.apkUrl  || '').trim();
-        const size = d.apkSizeBytes >= 1048576 ? (d.apkSizeBytes/1048576).toFixed(1)+' MB' : null;
+    try {
+      const res = await fetch(VERSION_URL, { headers: { 'Cache-Control': 'no-cache' }});
+      if (!res.ok) throw new Error(`release.json fetch: ${res.status}`);
+      const data = await res.json();
+      const version = (data.version || '').trim();
+      const apkUrl = (data.apkUrl || '').trim() || FALLBACK_URL;
+      const size = data.apkSizeBytes >= 1048576 ? (data.apkSizeBytes/1048576).toFixed(1)+' MB' : null;
 
-        if (ver) document.getElementById('hero-badge').innerHTML = `<span class="dot"></span>V${ver.toUpperCase()} \u2014 AVAILABLE NOW`;
+      if (badgeEl && version) badgeEl.textContent = `V${version.toUpperCase()} — AVAILABLE NOW`;
+      if (downloadBtn && apkUrl) {
+        downloadBtn.href = apkUrl;
+        downloadBtn.textContent = version ? `↓ DOWNLOAD APK — v${version}` : '↓ DOWNLOAD APK';
+      }
+      if (versionNote && version) {
+        const parts = [`v${version}`, 'Android 8.0+', size, 'No sign-up required'];
+        versionNote.textContent = parts.filter(Boolean).join(' · ');
+      }
+    } catch (err) {
+      // Keep static defaults if fetch fails
+    }
+  })();
 
-        const label = ver ? `\u2193 DOWNLOAD APK \u2014 v${ver}` : '\u2193 DOWNLOAD APK';
-        ['dl-btn-hero','dl-btn-main'].forEach(id => {
-          const el = document.getElementById(id);
-          if (el && url) { el.href = url; el.textContent = label; }
-        });
-
-        const meta = document.getElementById('dl-meta');
-        if (meta) {
-          const parts = [ver ? `v${ver}` : null, 'Android 8.0+', size, 'No sign-up required'];
-          meta.textContent = parts.filter(Boolean).join(' \u00B7 ');
-        }
-      } catch(e) { /* silent fallback */ }
-    })();
-
-    // ── 3. MOBILE NAV ────────────────────────────────────────────────────────────
-    const burger   = document.getElementById('burger');
-    const navLinks = document.getElementById('navLinks');
-    burger.addEventListener('click', () => {
-      const open = navLinks.classList.toggle('open');
-      burger.setAttribute('aria-expanded', String(open));
+  // ── MOBILE NAV HAMBURGER ──────────────────────────────────────────────
+  const hamburger = document.getElementById('hamburger');
+  const navLinks = document.getElementById('nav-links');
+  hamburger.addEventListener('click', () => {
+    const isOpen = navLinks.classList.toggle('open');
+    hamburger.setAttribute('aria-expanded', isOpen.toString());
+  });
+  navLinks.querySelectorAll('.nav__link, .nav__cta').forEach(link => {
+    link.addEventListener('click', () => {
+      navLinks.classList.remove('open');
+      hamburger.setAttribute('aria-expanded', 'false');
     });
-    navLinks.querySelectorAll('.nav__link,.nav__cta').forEach(l =>
-      l.addEventListener('click', () => { navLinks.classList.remove('open'); burger.setAttribute('aria-expanded','false'); })
-    );
+  });
 
-    // ── 4. SCROLL ANIMATIONS ─────────────────────────────────────────────────────
-    const obs = new IntersectionObserver(entries => {
-      entries.forEach((e, i) => {
-        if (e.isIntersecting) { setTimeout(() => e.target.classList.add('visible'), i * 80); obs.unobserve(e.target); }
+  // ── SCROLL REVEALS ────────────────────────────────────────────────────
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // ── PERFORMANCE OPTIMIZED CANVAS (Vines & Violet) ────────────────
+  const canvas = document.getElementById('engine-canvas');
+  const ctx = canvas.getContext('2d');
+  
+  const isMobile = window.innerWidth < 768;
+  if (isMobile) {
+    canvas.style.display = 'none';
+  } else {
+    let w, h;
+    function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+    window.addEventListener('resize', resize);
+    resize();
+
+    const nodes = [];
+    const numNodes = Math.min(80, Math.floor((w * h) / 15000));
+
+    for (let i = 0; i < numNodes; i++) {
+      const rand = Math.random();
+      
+      // 70% Emerald, 20% Earthy Green, 10% Sovereign Violet
+      let colorStr = 'rgba(46,204,113,'; // Vines Emerald
+      if (rand > 0.90) colorStr = 'rgba(124,77,255,'; // Sovereign Violet
+      else if (rand > 0.70) colorStr = 'rgba(139,195,74,'; // Earthy Green
+
+      nodes.push({
+        x: Math.random() * w, y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
+        r: Math.random() * 2 + 1,
+        color: colorStr,
+        isVineLeaf: Math.random() > 0.6 
       });
-    }, { threshold:0.1, rootMargin:'0px 0px -40px 0px' });
-    document.querySelectorAll('.animate-in').forEach(el => obs.observe(el));
+    }
 
-    // ── 5. SMOOTH SCROLL ─────────────────────────────────────────────────────────
-    document.querySelectorAll('a[href^="#"]').forEach(a =>
-      a.addEventListener('click', e => {
-        const t = document.querySelector(a.getAttribute('href'));
-        if (t) { e.preventDefault(); t.scrollIntoView({ behavior:'smooth' }); }
-      })
-    );
+    let isVisible = true;
+    document.addEventListener("visibilitychange", () => { isVisible = !document.hidden; });
+
+    function draw() {
+      if (!isVisible) { requestAnimationFrame(draw); return; } 
+
+      ctx.clearRect(0, 0, w, h);
+      
+      nodes.forEach(n => {
+        if (n.isVineLeaf) {
+          // Falling/swaying effect for Vines
+          n.y += (Math.random() * 0.8 + 0.3);
+          n.x += Math.sin(n.y * 0.03) * 0.7;
+          if (n.y > h + 10) { n.y = -10; n.x = Math.random() * w; }
+        } else {
+          n.x += n.vx; n.y += n.vy;
+          if (n.x < 0 || n.x > w) n.vx *= -1;
+          if (n.y < 0 || n.y > h) n.vy *= -1;
+        }
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+        ctx.fillStyle = n.color + (n.isVineLeaf ? '0.7)' : '0.4)');
+        ctx.fill();
+        
+        if (!n.isVineLeaf) {
+          nodes.forEach(n2 => {
+            if (!n2.isVineLeaf) {
+              const dist = Math.hypot(n.x - n2.x, n.y - n2.y);
+              if (dist < 120) {
+                ctx.beginPath();
+                ctx.moveTo(n.x, n.y);
+                ctx.lineTo(n2.x, n2.y);
+                // Connections use the Sovereign Violet accent
+                ctx.strokeStyle = `rgba(124, 77, 255, ${0.15 * (1 - dist/120)})`; 
+                ctx.stroke();
+              }
+            }
+          });
+        }
+      });
+      requestAnimationFrame(draw);
+    }
+    draw();
+  }
 </script>
 </body>
 </html>

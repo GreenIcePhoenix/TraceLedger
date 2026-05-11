@@ -1,6 +1,6 @@
 {
-  "version": "1.1.0",
-  "releaseNotes": "Daily Reminder — set a time to be nudged to log your transactions each day.\n\nUpdate Checker — the app now checks for new versions automatically on launch.\n\nSupport Screen — tip jar via UPI and PayPal if you find the app useful.\n\nNumber Format — choose between Indian (1,00,000) and International (100,000) grouping.\n\nCSV Import Feedback — import now shows how many rows were imported and how many were skipped.\n\nBug fixes — SCHEDULE_EXACT_ALARM crash on Android 12+, UPI crash on devices without UPI apps, PayPal button not opening on some devices.",
-  "apkUrl": "https://traceledger.pages.dev/TraceLedger-1.1.0.apk",
-  "apkSizeBytes": 13000704
+  "version": "1.3.0",
+  "releaseNotes": "SMS Detection, Statement Parsing, Custom SMS Rules, Settings Redesign",
+  "apkUrl": "https://github.com/GreenIcePhoenix/TraceLedger/releases/download/v1.3.0/TraceLedger_v1.3.0.apk",
+  "apkSizeBytes": 26453328
 }
