@@ -24,9 +24,12 @@ data class RuleFormState(
     val defaultAccountId: String? = null,
     val isEnabled: Boolean = true,
     val priority: Int = 10,
+    val isAdvancedMode: Boolean = false,
+    val rawRegex: String = "",
     // Validation errors
     val nameError: String? = null,
     val senderError: String? = null,
+    val regexError: String? = null,
     // Navigation trigger
     val isSaved: Boolean = false,
 )
@@ -74,6 +77,8 @@ class AddEditRuleViewModel(
             defaultAccountId  = rule.defaultAccountId,
             isEnabled       = rule.isEnabled,
             priority        = rule.priority,
+            isAdvancedMode  = rule.isAdvancedMode,
+            rawRegex        = rule.rawRegex,
         )
     }
 
@@ -90,6 +95,8 @@ class AddEditRuleViewModel(
     fun updateDefaultAccount(id: String?)  = _form.update { it.copy(defaultAccountId = id) }
     fun updateEnabled(v: Boolean)         = _form.update { it.copy(isEnabled = v) }
     fun updatePriority(v: Int)            = _form.update { it.copy(priority = v.coerceIn(1, 20)) }
+    fun updateIsAdvancedMode(v: Boolean)  = _form.update { it.copy(isAdvancedMode = v, regexError = null) }
+    fun updateRawRegex(v: String)         = _form.update { it.copy(rawRegex = v, regexError = null) }
 
     // ── Rule tester ───────────────────────────────────────────────────────────
 
@@ -128,6 +135,21 @@ class AddEditRuleViewModel(
         val state = _form.value
         var hasError = false
 
+        // Validate regex syntax before attempting to save
+        if (state.isAdvancedMode && !state.isExclusionRule) {
+            if (state.rawRegex.isBlank()) {
+                _form.update { it.copy(regexError = "Regex pattern is required in advanced mode") }
+                hasError = true
+            } else {
+                try {
+                    Regex(state.rawRegex)
+                } catch (e: Exception) {
+                    _form.update { it.copy(regexError = "Invalid regex: ${e.message?.take(80)}") }
+                    hasError = true
+                }
+            }
+        }
+
         if (state.name.isBlank()) {
             _form.update { it.copy(nameError = "Name is required") }
             hasError = true
@@ -158,8 +180,8 @@ class AddEditRuleViewModel(
         defaultAccountId  = defaultAccountId,
         isEnabled         = isEnabled,
         priority          = priority,
-        isAdvancedMode    = false,
-        rawRegex          = "",
+        isAdvancedMode    = isAdvancedMode,
+        rawRegex          = rawRegex.trim(),
         isExclusionRule   = isExclusionRule,
         createdAt         = System.currentTimeMillis()
     )

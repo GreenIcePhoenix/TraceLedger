@@ -213,24 +213,32 @@ object BuiltInSmsRules {
      * Ordered from most reliable to least reliable.
      */
     val MERCHANT_AFTER_KEYWORDS = listOf(
+        // ── Explicit merchant labels — highest confidence ─────────────────────
         "info:",
         "info -",
+        "merchant name:",       // "MERCHANT NAME: SWIGGY"
         "merchant:",
-        "merchant name:",
         "at merchant ",
+        // ── Action keywords — high confidence ────────────────────────────────
         "txn at ",
         "spent at ",
+        "used at ",             // SBI Card, ICICI CC: "Rs.500 used at AMAZON"
+        "purchase at ",         // some CC formats
+        "beneficiary name: ",   // IndusInd, Union Bank
+        "beneficiary: ",        // IndusInd, Union Bank
         "paid to ",
+        "payment to ",          // Kotak, IDFC, common UPI
         "sent to ",
         "trf to ",
         "transfer to ",
         "towards ",
-        "to vpa ",          // UPI VPA
-        "upi-",             // "UPI-MERCHANT@bank"
-        "upi/",             // "UPI/MERCHANT"
-        "ref: ",
-        "ref no ",
         "remarks: ",
+        // ── UPI-specific patterns ─────────────────────────────────────────────
+        "to vpa ",              // "to VPA MERCHANT@bank"
+        "vpa ",                 // standalone "VPA MERCHANT@bank"
+        "upi-",                 // "UPI-MERCHANT@bank"
+        "upi/",                 // "UPI/MERCHANT"
+        // NOTE: "ref: " and "ref no " removed — they extract reference IDs, not merchants
     )
 
     /**
@@ -238,15 +246,24 @@ object BuiltInSmsRules {
      * These are common suffix patterns in bank SMSes.
      */
     val MERCHANT_END_DELIMITERS = listOf(
-        "avail",        // "Available balance" / "Avail bal"
-        "bal",          // "Balance:"
+        "avail",            // "Available balance" / "Avail bal"
+        "bal",              // "Balance:"
         "available",
-        "limit",        // "Available credit limit"
+        "total outstanding",// credit card outstanding balance
+        "outstanding",      // CC: "Outstanding amount"
+        "credit limit",     // CC: "Available Credit Limit"
+        "limit",            // "Available credit limit"
+        "using ",           // GPay/PhonePe: "paid to MERCHANT using HDFC account"
+        "call ",            // "Call 18001234567 for disputes"
+        "utr",              // UTR number signals description has ended
+        "if not",           // "If not you, call..."
+        "customer",         // "Customer care / Customer service"
+        "helpline",
         "ref no",
         "txn id",
         "transaction id",
         "auth code",
-        " on ",         // "spent at MERCHANT on 01/01/24"
+        " on ",             // "spent at MERCHANT on 01/01/24"
         ". on ",
     )
 
