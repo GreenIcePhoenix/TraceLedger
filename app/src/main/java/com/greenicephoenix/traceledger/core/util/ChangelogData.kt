@@ -53,8 +53,8 @@ object ChangelogData {
         // ── v1.3.0 ────────────────────────────────────────────────────────────
         VersionEntry(
             version     = "1.3.0",
-            releaseDate = "10 May 2026",
-            tagline     = "Your bank messages, turned into transactions. On device. Privately.",
+            releaseDate = "25 May 2026",
+            tagline     = "Private SMS intelligence, now smarter, cleaner, and fully customizable.",
             changes     = listOf(
                 ChangeItem(ChangeType.NEW,      "SMS Transaction Detection — auto-detects financial SMS from 30+ Indian banks and wallets"),
                 ChangeItem(ChangeType.NEW,      "Real-time detection — new SMS instantly queued for review (opt-in, RECEIVE_SMS permission)"),
@@ -63,14 +63,18 @@ object ChangelogData {
                 ChangeItem(ChangeType.NEW,      "Smart account matching — resolves the correct account even for UPI credit notifications"),
                 ChangeItem(ChangeType.NEW,      "Auto-categorisation — 40+ keyword patterns for Zomato, Amazon, Airtel, Apollo, and more"),
                 ChangeItem(ChangeType.NEW,      "Learning engine — silently learns from your corrections and improves over time"),
-                ChangeItem(ChangeType.NEW,      "Custom SMS Rules — define rules for formats the built-in engine misses"),
+                ChangeItem(ChangeType.NEW,      "Custom SMS Rules — define rules for unsupported SMS formats with optional advanced regex mode"),
+                ChangeItem(ChangeType.NEW,      "Rule tester — preview extraction results with live regex validation and named group references"),
                 ChangeItem(ChangeType.NEW,      "Always-exclude rules — permanently silence specific senders"),
-                ChangeItem(ChangeType.NEW,      "Rule tester — paste a real SMS and preview extraction results before saving"),
-                ChangeItem(ChangeType.NEW,      "Help & FAQ — searchable answers to common questions"),
-                ChangeItem(ChangeType.NEW,      "What's New — full release history now in Settings → System"),
-                ChangeItem(ChangeType.IMPROVED, "Check for Updates moved to Settings → System for quicker access"),
-                ChangeItem(ChangeType.IMPROVED, "Dashboard shows pending SMS count chip when transactions await review"),
-                ChangeItem(ChangeType.IMPROVED, "Settings SMS Detection row shows live pending count"),
+                ChangeItem(ChangeType.NEW,      "Help & FAQ — searchable answers to common questions, accessible from Settings"),
+                ChangeItem(ChangeType.NEW,      "What's New screen — full release history with collapsible version cards"),
+                ChangeItem(ChangeType.IMPROVED, "Settings redesigned — new SYSTEM section with What's New, Check for Updates, Website, Privacy Policy, and Terms"),
+                ChangeItem(ChangeType.IMPROVED, "Dashboard and Settings now show live pending SMS review counts"),
+                ChangeItem(ChangeType.IMPROVED, "About screen simplified — identity, privacy promises, and legal links only"),
+                ChangeItem(ChangeType.IMPROVED, "Discord community link moved to Settings → App for easier access"),
+                ChangeItem(ChangeType.IMPROVED, "SMS merchant extraction improved for 'used at', 'payment to', 'beneficiary', standalone VPA, and parenthetical UPI formats"),
+                ChangeItem(ChangeType.IMPROVED, "Fallback merchant extraction now prioritises VPA and 'to MERCHANT' patterns before raw SMS text"),
+                ChangeItem(ChangeType.FIXED,    "Category cards invisible in light mode — gradients now use surface-to-surfaceVariant with a subtle border"),
             )
         ),
 
