@@ -100,6 +100,7 @@ dependencies {
     implementation(libs.glance.material3)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.pdfbox)
+    implementation(libs.compose.charts)
 
     // ── Apache POI — XLS + encrypted XLSX support ─────────────────────────────
     // poi       = core module, handles .xls (HSSF) + encryption/decryption layer

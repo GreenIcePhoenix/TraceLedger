@@ -16,6 +16,7 @@ room = "2.7.1"
 kotlinx-serialization-json = "1.7.3"
 datastore = "1.1.4"
 pdfbox = "2.0.25.0"
+compose-charts = "0.2.5"
 
 # Apache POI — XLS (old binary) + encrypted XLSX support.
 # Apache 2.0 license. Play Store safe.
@@ -52,6 +53,7 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 glance-appwidget = { group = "androidx.glance", name = "glance-appwidget", version.ref = "glance" }
 glance-material3 = { group = "androidx.glance", name = "glance-material3", version.ref = "glance" }
 pdfbox = { group = "com.tom-roush", name = "pdfbox-android", version.ref = "pdfbox" }
+compose-charts = { group = "io.github.ehsannarmani", name = "compose-charts", version.ref = "compose-charts" }
 
 # Apache POI — spreadsheet support
 poi-core = { group = "org.apache.poi", name = "poi",       version.ref = "poi" }
