@@ -31,6 +31,10 @@ class SmsReviewViewModel(
         accountId: String,
         categoryId: String?,
     ) {
+
+        if (accountId.isBlank()) return
+        if (categoryId == null) return
+
         viewModelScope.launch {
             // ── Issue 5: App learns from user's correction ────────────────────
             // If user chose a DIFFERENT account than suggested → remember for this sender
@@ -53,7 +57,7 @@ class SmsReviewViewModel(
                 dateMsEpoch = item.parsedDate,
                 type        = item.parsedType,
             )
-            _lastSavedDescription.value = item.parsedDescription
+            _lastSavedDescription.value = "Transaction saved"
         }
     }
 

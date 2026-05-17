@@ -3,7 +3,21 @@ package com.greenicephoenix.traceledger.core.ui.theme
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.runtime.staticCompositionLocalOf
+
+data class TraceLedgerExtraColors(
+    val warningBanner: Color,
+    val errorBanner: Color
+)
+
+val LocalExtraColors = staticCompositionLocalOf {
+    TraceLedgerExtraColors(
+        warningBanner = WarningBannerLight,
+        errorBanner = ErrorBannerLight
+    )
+}
 
 // ─────────────────────────────────────────────
 // DARK THEME (Balanced)
@@ -43,6 +57,11 @@ private val DarkColorScheme = darkColorScheme(
     scrim            = BlackPure
 )
 
+private val DarkExtraColors = TraceLedgerExtraColors(
+    warningBanner = WarningBannerDark,
+    errorBanner = ErrorBannerDark
+)
+
 // ─────────────────────────────────────────────
 // ULTRA DARK THEME (OLED)
 // ─────────────────────────────────────────────
@@ -74,6 +93,11 @@ private val UltraDarkColorScheme = darkColorScheme(
 
     surfaceTint      = Color.Transparent,
     scrim            = BlackPure
+)
+
+private val UltraDarkExtraColors = TraceLedgerExtraColors(
+    warningBanner = WarningBannerDark,
+    errorBanner = ErrorBannerDark
 )
 
 // ─────────────────────────────────────────────
@@ -109,6 +133,11 @@ private val LightColorScheme = lightColorScheme(
     scrim            = BlackPure
 )
 
+private val LightExtraColors = TraceLedgerExtraColors(
+    warningBanner = WarningBannerLight,
+    errorBanner = ErrorBannerLight
+)
+
 // ─────────────────────────────────────────────
 // ROOT THEME
 // ─────────────────────────────────────────────
@@ -117,16 +146,44 @@ fun TraceLedgerTheme(
     themeMode: ThemeMode,
     content: @Composable () -> Unit
 ) {
-    val colors = when (themeMode) {
-        ThemeMode.SYSTEM     -> if (isSystemInDarkTheme()) DarkColorScheme else LightColorScheme
-        ThemeMode.LIGHT      -> LightColorScheme
-        ThemeMode.DARK       -> DarkColorScheme
-        ThemeMode.ULTRA_DARK -> UltraDarkColorScheme
+    val (colors, extraColors) = when (themeMode) {
+
+        ThemeMode.SYSTEM -> {
+            if (isSystemInDarkTheme()) {
+                DarkColorScheme to DarkExtraColors
+            } else {
+                LightColorScheme to LightExtraColors
+            }
+        }
+
+        ThemeMode.LIGHT ->
+            LightColorScheme to LightExtraColors
+
+        ThemeMode.DARK ->
+            DarkColorScheme to DarkExtraColors
+
+        ThemeMode.ULTRA_DARK ->
+            UltraDarkColorScheme to UltraDarkExtraColors
     }
 
-    MaterialTheme(
-        colorScheme = colors,
-        typography  = TraceLedgerTypography,
-        content     = content
-    )
+    CompositionLocalProvider(
+        LocalExtraColors provides extraColors
+    ) {
+        MaterialTheme(
+            colorScheme = colors,
+            typography  = TraceLedgerTypography,
+            content     = content
+        )
+    }
+}
+
+object TraceLedgerThemeExtras {
+
+    val warningBanner: Color
+        @Composable
+        get() = LocalExtraColors.current.warningBanner
+
+    val errorBanner: Color
+        @Composable
+        get() = LocalExtraColors.current.errorBanner
 }

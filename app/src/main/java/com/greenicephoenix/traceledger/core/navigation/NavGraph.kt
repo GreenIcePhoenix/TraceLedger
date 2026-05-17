@@ -56,6 +56,19 @@ import com.greenicephoenix.traceledger.feature.sms.viewmodel.AddEditRuleViewMode
 import com.greenicephoenix.traceledger.feature.help.HelpScreen
 import com.greenicephoenix.traceledger.feature.about.ChangelogScreen
 import kotlinx.coroutines.launch
+import com.greenicephoenix.traceledger.feature.statistics.SpendingHeatmapScreen
+import com.greenicephoenix.traceledger.feature.statistics.WeekdayPatternScreen
+import com.greenicephoenix.traceledger.feature.statistics.AreaChartScreen
+import com.greenicephoenix.traceledger.feature.statistics.WaterfallScreen
+import com.greenicephoenix.traceledger.feature.statistics.TreemapScreen
+import com.greenicephoenix.traceledger.feature.statistics.SankeyScreen
+import com.greenicephoenix.traceledger.feature.statistics.HealthScreen
+import com.greenicephoenix.traceledger.feature.statistics.SavingsRateTrendScreen
+import com.greenicephoenix.traceledger.feature.statistics.ExpenseVelocityScreen
+import com.greenicephoenix.traceledger.feature.statistics.CategoryComparisonScreen
+import com.greenicephoenix.traceledger.feature.statistics.IncomeStabilityScreen
+import com.greenicephoenix.traceledger.feature.statistics.TopSpendingDaysScreen
+import com.greenicephoenix.traceledger.feature.statistics.RollingWindowScreen
 
 @Composable
 fun TraceLedgerNavGraph(
@@ -250,19 +263,35 @@ fun TraceLedgerNavGraph(
             composable(Routes.STATISTICS_BREAKDOWN) { backStackEntry ->
                 val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
                 val statisticsViewModel = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
+                // transactionsViewModel is created fresh here — drill-down pre-filters it
+                // before navigating to TRANSACTIONS so the list opens already filtered
+                val transactionsViewModel: TransactionsViewModel = viewModel(
+                    factory = TransactionsViewModelFactory(app.container.transactionRepository)
+                )
                 ExpenseBreakdownScreen(
                     viewModel   = statisticsViewModel,
                     categoryMap = categories.associateBy { it.id },
-                    onBack      = { navController.popBackStack() }
+                    onBack      = { navController.popBackStack() },
+                    onDrillDown = { categoryId ->
+                        transactionsViewModel.setCategoryFilter(categoryId)
+                        navController.navigate(Routes.TRANSACTIONS)
+                    }
                 )
             }
             composable(Routes.STATISTICS_INCOME) { backStackEntry ->
                 val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
                 val statisticsViewModel = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
+                val transactionsViewModel: TransactionsViewModel = viewModel(
+                    factory = TransactionsViewModelFactory(app.container.transactionRepository)
+                )
                 IncomeBreakdownScreen(
                     viewModel   = statisticsViewModel,
                     categoryMap = categories.associateBy { it.id },
-                    onBack      = { navController.popBackStack() }
+                    onBack      = { navController.popBackStack() },
+                    onDrillDown = { categoryId ->
+                        transactionsViewModel.setCategoryFilter(categoryId)
+                        navController.navigate(Routes.TRANSACTIONS)
+                    }
                 )
             }
             composable(Routes.STATISTICS_TRENDS) { backStackEntry ->
@@ -274,12 +303,94 @@ fun TraceLedgerNavGraph(
                     onBack      = { navController.popBackStack() }
                 )
             }
-        }
+            composable(Routes.STATISTICS_HEATMAP) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
+                val statisticsViewModel = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
+                SpendingHeatmapScreen(viewModel = statisticsViewModel, onBack = { navController.popBackStack() })
+            }
 
-        composable(Routes.STATISTICS_CASHFLOW) { backStackEntry ->
-            val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
-            val statisticsViewModel = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
-            CashflowScreen(viewModel = statisticsViewModel, onBack = { navController.popBackStack() })
+            composable(Routes.STATISTICS_WEEKDAY) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
+                val statisticsViewModel = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
+                WeekdayPatternScreen(viewModel = statisticsViewModel, onBack = { navController.popBackStack() })
+            }
+
+            composable(Routes.STATISTICS_AREA) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
+                val statisticsViewModel = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
+                AreaChartScreen(viewModel = statisticsViewModel, onBack = { navController.popBackStack() })
+            }
+
+            composable(Routes.STATISTICS_WATERFALL) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
+                val statisticsViewModel = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
+                WaterfallScreen(viewModel = statisticsViewModel, onBack = { navController.popBackStack() })
+            }
+
+            // MOVE this block from outside the navigation{} into inside it:
+            composable(Routes.STATISTICS_CASHFLOW) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
+                val statisticsViewModel = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
+                CashflowScreen(viewModel = statisticsViewModel, onBack = { navController.popBackStack() })
+            }
+
+            composable(Routes.STATISTICS_TREEMAP) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
+                val vm = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
+                val transactionsViewModel: TransactionsViewModel = viewModel(factory = TransactionsViewModelFactory(app.container.transactionRepository))
+                TreemapScreen(vm, categories.associateBy { it.id }, { navController.popBackStack() }) { categoryId ->
+                    transactionsViewModel.setCategoryFilter(categoryId)
+                    navController.navigate(Routes.TRANSACTIONS)
+                }
+            }
+
+            composable(Routes.STATISTICS_SANKEY) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
+                val vm = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
+                SankeyScreen(vm, categories.associateBy { it.id }) { navController.popBackStack() }
+            }
+
+            composable(Routes.STATISTICS_HEALTH) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
+                val vm = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
+                HealthScreen(vm) { navController.popBackStack() }
+            }
+
+            composable(Routes.STATISTICS_SAVINGS_RATE) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
+                val vm = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
+                SavingsRateTrendScreen(vm) { navController.popBackStack() }
+            }
+
+            composable(Routes.STATISTICS_VELOCITY) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
+                val vm = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
+                ExpenseVelocityScreen(vm) { navController.popBackStack() }
+            }
+
+            composable(Routes.STATISTICS_CAT_COMPARE) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
+                val vm = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
+                CategoryComparisonScreen(vm, categories.associateBy { it.id }) { navController.popBackStack() }
+            }
+
+            composable(Routes.STATISTICS_INCOME_STABILITY) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
+                val vm = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
+                IncomeStabilityScreen(vm) { navController.popBackStack() }
+            }
+
+            composable(Routes.STATISTICS_TOP_DAYS) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
+                val vm = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
+                TopSpendingDaysScreen(vm) { navController.popBackStack() }
+            }
+
+            composable(Routes.STATISTICS_ROLLING) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) { navController.getBackStackEntry(Routes.STATISTICS) }
+                val vm = viewModel<StatisticsViewModel>(parentEntry, factory = app.container.statisticsViewModelFactory)
+                RollingWindowScreen(vm) { navController.popBackStack() }
+            }
         }
 
         /* ── SETTINGS ──────────────────────────────────────────────────────── */

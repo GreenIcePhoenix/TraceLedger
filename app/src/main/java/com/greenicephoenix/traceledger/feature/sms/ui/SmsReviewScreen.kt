@@ -45,7 +45,7 @@ fun SmsReviewScreen(
     val snackbarHostState    = remember { SnackbarHostState() }
     LaunchedEffect(lastSavedDescription) {
         lastSavedDescription?.let {
-            snackbarHostState.showSnackbar("Saved: $it")
+            snackbarHostState.showSnackbar(it)
             viewModel.clearSavedMessage()
         }
     }
@@ -235,14 +235,6 @@ private fun SmsReviewRow(
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                         Text(
-                            text       = item.parsedDescription,
-                            style      = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines   = 2,
-                            overflow   = TextOverflow.Ellipsis,
-                            color      = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
                             text  = formatDate(item.parsedDate),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -290,9 +282,11 @@ private fun SmsReviewRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     modifier              = Modifier.fillMaxWidth()
                 ) {
+                    val canQuickSave = quickSaveAccountId != null && item.suggestedCategoryId != null
+
                     Button(
                         onClick  = {
-                            if (quickSaveAccountId != null) onAccept(quickSaveAccountId, item.suggestedCategoryId)
+                            if (canQuickSave) onAccept(quickSaveAccountId!!, item.suggestedCategoryId)
                             else onEdit()
                         },
                         modifier = Modifier.weight(1f),
@@ -302,7 +296,11 @@ private fun SmsReviewRow(
                         )
                     ) {
                         Text(
-                            if (quickSaveAccountId != null) "SAVE" else "SELECT ACCOUNT",
+                            when {
+                                quickSaveAccountId == null -> "SELECT ACCOUNT"
+                                item.suggestedCategoryId == null -> "SELECT CATEGORY"
+                                else -> "SAVE"
+                            },
                             style         = MaterialTheme.typography.labelMedium,
                             letterSpacing = 0.5.sp
                         )
@@ -374,11 +372,6 @@ private fun SmsEditSheet(
                 style      = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color      = amountColor
-            )
-            Text(
-                item.parsedDescription,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
             HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)

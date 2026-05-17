@@ -122,3 +122,15 @@ val NothingRed = ErrorRed
 
 val Grey850       = DarkSurface        // was Color(0xFF141414), now Color(0xFF16162A)
 val TextSecondary = TextSecondaryDark  // was Color(0xFFB3B3B3), now Color(0xFFB0B0C8)
+
+// ─────────────────────────────────────────────────────────────
+// BANNER COLORS (WCAG-safe)
+// ─────────────────────────────────────────────────────────────
+
+// Warning banners
+val WarningBannerLight = Color(0xFFFFF3E0)
+val WarningBannerDark  = Color(0xFF4A3310)
+
+// Error banners
+val ErrorBannerLight   = Color(0xFFFFEBEE)
+val ErrorBannerDark    = Color(0xFF4A1F1F)

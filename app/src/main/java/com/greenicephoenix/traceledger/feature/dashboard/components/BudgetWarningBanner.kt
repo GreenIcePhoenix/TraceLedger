@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.greenicephoenix.traceledger.core.ui.theme.NothingRed
+import com.greenicephoenix.traceledger.core.ui.theme.TraceLedgerThemeExtras
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BudgetWarningBanner
@@ -40,10 +41,15 @@ fun BudgetWarningBanner(
 
     if (!isExceeded && !isWarning) return
 
+//    val bannerColor = if (isExceeded)
+//        NothingRed.copy(alpha = 0.12f)
+//    else
+//        androidx.compose.ui.graphics.Color(0xFFFFF3E0)
+
     val bannerColor = if (isExceeded)
-        NothingRed.copy(alpha = 0.12f)
+        TraceLedgerThemeExtras.errorBanner
     else
-        androidx.compose.ui.graphics.Color(0xFFFFF3E0)  // Soft amber background
+        TraceLedgerThemeExtras.warningBanner
 
     val iconTint = if (isExceeded)
         NothingRed

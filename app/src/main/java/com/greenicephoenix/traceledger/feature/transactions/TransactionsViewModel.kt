@@ -40,6 +40,8 @@ class TransactionsViewModel(
     private val _maxAmount = MutableStateFlow<BigDecimal?>(null)
     val maxAmount: StateFlow<BigDecimal?> = _maxAmount.asStateFlow()
 
+    private val _categoryFilter = MutableStateFlow<String?>(null)
+    val categoryFilter: StateFlow<String?> = _categoryFilter.asStateFlow()
     private val accountNameMap  = MutableStateFlow<Map<String, String>>(emptyMap())
     private val categoryNameMap = MutableStateFlow<Map<String, String>>(emptyMap())
 
@@ -58,15 +60,17 @@ class TransactionsViewModel(
             _searchQuery,
             _minAmount,
             _maxAmount,
-            referenceData
+            referenceData,
+            _categoryFilter          // ← NEW 7th stream
         ) { args ->
             @Suppress("UNCHECKED_CAST")
-            val transactions = args[0] as List<TransactionUiModel>
-            val typeFilter   = args[1] as TransactionType?
-            val query        = args[2] as String
-            val minAmt       = args[3] as BigDecimal?
-            val maxAmt       = args[4] as BigDecimal?
-            val ref          = args[5] as Pair<Map<String, String>, Map<String, String>>
+            val transactions    = args[0] as List<TransactionUiModel>
+            val typeFilter      = args[1] as TransactionType?
+            val query           = args[2] as String
+            val minAmt          = args[3] as BigDecimal?
+            val maxAmt          = args[4] as BigDecimal?
+            val ref             = args[5] as Pair<Map<String, String>, Map<String, String>>
+            val categoryFilter  = args[6] as String?           // ← NEW
 
             val (accounts, categories) = ref
             val q = query.trim().lowercase()
@@ -75,6 +79,7 @@ class TransactionsViewModel(
                 .filter { typeFilter == null || it.type == typeFilter }
                 .filter { minAmt == null || it.amount >= minAmt }
                 .filter { maxAmt == null || it.amount <= maxAmt }
+                .filter { categoryFilter == null || it.categoryId == categoryFilter }  // ← NEW
                 .filter { tx ->
                     if (q.isBlank()) return@filter true
                     val accountMatch  = tx.fromAccountId?.let { accounts[it] }?.contains(q) == true ||
@@ -110,8 +115,8 @@ class TransactionsViewModel(
 
     // Returns true when any non-text filter is active (used to show a filter badge)
     val hasActiveFilters: StateFlow<Boolean> =
-        combine(_typeFilter, _minAmount, _maxAmount) { type, min, max ->
-            type != null || min != null || max != null
+        combine(_typeFilter, _minAmount, _maxAmount, _categoryFilter) { type, min, max, cat ->
+            type != null || min != null || max != null || cat != null
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     fun deleteTransaction(transaction: TransactionUiModel) {
@@ -136,4 +141,7 @@ class TransactionsViewModel(
     fun setCategories(categories: List<CategoryUiModel>) {
         categoryNameMap.value = categories.associate { it.id to it.name.lowercase() }
     }
+
+    fun setCategoryFilter(categoryId: String) { _categoryFilter.value = categoryId }
+    fun clearCategoryFilter()                  { _categoryFilter.value = null }
 }

@@ -6,35 +6,36 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.greenicephoenix.traceledger.domain.model.CategoryUiModel
 import com.greenicephoenix.traceledger.feature.statistics.components.BackHeader
-import com.greenicephoenix.traceledger.feature.statistics.components.IncomeDonutChart
-import com.greenicephoenix.traceledger.feature.statistics.components.IncomeLegend
+import com.greenicephoenix.traceledger.feature.statistics.components.CategoryLegend
+import com.greenicephoenix.traceledger.feature.statistics.components.DonutChart
 
 @Composable
 fun IncomeBreakdownScreen(
-    viewModel: StatisticsViewModel,
+    viewModel:   StatisticsViewModel,
     categoryMap: Map<String, CategoryUiModel>,
-    onBack: () -> Unit
+    onBack:      () -> Unit,
+    onDrillDown: (categoryId: String) -> Unit
 ) {
     val slices by viewModel.incomeCategorySlices.collectAsState()
+    var selectedCategoryId by remember { mutableStateOf<String?>(null) }
 
     LazyColumn(
         modifier            = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
         contentPadding      = PaddingValues(24.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        item {
-            BackHeader(title = "Income Breakdown", onBack = onBack)
-        }
+        item { BackHeader(title = "Income Breakdown", onBack = onBack) }
 
         item {
             if (slices.isEmpty()) {
                 Box(
                     modifier         = Modifier.fillMaxWidth().padding(vertical = 48.dp),
-                    contentAlignment = androidx.compose.ui.Alignment.Center
+                    contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text  = "No income data for this month",
@@ -43,16 +44,29 @@ fun IncomeBreakdownScreen(
                     )
                 }
             } else {
-                IncomeDonutChart(
-                    slices      = slices,
-                    categoryMap = categoryMap,
-                    modifier    = Modifier.fillMaxWidth()
+                DonutChart(
+                    slices       = slices,
+                    categoryMap  = categoryMap,
+                    centerLabel  = "INCOME",
+                    modifier     = Modifier.fillMaxWidth(),
+                    onSegmentTap = { categoryId ->
+                        if (selectedCategoryId == categoryId) onDrillDown(categoryId)
+                        else selectedCategoryId = categoryId
+                    }
                 )
             }
         }
 
         item {
-            IncomeLegend(slices = slices, categoryMap = categoryMap)
+            CategoryLegend(
+                slices             = slices,
+                categoryMap        = categoryMap,
+                selectedCategoryId = selectedCategoryId,
+                onItemClick        = { categoryId ->
+                    if (selectedCategoryId == categoryId) onDrillDown(categoryId)
+                    else selectedCategoryId = categoryId
+                }
+            )
         }
 
         item { Spacer(Modifier.height(48.dp)) }

@@ -48,6 +48,23 @@ object Routes {
     const val SMS_ADD_RULE     = "sms_add_rule"
     const val SMS_EDIT_RULE    = "sms_edit_rule/{ruleId}"
 
+    // ADD inside the Routes object, after STATISTICS_TRENDS:
+    const val STATISTICS_HEATMAP  = "statistics/heatmap"
+    const val STATISTICS_WEEKDAY  = "statistics/weekday"
+    const val STATISTICS_AREA     = "statistics/area"
+    const val STATISTICS_WATERFALL = "statistics/waterfall"
+
+    // Phase 3
+    const val STATISTICS_TREEMAP     = "statistics/treemap"
+    const val STATISTICS_SANKEY      = "statistics/sankey"
+    const val STATISTICS_HEALTH      = "statistics/health"
+    const val STATISTICS_SAVINGS_RATE = "statistics/savings_rate"
+    const val STATISTICS_VELOCITY    = "statistics/velocity"
+    const val STATISTICS_CAT_COMPARE = "statistics/cat_compare"
+    const val STATISTICS_INCOME_STABILITY = "statistics/income_stability"
+    const val STATISTICS_TOP_DAYS    = "statistics/top_days"
+    const val STATISTICS_ROLLING     = "statistics/rolling"
+
     fun smsEditRuleFor(ruleId: Long) = "sms_edit_rule/$ruleId"
 
     /** Build a concrete IMPORT_REVIEW route for a given accountId. */

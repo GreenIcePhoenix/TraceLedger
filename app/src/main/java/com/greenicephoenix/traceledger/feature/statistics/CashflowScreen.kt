@@ -31,6 +31,7 @@ fun CashflowScreen(
 
     var selectedEntry by remember { mutableStateOf<StatisticsViewModel.CashflowEntry?>(null) }
     val sheetState    = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var scrubEntry by remember { mutableStateOf<StatisticsViewModel.CashflowEntry?>(null) }
 
     LazyColumn(
         modifier            = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
@@ -42,12 +43,41 @@ fun CashflowScreen(
         }
 
         item {
-            CashflowBarChart(
-                entries       = cashflow,
-                selectedDay   = selectedEntry?.day,
-                onDaySelected = { selectedEntry = it },
-                modifier      = Modifier.fillMaxWidth()
-            )
+            Column {
+                // Scrub value display — shown above chart during drag
+                val displayEntry = scrubEntry ?: selectedEntry
+                if (displayEntry != null) {
+                    val net = displayEntry.income.subtract(displayEntry.expense)
+                    Row(
+                        modifier              = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            "Day ${displayEntry.day}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.5f)
+                        )
+                        Text(
+                            CurrencyFormatter.format(displayEntry.income.toPlainString(), currency),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SuccessGreen
+                        )
+                        Text(
+                            CurrencyFormatter.format(displayEntry.expense.toPlainString(), currency),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = NothingRed
+                        )
+                    }
+                }
+
+                CashflowBarChart(
+                    entries       = cashflow,
+                    selectedDay   = selectedEntry?.day,
+                    onDaySelected = { selectedEntry = it },
+                    modifier      = Modifier.fillMaxWidth(),
+                    onScrub       = { entry -> scrubEntry = entry }
+                )
+            }
         }
 
         if (cashflow.isEmpty()) {
