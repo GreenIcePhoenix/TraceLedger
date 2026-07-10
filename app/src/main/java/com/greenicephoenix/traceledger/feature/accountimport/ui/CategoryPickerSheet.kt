@@ -1,10 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// FILE: feature/accountimport/ui/CategoryPickerSheet.kt
-//
-// Bottom sheet for picking/changing a category on the review screen.
-// Shows EXPENSE and INCOME categories separately based on the transaction type.
-// Includes a "No category" option to clear the assignment.
-// ─────────────────────────────────────────────────────────────────────────────
 package com.greenicephoenix.traceledger.feature.accountimport.ui
 
 import androidx.compose.foundation.background
@@ -12,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.outlined.Cancel
@@ -25,15 +19,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.greenicephoenix.traceledger.domain.model.CategoryUiModel
 import com.greenicephoenix.traceledger.domain.model.TransactionType
+import com.greenicephoenix.traceledger.feature.categories.CategoryIcons
 
 /**
- * Bottom sheet for selecting a category on the review screen.
+ * Bottom sheet for selecting a category on the import review screen.
+ * Matches the AddTransaction CategorySelector style — icons + color circles.
  *
- * @param isCredit       true = show INCOME categories, false = show EXPENSE categories.
- * @param categories     Full category list — filtered internally by type.
- * @param currentId      Currently selected category ID (shown with checkmark).
- * @param onSelect       Called with the chosen category ID. Null = "No category".
- * @param onDismiss      Called when the sheet is dismissed without selection.
+ * @param isCredit   true = INCOME categories, false = EXPENSE categories
+ * @param categories Full list — filtered internally by type
+ * @param currentId  Currently selected category ID
+ * @param onSelect   Called with chosen ID, or null for "No category"
+ * @param onDismiss  Called on dismiss without selection
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,18 +40,20 @@ fun ImportCategoryPickerSheet(
     onSelect:   (String?) -> Unit,
     onDismiss:  () -> Unit
 ) {
-    // Filter to the relevant type
     val targetTypeName = if (isCredit) TransactionType.INCOME.name else TransactionType.EXPENSE.name
-    val filtered = categories.filter { it.type.name == targetTypeName }
-    val typeLabel = if (isCredit) "Income" else "Expense"
+    val filtered   = categories.filter { it.type.name == targetTypeName }
+    val typeLabel  = if (isCredit) "Income" else "Expense"
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor   = MaterialTheme.colorScheme.surface
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 32.dp)
         ) {
-            // Sheet title
+            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -75,113 +73,114 @@ fun ImportCategoryPickerSheet(
                 )
             }
 
-            HorizontalDivider()
+            HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
 
-            LazyColumn(
-                contentPadding = PaddingValues(vertical = 8.dp)
-            ) {
-                // "No category" option at the top
+            LazyColumn(contentPadding = PaddingValues(vertical = 8.dp)) {
+
+                // "No category" option
                 item {
-                    CategoryPickerRow(
-                        name       = "No category",
-                        colorHex   = null,
-                        isSelected = currentId == null,
-                        onClick    = { onSelect(null) },
-                        isNone     = true
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                if (currentId == null)
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                                else Color.Transparent
+                            )
+                            .clickable { onSelect(null) }
+                            .padding(horizontal = 20.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        // Icon placeholder — same size as category icons
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Outlined.Cancel,
+                                contentDescription = null,
+                                tint     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Text(
+                            text       = "No category",
+                            style      = MaterialTheme.typography.bodyMedium,
+                            color      = if (currentId == null) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                            fontWeight = if (currentId == null) FontWeight.Medium else FontWeight.Normal,
+                            modifier   = Modifier.weight(1f)
+                        )
+                        if (currentId == null) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = "Selected",
+                                tint     = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
                 }
 
                 items(filtered, key = { it.id }) { category ->
-                    CategoryPickerRow(
-                        name       = category.name,
-                        colorHex   = category.color.toString(),
-                        isSelected = category.id == currentId,
-                        onClick    = { onSelect(category.id) },
-                        isNone     = false
-                    )
+                    val isSelected = category.id == currentId
+                    val catColor   = Color(category.color)
+                    val icon       = CategoryIcons.iconFor(category.icon)
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
+                                else Color.Transparent
+                            )
+                            .clickable { onSelect(category.id) }
+                            .padding(horizontal = 20.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        // Icon circle — matches AddTransaction CategorySelector style
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(catColor.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector        = icon,
+                                contentDescription = null,
+                                tint               = catColor,
+                                modifier           = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Text(
+                            text       = category.name,
+                            style      = MaterialTheme.typography.bodyMedium,
+                            color      = if (isSelected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface,
+                            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
+                            modifier   = Modifier.weight(1f)
+                        )
+
+                        if (isSelected) {
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                contentDescription = "Selected",
+                                tint     = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
                 }
 
-                // Padding at the bottom for system gesture bar
                 item { Spacer(Modifier.height(16.dp)) }
             }
         }
-    }
-}
-
-@Composable
-private fun CategoryPickerRow(
-    name:       String,
-    colorHex:   String?,
-    isSelected: Boolean,
-    onClick:    () -> Unit,
-    isNone:     Boolean
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)
-                else Color.Transparent
-            )
-            .clickable { onClick() }
-            .padding(horizontal = 20.dp, vertical = 13.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        // Colour dot or "none" icon
-        if (isNone) {
-            Icon(
-                Icons.Outlined.Cancel,
-                contentDescription = null,
-                tint     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f),
-                modifier = Modifier.size(20.dp)
-            )
-        } else {
-            // Parse the stored hex colour key
-            val dotColor = parseColorKey(colorHex)
-            Box(
-                modifier = Modifier
-                    .size(20.dp)
-                    .clip(androidx.compose.foundation.shape.CircleShape)
-                    .background(dotColor)
-            )
-        }
-
-        Text(
-            text     = name,
-            style    = MaterialTheme.typography.bodyMedium,
-            color    = if (isSelected) MaterialTheme.colorScheme.primary
-            else MaterialTheme.colorScheme.onSurface,
-            fontWeight = if (isSelected) FontWeight.Medium else FontWeight.Normal,
-            modifier   = Modifier.weight(1f)
-        )
-
-        if (isSelected) {
-            Icon(
-                Icons.Default.CheckCircle,
-                contentDescription = "Selected",
-                tint     = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
-            )
-        }
-    }
-}
-
-/**
- * Parse the colorKey stored in CategoryEntity into a Compose Color.
- * ColorKey is stored as a hex string like "0xFF2ECC71" or "4281549393".
- * Falls back to a neutral grey if the format is unrecognised.
- */
-private fun parseColorKey(colorKey: String?): Color {
-    if (colorKey == null) return Color.Gray
-    return try {
-        // Handle both "0xFF..." format and plain long strings
-        val long = if (colorKey.startsWith("0x", ignoreCase = true))
-            java.lang.Long.decode(colorKey)
-        else
-            colorKey.toLong()
-        Color(long)
-    } catch (e: Exception) {
-        Color.Gray
     }
 }

@@ -10,6 +10,14 @@
 // Uses Apache POI's WorkbookFactory which auto-detects the file type.
 // Column detection uses FuzzyColumnMapper — no hardcoded bank layouts.
 //
+// v1.5.0 improvements:
+//   - Multi-sheet scan: picks the sheet that contains a valid transaction header
+//   - Leading blank column offset: handles banks (ICICI) with blank column A
+//   - 2-row merged header fallback: for banks with merged cell headers
+//   - Header validation: minimum 4 non-blank columns + amount cols required
+//     to reject preamble rows (e.g. "Transaction Date from | 01/03/2026")
+//     that partially match FuzzyColumnMapper but are NOT real headers
+//
 // DEPENDENCIES (already in libs.versions.toml and build.gradle.kts):
 //   implementation(libs.poi.core)
 //   implementation(libs.poi.ooxml)
@@ -76,15 +84,45 @@ object SpreadsheetParser {
         }
 
         return try {
-            val sheet = workbook.getSheetAt(0)
+            // ── Multi-sheet scan ─────────────────────────────────────────────
+            // Some banks put transactions on sheet 2+. Scan all sheets and
+            // pick the first one that contains a valid transaction header.
+            // Falls back to sheet 0 if no sheet passes the header check.
+            val sheet = run {
+                var bestSheet = workbook.getSheetAt(0)
+                for (i in 0 until workbook.numberOfSheets) {
+                    val candidate = workbook.getSheetAt(i)
+                    if (candidate.lastRowNum <= 0) continue
 
-            // Extract all rows as List<List<String>>
-            val rows = (0..sheet.lastRowNum).mapNotNull { rowIdx ->
-                val row = sheet.getRow(rowIdx) ?: return@mapNotNull null
-                val maxCol = row.lastCellNum.toInt().coerceAtLeast(1)
-                val cells = (0 until maxCol).map { col ->
-                    cellToString(row.getCell(col))
+                    // Extract first 20 rows and check if any row is a valid header
+                    val sampleRows = (0..minOf(candidate.lastRowNum, 20)).mapNotNull { rowIdx ->
+                        val row    = candidate.getRow(rowIdx) ?: return@mapNotNull null
+                        val maxCol = row.lastCellNum.toInt().coerceAtLeast(1)
+                        (0 until maxCol).map { col -> cellToString(row.getCell(col)) }
+                            .takeIf { cells -> cells.any { it.isNotBlank() } }
+                    }
+
+                    // Use the same header validation as findHeaderAndMapping
+                    val hasValidHeader = sampleRows.any { row ->
+                        val leading = row.indexOfFirst { it.isNotBlank() }.coerceAtLeast(0)
+                        val trimmed = row.drop(leading)
+                        val m = FuzzyColumnMapper.detectColumns(trimmed) ?: return@any false
+                        isStrongHeaderMapping(trimmed, m)
+                    }
+
+                    if (hasValidHeader) {
+                        bestSheet = candidate
+                        break
+                    }
                 }
+                bestSheet
+            }
+
+            // ── Extract all rows as List<List<String>> ───────────────────────
+            val rows = (0..sheet.lastRowNum).mapNotNull { rowIdx ->
+                val row    = sheet.getRow(rowIdx) ?: return@mapNotNull null
+                val maxCol = row.lastCellNum.toInt().coerceAtLeast(1)
+                val cells  = (0 until maxCol).map { col -> cellToString(row.getCell(col)) }
                 if (cells.all { it.isBlank() }) null else cells
             }
 
@@ -94,7 +132,7 @@ object SpreadsheetParser {
                 return SpreadsheetParseResult.Error("No data found in this spreadsheet.")
             }
 
-            // Find the header row — scan first 5 rows for one that matches column keywords
+            // ── Find header + column mapping ─────────────────────────────────
             val (headerRowIdx, mapping) = findHeaderAndMapping(rows)
                 ?: return SpreadsheetParseResult.Error(
                     "Could not identify the column structure.\n\n" +
@@ -118,15 +156,94 @@ object SpreadsheetParser {
     // ── Header detection ──────────────────────────────────────────────────────
 
     /**
-     * Scan the first few rows to find the header row and build a column mapping.
-     * Returns (headerRowIndex, ColumnMapping) or null if not found.
+     * Validate that a FuzzyColumnMapper result is a REAL transaction header
+     * and not a preamble key-value row that partially matches.
+     *
+     * Requirements:
+     *   1. At least 4 non-blank columns in the trimmed row
+     *   2. Must have BOTH debit + credit columns, OR a single amount column
+     *
+     * This rejects preamble rows like:
+     *   ["Transaction Date from", "01/03/2026", "to", "01/06/2026"]
+     * which have a date match and description match but no amount columns.
+     */
+    private fun isStrongHeaderMapping(trimmedRow: List<String>, mapping: ColumnMapping): Boolean {
+        val nonBlankCount = trimmedRow.count { it.isNotBlank() }
+        val hasAmountCols = (mapping.debitCol >= 0 && mapping.creditCol >= 0) ||
+                mapping.amountCol >= 0
+        return nonBlankCount >= 4 && hasAmountCols
+    }
+
+    /**
+     * Scan up to 20 rows to find the transaction header and build a ColumnMapping.
+     *
+     * Pass 1 — single-row headers (most banks)
+     * Pass 2 — 2-row merged headers (some banks use merged cells spanning 2 rows)
+     *
+     * For each candidate row:
+     *   - Strip leading blank columns (handles ICICI blank column A)
+     *   - Run FuzzyColumnMapper
+     *   - Validate with isStrongHeaderMapping (rejects preamble rows)
+     *   - Offset all column indices back by leadingBlanks
      */
     private fun findHeaderAndMapping(rows: List<List<String>>): Pair<Int, ColumnMapping>? {
-        for (i in 0 until minOf(rows.size, 8)) {
-            val mapping = FuzzyColumnMapper.detectColumns(rows[i])
-            if (mapping != null) return i to mapping.copy(skipRows = 1)
+
+        // ── Pass 1: single-row header ─────────────────────────────────────────
+        for (i in 0 until minOf(rows.size, 20)) {
+            val row          = rows[i]
+            val leadingBlanks = row.indexOfFirst { it.isNotBlank() }.coerceAtLeast(0)
+            val trimmedRow   = row.drop(leadingBlanks)
+
+            val mapping = FuzzyColumnMapper.detectColumns(trimmedRow) ?: continue
+
+            // Reject preamble rows that partially match (e.g. "Transaction Date from | 01/03/2026")
+            if (!isStrongHeaderMapping(trimmedRow, mapping)) continue
+
+            val offsetMapping = applyOffset(mapping, leadingBlanks)
+            return i to offsetMapping
         }
+
+        // ── Pass 2: 2-row merged header ───────────────────────────────────────
+        // Some banks use merged cells; POI reads merged cells as blank in the
+        // child rows. Combining adjacent rows reconstructs the full header.
+        for (i in 0 until minOf(rows.size - 1, 20)) {
+            val combined = rows[i].zip(rows[i + 1]) { a, b ->
+                listOf(a, b).filter { it.isNotBlank() }.joinToString(" ")
+            }
+            val leading  = combined.indexOfFirst { it.isNotBlank() }.coerceAtLeast(0)
+            val trimmed  = combined.drop(leading)
+            val mapping  = FuzzyColumnMapper.detectColumns(trimmed) ?: continue
+
+            if (!isStrongHeaderMapping(trimmed, mapping)) continue
+
+            val offsetMapping = applyOffset(mapping, leading)
+            // +1 because we consumed 2 rows for the header — data starts after row i+1
+            return (i + 1) to offsetMapping
+        }
+
         return null
+    }
+
+    /**
+     * Offset all column indices in a ColumnMapping by [offset].
+     * This corrects for leading blank columns that were stripped before
+     * FuzzyColumnMapper ran.
+     */
+    private fun applyOffset(mapping: ColumnMapping, offset: Int): ColumnMapping {
+        if (offset == 0) return mapping
+        fun shift(col: Int) = if (col >= 0) col + offset else -1
+        return mapping.copy(
+            skipRows       = 1,
+            dateCol        = shift(mapping.dateCol),
+            descriptionCol = shift(mapping.descriptionCol),
+            debitCol       = shift(mapping.debitCol),
+            creditCol      = shift(mapping.creditCol),
+            amountCol      = shift(mapping.amountCol),
+            directionCol   = shift(mapping.directionCol),
+            balanceCol     = shift(mapping.balanceCol),
+            referenceCol   = shift(mapping.referenceCol),
+            categoryCol    = shift(mapping.categoryCol)
+        )
     }
 
     // ── Cell → String ─────────────────────────────────────────────────────────
@@ -134,6 +251,7 @@ object SpreadsheetParser {
     /**
      * Convert any POI cell to a clean string representation.
      * Handles date cells specially — returns "DD/MM/YYYY" format.
+     * Preserves decimal values for amount cells (e.g. "0.00", "30.00").
      */
     private fun cellToString(cell: org.apache.poi.ss.usermodel.Cell?): String {
         if (cell == null) return ""
@@ -154,14 +272,21 @@ object SpreadsheetParser {
                     }
                 } else {
                     val num = cell.numericCellValue
-                    // Strip ".0" from whole numbers: 15000.0 → "15000"
-                    if (num == floor(num) && !num.isInfinite()) num.toLong().toString()
-                    else num.toString()
+                    // Preserve decimals for amount cells — "0.00" must stay "0.00"
+                    // so parseAmount can correctly identify zero-value cells.
+                    // Only strip ".0" for truly whole numbers that are clearly not amounts.
+                    if (num == floor(num) && !num.isInfinite() && num >= 1000) {
+                        // Large whole numbers (serial numbers, account numbers) — strip .0
+                        num.toLong().toString()
+                    } else {
+                        // Small numbers or decimals — preserve as-is for amount parsing
+                        num.toBigDecimal().stripTrailingZeros().toPlainString()
+                            .let { if (it == "0") "0.00" else it }
+                    }
                 }
             }
 
             CellType.FORMULA -> {
-                // Evaluate formula result
                 try {
                     val num = cell.numericCellValue
                     if (num == floor(num) && !num.isInfinite()) num.toLong().toString()
@@ -196,7 +321,7 @@ object SpreadsheetParser {
             cols.getOrElse(mapping.referenceCol) { "" }.trim().ifEmpty { null }
         else null
 
-        // Skip footer/header text rows
+        // Skip footer/summary rows
         val lower = description.lowercase()
         if ("opening balance" in lower || "closing balance" in lower ||
             lower.trim() == "total"    || "balance b/f" in lower    ||
@@ -204,14 +329,19 @@ object SpreadsheetParser {
             return null
         }
 
+        // Skip rows with no meaningful description (S No. rows, blank rows)
+        if (description.isBlank() || description.matches(Regex("\\d+"))) return null
+
         // Amount + direction
-        val (amount, isCredit) = if (mapping.amountCol >= 0) {
+        val (amount, isCredit) = if (mapping.amountCol >= 0 && mapping.directionCol >= 0) {
+            // Single amount column with explicit DR/CR direction column (e.g. IndusInd)
             val rawAmount = cols.getOrElse(mapping.amountCol)    { "" }
             val direction = cols.getOrElse(mapping.directionCol) { "Dr" }.trim().lowercase()
             val parsed    = parseAmount(rawAmount) ?: return null
             parsed to direction.startsWith("cr")
         } else {
-            val debit  = parseAmount(cols.getOrElse(mapping.debitCol)  { "" })
+            // Separate debit/credit columns (most banks including ICICI)
+            val debit  = parseAmount(cols.getOrElse(if (mapping.debitCol  >= 0) mapping.debitCol  else mapping.amountCol) { "" })
             val credit = parseAmount(cols.getOrElse(mapping.creditCol) { "" })
             when {
                 debit  != null && debit  > BigDecimal.ZERO -> debit  to false
@@ -235,12 +365,24 @@ object SpreadsheetParser {
         )
     }
 
-    // ── Shared helpers ────────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
+    /**
+     * Parse an amount string, returning null for zero or unparseable values.
+     * Handles currency symbols (₹, $, €, £, ¥), commas, spaces.
+     * Treats "0", "0.00", "-" as null (no transaction).
+     */
     private fun parseAmount(raw: String): BigDecimal? {
-        val cleaned = raw.replace(Regex("[₹$€£¥,\\s]"), "").trim()
+        val cleaned = raw
+            .replace(Regex("[₹$€£¥,\\s]"), "")
+            .replace("(", "-")
+            .replace(")", "")
+            .trim()
         if (cleaned.isEmpty() || cleaned == "-") return null
-        return try { BigDecimal(cleaned).abs() } catch (e: NumberFormatException) { null }
+        return try {
+            val value = BigDecimal(cleaned).abs()
+            if (value.compareTo(BigDecimal.ZERO) == 0) null else value
+        } catch (e: NumberFormatException) { null }
     }
 
     private fun parseDate(raw: String, formats: List<String>): LocalDate? {
@@ -260,11 +402,11 @@ object SpreadsheetParser {
     private fun isEncryptionError(e: Exception): Boolean {
         val name = e.javaClass.name + " " + (e.javaClass.simpleName)
         val msg  = e.message ?: ""
-        return "EncryptedDocument"   in name  ||
-                "InvalidPassword"     in name  ||
+        return "EncryptedDocument"          in name ||
+                "InvalidPassword"            in name ||
                 "org.apache.poi.poifs.crypt" in name ||
-                "password"            in msg.lowercase() ||
-                "encrypted"           in msg.lowercase() ||
-                "decrypt"             in msg.lowercase()
+                "password"                   in msg.lowercase() ||
+                "encrypted"                  in msg.lowercase() ||
+                "decrypt"                    in msg.lowercase()
     }
 }

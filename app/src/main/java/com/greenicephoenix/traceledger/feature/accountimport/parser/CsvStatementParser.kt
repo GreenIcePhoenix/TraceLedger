@@ -1,27 +1,17 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // FILE: feature/accountimport/parser/CsvStatementParser.kt
 //
-// What this does:
-//   Parses a bank statement CSV file into a List<ParsedTransaction>.
-//   Each bank has a ColumnMapping that describes which CSV column index
-//   holds the date, description, debit amount, credit amount, etc.
+// Tier 1 improvements (v1.5.0):
+//   - Encoding auto-detection: UTF-16 LE/BE, UTF-8 BOM, Windows-1252 fallback
+//   - Delimiter auto-detection: comma, tab, semicolon, pipe
+//   - Header row scan: up to 50 rows (handles preamble-heavy bank CSVs)
+//   - Known bank header scan: finds actual header row for hardcoded-mapping banks
+//   - New Indian bank mappings: Federal, Canara, PNB, Bank of Baroda, IDFC First
 //
-// Design principles:
-//   - Never crashes on bad data. Every row is wrapped in a try/catch.
-//     If a row fails to parse, it produces a ParsedTransaction with
-//     date = null and hasDateError = true (handled in the review screen).
-//   - Amount parsing: strips currency symbols, commas, and spaces.
-//     Handles both "1,23,456.78" (Indian) and "1,234,567.89" (International).
-//   - Date parsing: tries multiple formats per bank since some banks change
-//     their export format across statement periods.
-//   - Credit/Debit detection: some banks use separate Debit/Credit columns,
-//     others use a single Amount column with a Dr/Cr indicator.
-//
-// Adding a new bank:
-//   1. Add a BankFormat entry in BankFormat.kt
-//   2. Add a detection fingerprint in BankFormatDetector.kt
-//   3. Add a ColumnMapping entry in the MAPPINGS map below
-//   Nothing else needs to change.
+// Design principles (unchanged):
+//   - Never crashes on bad data — every row is wrapped in try/catch
+//   - Amount parsing strips currency symbols, commas, spaces
+//   - Date parsing tries multiple formats
 // ─────────────────────────────────────────────────────────────────────────────
 package com.greenicephoenix.traceledger.feature.accountimport.parser
 
@@ -30,6 +20,7 @@ import android.net.Uri
 import com.greenicephoenix.traceledger.feature.accountimport.model.BankFormat
 import com.greenicephoenix.traceledger.feature.accountimport.model.ParsedTransaction
 import java.math.BigDecimal
+import java.nio.charset.Charset
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
@@ -39,22 +30,6 @@ import java.time.format.DateTimeParseException
 /**
  * Describes which column index in a bank's CSV holds each piece of data.
  * Indices are 0-based. Use -1 to indicate "this column doesn't exist".
- *
- * @param skipRows         How many rows to skip before the data rows start.
- *                         Most banks: 1 (skip the header). Some: 2 or more.
- * @param dateCol          Column index for transaction date.
- * @param descriptionCol   Column index for narration / particulars.
- * @param debitCol         Column index for debit (money out) amount.
- *                         -1 if the bank uses a single amount + direction column.
- * @param creditCol        Column index for credit (money in) amount.
- *                         -1 if the bank uses a single amount + direction column.
- * @param amountCol        Column index for amount when debit/credit are combined.
- *                         -1 if the bank uses separate debit/credit columns.
- * @param directionCol     Column index for "Dr"/"Cr" indicator when [amountCol] != -1.
- * @param balanceCol       Column index for running balance. -1 if not present.
- * @param referenceCol     Column index for cheque/UTR reference number. -1 if not present.
- * @param dateFormats      List of date format strings to try, in order of preference.
- *                         We try all formats because some banks change formats over time.
  */
 data class ColumnMapping(
     val skipRows:       Int,
@@ -67,22 +42,15 @@ data class ColumnMapping(
     val balanceCol:     Int  = -1,
     val referenceCol:   Int  = -1,
     val categoryCol:    Int  = -1,
-    val dateFormats:    List<String> = listOf("dd/MM/yy", "dd/MM/yyyy", "dd-MM-yyyy", "yyyy-MM-dd")
+    val dateFormats:    List<String> = listOf(
+        "dd/MM/yyyy", "dd-MM-yyyy", "dd/MM/yy", "dd-MM-yy",
+        "dd MMM yyyy", "dd MMM yy", "yyyy-MM-dd", "MM/dd/yyyy",
+        "d/M/yyyy", "d-M-yyyy", "d MMM yyyy"
+    )
 )
 
 // ── Bank column mappings ──────────────────────────────────────────────────────
 
-/**
- * Column mappings for every supported bank.
- *
- * HOW TO READ THESE:
- * Open a sample statement from each bank in a text editor.
- * Count columns from 0. Map each column to the field it represents.
- *
- * Example HDFC row (indices 0-6):
- * "01/01/24","UPI-SWIGGY","01/01/24","150.00","","","9,850.00"
- *  0=date     1=narration  2=valueDate 3=debit 4=credit 5=ref   6=balance
- */
 private val MAPPINGS: Map<BankFormat, ColumnMapping> = mapOf(
 
     // HDFC Bank CSV
@@ -176,6 +144,69 @@ private val MAPPINGS: Map<BankFormat, ColumnMapping> = mapOf(
         dateFormats    = listOf("dd/MM/yyyy", "dd-MM-yyyy")
     ),
 
+    // Federal Bank CSV
+    // Header: Transaction Date, Particulars, Cheque No, Debit, Credit, Balance
+    BankFormat.FEDERAL_CSV to ColumnMapping(
+        skipRows       = 1,
+        dateCol        = 0,
+        descriptionCol = 1,
+        referenceCol   = 2,
+        debitCol       = 3,
+        creditCol      = 4,
+        balanceCol     = 5,
+        dateFormats    = listOf("dd/MM/yyyy", "dd-MM-yyyy", "dd MMM yyyy")
+    ),
+
+    // Canara Bank CSV
+    // Header: Sl No, Transaction Date, Value Date, Description, Ref No, Debit, Credit, Balance
+    BankFormat.CANARA_CSV to ColumnMapping(
+        skipRows       = 1,
+        dateCol        = 1,
+        descriptionCol = 3,
+        referenceCol   = 4,
+        debitCol       = 5,
+        creditCol      = 6,
+        balanceCol     = 7,
+        dateFormats    = listOf("dd/MM/yyyy", "dd-MM-yyyy", "dd MMM yyyy")
+    ),
+
+    // PNB (Punjab National Bank) CSV
+    // Header: Date, Particulars, Debit, Credit, Balance
+    BankFormat.PNB_CSV to ColumnMapping(
+        skipRows       = 1,
+        dateCol        = 0,
+        descriptionCol = 1,
+        debitCol       = 2,
+        creditCol      = 3,
+        balanceCol     = 4,
+        dateFormats    = listOf("dd/MM/yyyy", "dd-MM-yyyy", "dd MMM yyyy")
+    ),
+
+    // Bank of Baroda CSV
+    // Header: Txn Date, Narration, Ref Num, Value Date, Withdrawal Amt, Deposit Amt, Closing Balance
+    BankFormat.BOB_CSV to ColumnMapping(
+        skipRows       = 1,
+        dateCol        = 0,
+        descriptionCol = 1,
+        referenceCol   = 2,
+        debitCol       = 4,
+        creditCol      = 5,
+        balanceCol     = 6,
+        dateFormats    = listOf("dd/MM/yyyy", "dd-MM-yyyy", "dd MMM yyyy")
+    ),
+
+    // IDFC First Bank CSV
+    // Header: Date, Transaction Details, Ref No, Debit, Credit, Balance
+    BankFormat.IDFC_CSV to ColumnMapping(
+        skipRows       = 1,
+        dateCol        = 0,
+        descriptionCol = 1,
+        referenceCol   = 2,
+        debitCol       = 3,
+        creditCol      = 4,
+        balanceCol     = 5,
+        dateFormats    = listOf("dd/MM/yyyy", "dd-MM-yyyy", "dd MMM yyyy")
+    ),
 )
 
 // ── Parser ────────────────────────────────────────────────────────────────────
@@ -183,91 +214,216 @@ private val MAPPINGS: Map<BankFormat, ColumnMapping> = mapOf(
 object CsvStatementParser {
 
     /**
-     * Parse a CSV file into a list of [ParsedTransaction].
+     * Parse a CSV/TSV file into a list of [ParsedTransaction].
      *
-     * Rows that fail to parse completely have [ParsedTransaction.date] = null.
-     * The review screen flags these and prevents them from being imported.
-     *
-     * @param context  Needed to open the URI via ContentResolver.
-     * @param uri      Content URI of the CSV file.
-     * @param format   The bank format detected by [BankFormatDetector].
-     * @return         List of parsed rows, including failed ones (date = null).
-     *                 Returns empty list if the file cannot be opened.
+     * Tier 1 improvements:
+     *  - Auto-detects file encoding (UTF-16, UTF-8 BOM, Windows-1252 fallback)
+     *  - Auto-detects delimiter (comma, tab, semicolon, pipe)
+     *  - Scans up to 50 rows for the actual header (handles preamble blocks)
      */
     fun parse(
         context: Context,
         uri:     Uri,
         format:  BankFormat
     ): List<ParsedTransaction> {
-        val lines = try {
-            context.contentResolver.openInputStream(uri)
-                ?.bufferedReader()
-                ?.readLines()
+
+        // ── Step 1: Read all bytes and detect encoding ────────────────────────
+        val bytes = try {
+            context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
                 ?: return emptyList()
         } catch (e: Exception) {
             return emptyList()
         }
 
-        //For GENERIC_CSV, auto-detect column layout from the header row
-        //using FuzzyColumnMapper. This handles any bank not in MAPPINGS.
+        val charset  = detectEncoding(bytes)
+        val rawText  = bytes.toString(charset)
+        val allLines = rawText.lines().filter { it.isNotBlank() }
+
+        if (allLines.isEmpty()) return emptyList()
+
+        // ── Step 2: Detect delimiter ──────────────────────────────────────────
+        val delimiter = detectDelimiter(allLines.take(10))
+
+        // ── Step 3: Get column mapping ────────────────────────────────────────
         val mapping = if (format == BankFormat.GENERIC_CSV) {
-            val headerCols = lines.firstOrNull()
-                ?.let { splitCsvLine(it) }
-                ?: return emptyList()
-            FuzzyColumnMapper.detectColumns(headerCols) ?: return emptyList()
+            // Unknown bank — use FuzzyColumnMapper to auto-detect columns
+            findHeaderRowGeneric(allLines, delimiter)?.let { (idx, m) ->
+                m.copy(skipRows = idx + 1)
+            } ?: return emptyList()
         } else {
-            MAPPINGS[format] ?: return emptyList()
+            // Known bank — use hardcoded mapping but find actual header row
+            // to handle preamble rows that appear before the header
+            val knownMapping    = MAPPINGS[format] ?: return emptyList()
+            val actualHeaderIdx = findKnownFormatHeaderRow(allLines, format, delimiter)
+            knownMapping.copy(skipRows = (actualHeaderIdx ?: 0) + 1)
         }
 
-        return lines.drop(mapping.skipRows)
+        // ── Step 4: Parse data rows ───────────────────────────────────────────
+        return allLines.drop(mapping.skipRows)
             .filter { it.isNotBlank() }
-            .mapNotNull { line -> parseRow(line, mapping) }
+            .mapNotNull { line -> parseRow(line, mapping, delimiter) }
+    }
+
+    // ── Encoding detection ────────────────────────────────────────────────────
+
+    /**
+     * Detect file encoding from BOM bytes.
+     * Falls back to UTF-8 then Windows-1252 if no BOM found.
+     */
+    private fun detectEncoding(bytes: ByteArray): Charset {
+        if (bytes.size >= 2) {
+            // UTF-16 Little Endian BOM: FF FE
+            if (bytes[0] == 0xFF.toByte() && bytes[1] == 0xFE.toByte())
+                return Charsets.UTF_16LE
+            // UTF-16 Big Endian BOM: FE FF
+            if (bytes[0] == 0xFE.toByte() && bytes[1] == 0xFF.toByte())
+                return Charsets.UTF_16BE
+        }
+        if (bytes.size >= 3) {
+            // UTF-8 BOM: EF BB BF
+            if (bytes[0] == 0xEF.toByte() && bytes[1] == 0xBB.toByte() && bytes[2] == 0xBF.toByte())
+                return Charsets.UTF_8
+        }
+        // No BOM — try UTF-8; if it produces replacement characters fall back to Windows-1252
+        val utf8Text = bytes.toString(Charsets.UTF_8)
+        return if (utf8Text.contains('\uFFFD')) {
+            // Replacement character found — likely Windows-1252 (common in Indian bank exports)
+            charset("windows-1252")
+        } else {
+            Charsets.UTF_8
+        }
+    }
+
+    // ── Delimiter detection ───────────────────────────────────────────────────
+
+    /**
+     * Detect the delimiter used in the file by counting candidate characters
+     * across the first few lines. The delimiter with the most consistent
+     * non-zero count wins.
+     */
+    private fun detectDelimiter(sampleLines: List<String>): Char {
+        val candidates = listOf(',', '\t', ';', '|')
+        val scores = candidates.associateWith { delim ->
+            val counts = sampleLines.map { line -> line.count { it == delim } }
+            val nonZero = counts.filter { it > 0 }
+            // Score = consistency (low variance) × presence (non-zero count)
+            if (nonZero.isEmpty()) 0.0
+            else nonZero.average() * nonZero.size.toDouble() / sampleLines.size
+        }
+        return scores.maxByOrNull { it.value }?.key ?: ','
+    }
+
+    // ── Header row detection ──────────────────────────────────────────────────
+
+    /**
+     * For GENERIC_CSV: scan up to 50 rows and use FuzzyColumnMapper to find
+     * the first row that looks like a column header.
+     */
+    private fun findHeaderRowGeneric(
+        lines:     List<String>,
+        delimiter: Char
+    ): Pair<Int, ColumnMapping>? {
+        for (i in 0 until minOf(lines.size, 50)) {
+            val cols    = splitLine(lines[i], delimiter)
+            // Strip leading blank columns (same as SpreadsheetParser)
+            val leading = cols.indexOfFirst { it.isNotBlank() }.coerceAtLeast(0)
+            val trimmed = cols.drop(leading)
+            val mapping = FuzzyColumnMapper.detectColumns(trimmed) ?: continue
+            // Offset column indices back
+            val offset  = mapping.copy(
+                dateCol        = if (mapping.dateCol        >= 0) mapping.dateCol        + leading else -1,
+                descriptionCol = if (mapping.descriptionCol >= 0) mapping.descriptionCol + leading else -1,
+                debitCol       = if (mapping.debitCol       >= 0) mapping.debitCol       + leading else -1,
+                creditCol      = if (mapping.creditCol      >= 0) mapping.creditCol      + leading else -1,
+                amountCol      = if (mapping.amountCol      >= 0) mapping.amountCol      + leading else -1,
+                directionCol   = if (mapping.directionCol   >= 0) mapping.directionCol   + leading else -1,
+                balanceCol     = if (mapping.balanceCol     >= 0) mapping.balanceCol     + leading else -1,
+                referenceCol   = if (mapping.referenceCol   >= 0) mapping.referenceCol   + leading else -1,
+                categoryCol    = if (mapping.categoryCol    >= 0) mapping.categoryCol    + leading else -1
+            )
+            return i to offset
+        }
+        return null
+    }
+
+    /**
+     * For known bank formats: find the actual header row by looking for the
+     * bank-specific fingerprint. Handles preamble rows before the header.
+     * Returns the row index of the header, or null if not found (use row 0).
+     */
+    private fun findKnownFormatHeaderRow(
+        lines:     List<String>,
+        format:    BankFormat,
+        delimiter: Char
+    ): Int? {
+        val fingerprint = when (format) {
+            BankFormat.HDFC_CSV     -> "narration"
+            BankFormat.ICICI_CSV    -> "transaction date"
+            BankFormat.SBI_CSV      -> "txn date"
+            BankFormat.AXIS_CSV     -> "particulars"
+            BankFormat.KOTAK_CSV    -> "withdrawal"
+            BankFormat.YES_CSV      -> "withdrawal amt"
+            BankFormat.INDUSIND_CSV -> "dr/cr"
+            BankFormat.FEDERAL_CSV  -> "particulars"
+            BankFormat.CANARA_CSV   -> "description"
+            BankFormat.PNB_CSV      -> "particulars"
+            BankFormat.BOB_CSV      -> "narration"
+            BankFormat.IDFC_CSV     -> "transaction details"
+            else                    -> return null
+        }
+        for (i in 0 until minOf(lines.size, 50)) {
+            if (lines[i].lowercase().contains(fingerprint)) return i
+        }
+        return null
     }
 
     // ── Row parsing ───────────────────────────────────────────────────────────
 
-    /**
-     * Parse a single CSV row into a [ParsedTransaction].
-     * Returns null for completely empty or malformed rows that provide no data.
-     * Returns a ParsedTransaction with date=null for rows with parseable amounts
-     * but unparseable dates — these appear as errors in the review screen.
-     */
-    private fun parseRow(line: String, mapping: ColumnMapping): ParsedTransaction? {
-        val cols = splitCsvLine(line)
+    private fun parseRow(
+        line:      String,
+        mapping:   ColumnMapping,
+        delimiter: Char
+    ): ParsedTransaction? {
+        val cols = splitLine(line, delimiter)
 
-        // Need at least enough columns to reach the furthest required index
         val requiredCols = maxOf(
             mapping.dateCol,
             mapping.descriptionCol,
-            mapping.debitCol,
-            mapping.creditCol,
-            mapping.amountCol
+            mapping.debitCol.coerceAtLeast(0),
+            mapping.creditCol.coerceAtLeast(0),
+            mapping.amountCol.coerceAtLeast(0)
         ) + 1
         if (cols.size < requiredCols) return null
 
-        val rawDate     = cols.getOrElse(mapping.dateCol)     { "" }.trim()
+        val rawDate     = cols.getOrElse(mapping.dateCol)        { "" }.trim()
         val description = cols.getOrElse(mapping.descriptionCol) { "" }.trim()
         val referenceNo = if (mapping.referenceCol >= 0)
             cols.getOrElse(mapping.referenceCol) { "" }.trim().ifEmpty { null }
         else null
 
-        // Determine amount and direction
-        val (amount, isCredit) = if (mapping.amountCol >= 0) {
-            // Single amount column with Dr/Cr indicator (e.g. IndusInd)
-            val rawAmount = cols.getOrElse(mapping.amountCol) { "" }
+        // Skip summary/footer rows
+        val lower = description.lowercase()
+        if ("opening balance" in lower || "closing balance" in lower ||
+            lower.trim() == "total"    || "balance b/f" in lower    ||
+            lower.trim() in setOf("narration", "particulars", "description", "details")) {
+            return null
+        }
+
+        // Amount + direction
+        val (amount, isCredit) = if (mapping.amountCol >= 0 && mapping.directionCol >= 0) {
+            // Single amount column with explicit DR/CR direction column (e.g. IndusInd)
+            val rawAmount = cols.getOrElse(mapping.amountCol)    { "" }
             val direction = cols.getOrElse(mapping.directionCol) { "Dr" }.trim().lowercase()
             val parsed    = parseAmount(rawAmount) ?: return null
-            parsed to (direction.startsWith("cr"))
+            parsed to direction.startsWith("cr")
         } else {
-            // Separate debit/credit columns (most banks)
-            val rawDebit  = cols.getOrElse(mapping.debitCol)  { "" }
-            val rawCredit = cols.getOrElse(mapping.creditCol) { "" }
-            val debit     = parseAmount(rawDebit)
-            val credit    = parseAmount(rawCredit)
+            // Separate debit/credit columns (most banks including ICICI)
+            val debit  = parseAmount(cols.getOrElse(if (mapping.debitCol  >= 0) mapping.debitCol  else mapping.amountCol) { "" })
+            val credit = parseAmount(cols.getOrElse(mapping.creditCol) { "" })
             when {
                 debit  != null && debit  > BigDecimal.ZERO -> debit  to false
                 credit != null && credit > BigDecimal.ZERO -> credit to true
-                else -> return null  // Both empty — skip this row (often a metadata row)
+                else -> return null
             }
         }
 
@@ -275,105 +431,71 @@ object CsvStatementParser {
             parseAmount(cols.getOrElse(mapping.balanceCol) { "" })
         else null
 
-        // Read the category name directly from the CSV if the column exists.
-        // The ViewModel will look this up against the user's category list.
         val importedCategoryName = if (mapping.categoryCol >= 0)
             cols.getOrElse(mapping.categoryCol) { "" }.trim().ifEmpty { null }
         else null
 
-        // Parse the date — on failure, keep the raw string for display
-        val parsedDate = parseDate(rawDate, mapping.dateFormats)
-
-        // Skip rows that look like footer summaries (e.g. "Opening Balance", "Closing Balance")
-        if (description.lowercase().let {
-                "opening balance" in it || "closing balance" in it ||
-                        "total" == it.trim()    || "balance b/f" in it
-            }) return null
-
         return ParsedTransaction(
-            rawDate     = rawDate,
-            date        = parsedDate,
-            description = description,
-            amount      = amount,
-            isCredit    = isCredit,
-            balance     = balance,
-            referenceNo = referenceNo,
+            rawDate              = rawDate,
+            date                 = parseDate(rawDate, mapping.dateFormats),
+            description          = description,
+            amount               = amount,
+            isCredit             = isCredit,
+            balance              = balance,
+            referenceNo          = referenceNo,
             importedCategoryName = importedCategoryName
         )
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /**
-     * Parse an amount string to BigDecimal.
-     * Handles: "1,23,456.78", "1,234,567.89", "1234567.89", "₹ 1,234.56", " "
-     * Returns null for empty, whitespace-only, or non-numeric strings.
-     */
     private fun parseAmount(raw: String): BigDecimal? {
-        // Strip everything except digits, dots, and minus signs
-        val cleaned = raw
-            .replace(Regex("[₹$€£¥,\\s]"), "")  // currency symbols, commas, spaces
-            .replace("(", "-")                    // some banks use (1234.00) for negatives
-            .replace(")", "")
-            .trim()
-        if (cleaned.isEmpty() || cleaned == "-") return null
+        val cleaned = raw.replace(Regex("[₹$€£¥,\\s]"), "").trim()
+        if (cleaned.isEmpty() || cleaned == "-" || cleaned == "0.00" || cleaned == "0") return null
         return try {
-            BigDecimal(cleaned).abs()  // always positive — direction from isCredit
-        } catch (e: NumberFormatException) {
-            null
-        }
+            val value = BigDecimal(cleaned).abs()
+            if (value.compareTo(BigDecimal.ZERO) == 0) null else value
+        } catch (e: NumberFormatException) { null }
     }
 
-    /**
-     * Try parsing a date string using each format in [formats] until one succeeds.
-     * Returns null if none work.
-     */
     private fun parseDate(raw: String, formats: List<String>): LocalDate? {
         val cleaned = raw.trim()
         if (cleaned.isEmpty()) return null
         for (fmt in formats) {
-            try {
-                return LocalDate.parse(cleaned, DateTimeFormatter.ofPattern(fmt))
-            } catch (e: DateTimeParseException) {
-                // Try next format
-            }
+            try { return LocalDate.parse(cleaned, DateTimeFormatter.ofPattern(fmt)) }
+            catch (e: DateTimeParseException) { /* try next */ }
         }
         return null
     }
 
     /**
-     * Split a CSV line into columns, respecting quoted fields.
-     * Handles fields like: "Narration with, comma inside","Amount"
-     *
-     * This is a simple RFC 4180 compliant parser. We don't use a library
-     * to keep dependencies minimal — the CSV format used by Indian banks
-     * is straightforward enough that a hand-rolled parser is sufficient.
+     * Split a delimited line into columns, respecting quoted fields.
+     * Handles: comma, tab, semicolon, pipe delimiters.
+     * RFC 4180 compliant for quoted fields containing the delimiter.
      */
-    private fun splitCsvLine(line: String): List<String> {
-        val result  = mutableListOf<String>()
-        val current = StringBuilder()
+    private fun splitLine(line: String, delimiter: Char): List<String> {
+        val result   = mutableListOf<String>()
+        val current  = StringBuilder()
         var inQuotes = false
+        var i        = 0
 
-        var i = 0
         while (i < line.length) {
             val c = line[i]
             when {
-                c == '"' && !inQuotes               -> inQuotes = true
+                c == '"' && !inQuotes -> inQuotes = true
                 c == '"' && inQuotes && i + 1 < line.length && line[i + 1] == '"' -> {
-                    // Escaped quote inside a quoted field: "" → "
-                    current.append('"')
-                    i++
+                    current.append('"'); i++   // escaped quote "" → "
                 }
-                c == '"' && inQuotes                -> inQuotes = false
-                c == ',' && !inQuotes               -> {
+                c == '"' && inQuotes  -> inQuotes = false
+                c == delimiter && !inQuotes -> {
                     result.add(current.toString())
                     current.clear()
                 }
-                else                                -> current.append(c)
+                else -> current.append(c)
             }
             i++
         }
-        result.add(current.toString())  // add the last field
+        result.add(current.toString())
         return result
     }
 }

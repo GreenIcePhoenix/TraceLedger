@@ -29,6 +29,11 @@ enum class BankFormat(val displayName: String) {
     KOTAK_CSV    ("Kotak Bank"),
     YES_CSV      ("Yes Bank"),
     INDUSIND_CSV ("IndusInd Bank"),
+    FEDERAL_CSV  ("Federal Bank"),
+    CANARA_CSV   ("Canara Bank"),
+    PNB_CSV      ("Punjab National Bank"),
+    BOB_CSV      ("Bank of Baroda"),
+    IDFC_CSV     ("IDFC First Bank"),
     GENERIC_CSV  ("Unknown Bank"),
 
     // ── Unrecognised ───────────────────────────────────────────────────────────

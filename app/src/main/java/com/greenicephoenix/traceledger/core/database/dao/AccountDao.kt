@@ -86,4 +86,17 @@ interface AccountDao {
         LIMIT 1
     """)
     suspend fun findByNameContaining(fragment: String): AccountEntity?
+
+
+    /**
+     * Finds an account whose lastFourDigits exactly matches [lastFour].
+     * Used by SmsQueueRepository to match SMS account references to TraceLedger accounts.
+     * Returns null if no account has this last-4 set.
+     */
+    @Query("""
+        SELECT * FROM accounts
+        WHERE lastFourDigits = :lastFour
+        LIMIT 1
+    """)
+    suspend fun findByLastFourDigits(lastFour: String): AccountEntity?
 }

@@ -51,11 +51,11 @@ class BudgetsViewModel(
                     used.divide(budget.limitAmount, 4, RoundingMode.HALF_UP).toFloat()
                 else 0f
 
-                // Phase 2: thresholds updated — 75% = WARNING, 90% = EXCEEDED
+                // Phase 2: thresholds updated — 75% = WARNING, 100% = EXCEEDED
                 val state = when {
-                    progress >= 0.90f -> BudgetState.EXCEEDED
+                    progress >= 1f -> BudgetState.EXCEEDED
                     progress >= 0.75f -> BudgetState.WARNING
-                    else              -> BudgetState.SAFE
+                    else -> BudgetState.SAFE
                 }
 
                 BudgetStatus(

@@ -39,9 +39,9 @@ object UniversalPdfParser {
         // YYYY-MM-DD  ISO
         Regex("""\b(\d{4}[-/]\d{2}[-/]\d{2})\b"""),
         // DD/MM/YYYY or MM/DD/YYYY or DD-MM-YYYY or DD.MM.YYYY (4-digit year)
-        Regex("""\b(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{4})\b"""),
+        Regex("""\b(\d{1,2}[/\-.]\d{1,2}[/\-.]\d{4})\b"""),
         // DD/MM/YY  (2-digit year)
-        Regex("""\b(\d{1,2}[/\-\.]\d{1,2}[/\-\.]\d{2})\b""")
+        Regex("""\b(\d{1,2}[/\-.]\d{1,2}[/\-.]\d{2})\b""")
     )
 
     // ── Amount pattern ────────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ object UniversalPdfParser {
     // Requires at least one digit, optional comma grouping, mandatory decimal
     // OR large round numbers (catches 150 but not dates like 12).
     private val AMOUNT_PATTERN = Regex(
-        """(?<![.\d,])(\d{1,3}(?:[,\.]\d{2,3})+(?:[,.]\d{1,2})?|\d+\.\d{2})(?![.\d])"""
+        """(?<![.\d,])(\d{1,3}(?:[,.]\d{2,3})+(?:[,.]\d{1,2})?|\d{1,10}\.\d{2})(?![.\d])"""
     )
 
     // ── Debit/Credit keywords ─────────────────────────────────────────────────
@@ -61,7 +61,7 @@ object UniversalPdfParser {
         """opening\s+balance|closing\s+balance|^total\b|balance\s+b/?f|brought\s+forward|
            |^statement\s+of|account\s+(number|no)|page\s+\d+\s+of|customer\s+(name|id)|
            |branch\s+(name|code)|ifsc|^date\s+(narration|description|particulars)|
-           |^\s*(narration|description|particulars|details)\s*${'$'}""".trimMargin("|"),
+           |^\s*(narration|description|particulars|details)\s*\$""".trimMargin("|"),
         RegexOption.IGNORE_CASE
     )
 
@@ -139,19 +139,28 @@ object UniversalPdfParser {
         if (amountMatches.isEmpty()) return null
 
         // Last amount = running balance, second-to-last = transaction amount
-        val balance = amountMatches.last().third
-        val transactionAmount = when {
-            amountMatches.size >= 2 -> amountMatches[amountMatches.size - 2].third
-            else                    -> amountMatches.first().third
+        val (transactionAmount, balance) = when {
+            amountMatches.size >= 2 -> {
+                // Last = running balance, second-to-last = transaction amount
+                amountMatches[amountMatches.size - 2].third to amountMatches.last().third
+            }
+            else -> {
+                // Only one amount — it IS the transaction amount, no balance available
+                amountMatches.first().third to null
+            }
         }
 
-        // Determine direction
+        // use balance delta when available, otherwise leave as unknown (false)
+        // but also check the line for Indian banking shorthand CR/DR
         val isCredit = when {
             CREDIT_KW.containsMatchIn(line) && !DEBIT_KW.containsMatchIn(line) -> true
-            DEBIT_KW.containsMatchIn(line)                                       -> false
-            // Balance delta: balance rose → credit
-            previousBalance != null && amountMatches.size >= 2 ->
+            DEBIT_KW.containsMatchIn(line)  && !CREDIT_KW.containsMatchIn(line) -> false
+            // Both or neither — use balance delta as tiebreaker
+            previousBalance != null && balance != null ->
                 balance > previousBalance
+            // Last resort: check for standalone CR/DR at end of line
+            line.trimEnd().endsWith("Cr", ignoreCase = true) -> true
+            line.trimEnd().endsWith("Dr", ignoreCase = true) -> false
             else -> false
         }
 
@@ -168,7 +177,7 @@ object UniversalPdfParser {
             description = description,
             amount      = transactionAmount,
             isCredit    = isCredit,
-            balance     = if (amountMatches.size >= 2) balance else null
+            balance     = balance
         )
     }
 
@@ -183,7 +192,7 @@ object UniversalPdfParser {
     private fun normaliseAmount(raw: String): BigDecimal? {
         val s = raw.trim()
         // Detect European format: ends with ,XX (comma before 2 digits)
-        val european = Regex(""",(\d{2})${'$'}""").find(s)
+        val european = Regex(""",(\d{2})\$""").find(s)
         val cleaned = if (european != null && !s.contains('.')) {
             // European: replace dots (thousands) and comma (decimal)
             s.replace(".", "").replace(",", ".")

@@ -48,6 +48,33 @@ object ChangelogData {
 
     val entries: List<VersionEntry> = listOf(
 
+        // ── v1.5.0 ────────────────────────────────────────────────────────────────
+        VersionEntry(
+            version     = "1.5.0",
+            releaseDate = "06 Jun 2026",
+            tagline     = "Smarter imports, last-4 matching, and a consistent design language.",
+            changes     = listOf(
+                ChangeItem(ChangeType.NEW,      "Statement import learning store — category assignments remembered across sessions"),
+                ChangeItem(ChangeType.NEW,      "Apply to similar — assign a category to all matching transactions in one tap"),
+                ChangeItem(ChangeType.NEW,      "Bulk assign — one category to all uncategorized rows at once"),
+                ChangeItem(ChangeType.NEW,      "Account last 4 digits — optional field shown on cards and in account selectors"),
+                ChangeItem(ChangeType.IMPROVED, "Statement import works with any bank — preamble rows, blank columns, multi-sheet, merged headers"),
+                ChangeItem(ChangeType.IMPROVED, "CSV encoding and delimiter auto-detected — UTF-16, Windows-1252, tab, semicolon all supported"),
+                ChangeItem(ChangeType.IMPROVED, "Added Federal Bank, Canara, PNB, Bank of Baroda, IDFC First Bank CSV support"),
+                ChangeItem(ChangeType.IMPROVED, "Import review — auto-suggested categories marked with ~ prefix; description always visible"),
+                ChangeItem(ChangeType.IMPROVED, "Category picker in import matches AddTransaction style with icons and colors"),
+                ChangeItem(ChangeType.IMPROVED, "SMS account matching now uses last 4 digits for higher accuracy"),
+                ChangeItem(ChangeType.IMPROVED, "Categories can be renamed even when transactions are linked"),
+                ChangeItem(ChangeType.IMPROVED, "Delete category shows warning instead of hiding the button"),
+                ChangeItem(ChangeType.IMPROVED, "Design system — shared color tokens, layout tokens, and Compose primitives across all screens"),
+                ChangeItem(ChangeType.IMPROVED, "AddEditRecurring, AddEditBudget, and Templates screens redesigned"),
+                ChangeItem(ChangeType.FIXED,    "Auto backup now includes currency and number format settings"),
+                ChangeItem(ChangeType.FIXED,    "Category rename no longer crashes when transactions are linked"),
+                ChangeItem(ChangeType.FIXED,    "ICICI and other banks with preamble rows now fully imported"),
+                ChangeItem(ChangeType.FIXED,    "Credit transactions in XLSX now correctly identified"),
+            )
+        ),
+
         // ── v1.4.0 ────────────────────────────────────────────────────────────
         VersionEntry(
             version     = "1.4.0",

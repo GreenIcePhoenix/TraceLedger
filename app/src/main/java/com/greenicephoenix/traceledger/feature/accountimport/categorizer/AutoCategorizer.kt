@@ -25,7 +25,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 package com.greenicephoenix.traceledger.feature.accountimport.categorizer
 
-import com.greenicephoenix.traceledger.domain.model.CategoryType
 import com.greenicephoenix.traceledger.domain.model.CategoryUiModel
 import com.greenicephoenix.traceledger.domain.model.TransactionType
 
@@ -64,17 +63,17 @@ private val KEYWORD_RULES = listOf(
     ),
     KeywordRule(
         keywords     = listOf("interest credit", "interest earned", "fd interest", "rd interest"),
-        categoryName = "Investment",
+        categoryName = "Interest",
         forType      = TransactionType.INCOME
     ),
     KeywordRule(
         keywords     = listOf("dividend", "mutual fund", "redemption"),
-        categoryName = "Investment",
-        forType      = TransactionType.INCOME
+        categoryName = "Other",
+        forType      = TransactionType.INVESTMENT
     ),
     KeywordRule(
         keywords     = listOf("refund", "cashback", "reversal"),
-        categoryName = "Other",
+        categoryName = "Refund",
         forType      = TransactionType.INCOME
     ),
     KeywordRule(
@@ -98,7 +97,7 @@ private val KEYWORD_RULES = listOf(
         keywords     = listOf("grofers", "bigbasket", "dmart", "reliance fresh",
             "more supermarket", "spencer", "nature basket",
             "jiomart", "milkbasket"),
-        categoryName = "Food",
+        categoryName = "Groceries",
         forType      = TransactionType.EXPENSE
     ),
 
@@ -117,24 +116,31 @@ private val KEYWORD_RULES = listOf(
             "irctc", "indian railway", "redbus", "abhibus",
             "metro", "dmrc", "bmtc", "best bus",
             "makemytrip", "yatra", "goibibo", "indigo", "airindia",
-            "spicejet", "vistara", "akasa"),
+            "spicejet", "vistara", "akasa", "fastag", "toll",),
         categoryName = "Transport",
         forType      = TransactionType.EXPENSE
     ),
     KeywordRule(
-        keywords     = listOf("fastag", "toll", "fuel", "petrol", "diesel", "hp petrol",
-            "iocl", "bpcl", "hindustan petroleum"),
-        categoryName = "Transport",
+        keywords     = listOf("fuel", "petrol", "diesel", "hp petrol",
+            "iocl", "bpcl", "hindustan petroleum", "hp", "gas", "cng", "shell", "oil"),
+        categoryName = "Fuel",
         forType      = TransactionType.EXPENSE
     ),
 
     // ── EXPENSE: Entertainment ────────────────────────────────────────────────
     KeywordRule(
-        keywords     = listOf("netflix", "amazon prime", "prime video", "hotstar",
-            "disney", "sony liv", "zee5", "jiocinema",
-            "spotify", "gaana", "jiosaavn", "apple music",
-            "youtube premium", "bookmyshow", "pvr", "inox"),
+        keywords     = listOf("movie", "hotel", "resort", "park",
+            "adventure"),
         categoryName = "Entertainment",
+        forType      = TransactionType.EXPENSE
+    ),
+
+    // Add after Entertainment rule:
+    KeywordRule(
+        keywords     = listOf("netflix", "spotify", "hotstar", "disney", "prime",
+            "youtube premium", "apple music", "jiosaavn",
+            "zee5", "sonyliv", "jiocinema"),
+        categoryName = "Subscriptions",
         forType      = TransactionType.EXPENSE
     ),
 
@@ -144,7 +150,7 @@ private val KEYWORD_RULES = listOf(
             "pharmacy", "medical", "hospital", "clinic",
             "1mg", "pharmeasy", "netmeds", "healthkart",
             "doctor", "lab test", "diagnostics", "thyrocare"),
-        categoryName = "Health",
+        categoryName = "Healthcare",
         forType      = TransactionType.EXPENSE
     ),
 
@@ -155,13 +161,13 @@ private val KEYWORD_RULES = listOf(
             "water bill", "bwssb", "jal board",
             "broadband", "jio fiber", "airtel fiber", "act broadband",
             "tata sky", "dish tv", "sun direct", "d2h"),
-        categoryName = "Utilities",
+        categoryName = "Bills",
         forType      = TransactionType.EXPENSE
     ),
     KeywordRule(
         keywords     = listOf("airtel", "jio", "vodafone", "vi ", "bsnl", "recharge",
             "mobile bill", "postpaid"),
-        categoryName = "Utilities",
+        categoryName = "Bills",
         forType      = TransactionType.EXPENSE
     ),
 
@@ -169,7 +175,7 @@ private val KEYWORD_RULES = listOf(
     KeywordRule(
         keywords     = listOf("rent", "maintenance", "society", "nobroker",
             "housing.com", "magicbricks", "99acres"),
-        categoryName = "Housing",
+        categoryName = "Rent",
         forType      = TransactionType.EXPENSE
     ),
 
@@ -177,7 +183,7 @@ private val KEYWORD_RULES = listOf(
     KeywordRule(
         keywords     = listOf("fees", "tuition", "school", "college", "university",
             "byju", "unacademy", "vedantu", "coursera", "udemy",
-            "upgrad", "simplilearn"),
+            "upgrad", "simplilearn", "course"),
         categoryName = "Education",
         forType      = TransactionType.EXPENSE
     ),
@@ -186,7 +192,7 @@ private val KEYWORD_RULES = listOf(
     KeywordRule(
         keywords     = listOf("insurance", "lic", "icici pru", "hdfc life",
             "max life", "bajaj allianz", "star health",
-            "niva bupa", "religare", "policy premium"),
+            "niva bupa", "religare", "policy premium", "health insurance", "term insurance"),
         categoryName = "Insurance",
         forType      = TransactionType.EXPENSE
     ),
@@ -194,7 +200,7 @@ private val KEYWORD_RULES = listOf(
     // ── EXPENSE: ATM / Cash ───────────────────────────────────────────────────
     KeywordRule(
         keywords     = listOf("atm cash", "cash withdrawal", "atm withdrawal"),
-        categoryName = "Cash",
+        categoryName = "Other",
         forType      = TransactionType.EXPENSE
     )
 )
@@ -232,6 +238,24 @@ object AutoCategorizer {
                             category.name.equals(rule.categoryName, ignoreCase = true)
                 }
                 if (match != null) return match.id
+            }
+        }
+
+        // Secondary pass: check if any keyword rule's keywords match the description,
+        // and if so, try to find ANY user category that contains part of the description.
+        // This handles renamed categories.
+        for (rule in KEYWORD_RULES) {
+            if (rule.forType != targetType) continue
+            if (rule.keywords.any { keyword -> keyword in normalised }) {
+                // Keyword matched but category name lookup failed (user renamed it).
+                // Try fuzzy match: find any user category whose name appears in the description
+                // or whose keywords overlap with this rule's category name.
+                val fuzzyMatch = userCategories.firstOrNull { category ->
+                    category.type.name == targetType.name &&
+                            (normalised.contains(category.name.lowercase()) ||
+                                    category.name.lowercase().contains(rule.categoryName.lowercase()))
+                }
+                if (fuzzyMatch != null) return fuzzyMatch.id
             }
         }
 

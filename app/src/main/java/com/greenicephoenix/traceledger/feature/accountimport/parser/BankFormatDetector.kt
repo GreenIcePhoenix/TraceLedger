@@ -15,7 +15,12 @@ object BankFormatDetector {
         BankFormat.AXIS_CSV     to "particulars",
         BankFormat.KOTAK_CSV    to "withdrawal (dr)",
         BankFormat.YES_CSV      to "withdrawal amt",
-        BankFormat.INDUSIND_CSV to "dr/cr"
+        BankFormat.INDUSIND_CSV to "dr/cr",
+        BankFormat.FEDERAL_CSV  to "federal bank",
+        BankFormat.CANARA_CSV   to "canara",
+        BankFormat.PNB_CSV      to "punjab national",
+        BankFormat.BOB_CSV      to "bank of baroda",
+        BankFormat.IDFC_CSV     to "idfc"
     )
 
     // ── File signature bytes ─────────────────────────────────────────────────
@@ -60,7 +65,7 @@ object BankFormatDetector {
     }
 
     private fun detectCsvFormat(context: Context, uri: Uri): BankFormat {
-        val headerLines = readFirstLines(context, uri, 5)
+        val headerLines = readFirstLines(context, uri, 50)
         if (headerLines.isEmpty()) return BankFormat.UNKNOWN
         for (line in headerLines) {
             val n = line.normalise()

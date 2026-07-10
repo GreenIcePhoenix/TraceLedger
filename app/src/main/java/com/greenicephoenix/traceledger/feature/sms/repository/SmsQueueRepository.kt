@@ -120,7 +120,15 @@ class SmsQueueRepository(
         // 1. Learning store
         learningStore.getLearnedAccountForSender(sender)?.let { return it }
 
-        // 2. Body-based detection — only used when body explicitly names a bank
+        // 2. Last-4 digit match — highest-confidence structural match.
+        //    If the SMS contains "xx1234" and the user has an account with
+        //    lastFourDigits = "1234", this is almost certainly the right account.
+        val smsLastFour = engine.extractAccountLastFour(body)
+        if (!smsLastFour.isNullOrBlank()) {
+            accountDao.findByLastFourDigits(smsLastFour)?.id?.let { return it }
+        }
+
+        // 3. Body-based detection — only used when body explicitly names a bank
         //    AND contains an account number (strong signal this is a bank txn,
         //    not just a UPI payment confirmation to a wallet)
         val bodyBankInfo = engine.detectBankInfoFromBody(body)
@@ -134,7 +142,7 @@ class SmsQueueRepository(
             if (byNameOnly != null) return byNameOnly
         }
 
-        // 3. Sender-based detection (original logic)
+        // 4. Sender-based detection (original logic)
         val bankInfo = engine.detectBankInfo(sender) ?: return null
         val fragment = extractSearchFragment(bankInfo.bankName)
 

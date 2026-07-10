@@ -65,7 +65,15 @@ fun ImportReviewScreen(
     val categoryMap = remember(categories) { categories.associateBy { it.id } }
 
     var editingItemId    by remember { mutableStateOf<String?>(null) }
+    var editingNoteItemId by remember { mutableStateOf<String?>(null) }
+    var editingNoteText   by remember { mutableStateOf("") }
     var showBalanceSheet by remember { mutableStateOf(false) }
+
+    var applyToSimilarCategoryId by remember { mutableStateOf<String?>(null) }
+    var applyToSimilarItemId     by remember { mutableStateOf<String?>(null) }
+    var applyToSimilarCount      by remember { mutableStateOf(0) }
+
+    var showBulkAssignPicker by remember { mutableStateOf(false) }
 
     LaunchedEffect(fileUri, accountId) {
         if (account != null) viewModel.startParsing(fileUri, account, categories)
@@ -124,12 +132,17 @@ fun ImportReviewScreen(
                 is ImportReviewState.Parsing    -> ParsingView()
                 is ImportReviewState.ParseError -> ParseErrorView(s.message, onBack, onRetry)
                 is ImportReviewState.NeedsPassword -> ParsingView() // dialog shown separately
-                is ImportReviewState.Reviewing  -> ReviewingContent(
+                is ImportReviewState.Reviewing -> ReviewingContent(
                     reviewing      = s,
                     categoryMap    = categoryMap,
                     onFilterChange = { viewModel.setFilter(it) },
                     onToggle       = { viewModel.toggleIncluded(it) },
                     onCategoryTap  = { editingItemId = it },
+                    onNoteTap      = { itemId ->
+                        editingNoteItemId = itemId
+                        editingNoteText   = s.items.firstOrNull { it.id == itemId }?.note ?: ""
+                    },
+                    onBulkAssign   = { showBulkAssignPicker = true },
                     onExcludeDuplicates = { viewModel.excludeAllDuplicates() }
                 )
                 is ImportReviewState.Importing  -> ImportingView(s)
@@ -169,8 +182,15 @@ fun ImportReviewScreen(
             isCredit   = editingItem.parsed.isCredit,
             categories = categories,
             currentId  = editingItem.categoryId,
-            onSelect   = { categoryId ->
+            onSelect = { categoryId ->
                 viewModel.updateCategory(editingItemId!!, categoryId)
+                // Check if similar transactions exist
+                val similarCount = viewModel.countSimilar(editingItemId!!, categoryId)
+                if (similarCount > 0) {
+                    applyToSimilarItemId     = editingItemId
+                    applyToSimilarCategoryId = categoryId
+                    applyToSimilarCount      = similarCount
+                }
                 editingItemId = null
             },
             onDismiss = { editingItemId = null }
@@ -184,6 +204,97 @@ fun ImportReviewScreen(
             onStrategyChange       = { viewModel.setBalanceStrategy(it) },
             onClosingBalanceChange = { viewModel.updateClosingBalanceInput(it) },
             onDismiss              = { showBalanceSheet = false }
+        )
+    }
+
+    if (editingNoteItemId != null) {
+        AlertDialog(
+            onDismissRequest = { editingNoteItemId = null },
+            title = { Text("Edit note") },
+            text  = {
+                OutlinedTextField(
+                    value         = editingNoteText,
+                    onValueChange = { if (it.length <= 200) editingNoteText = it },
+                    label         = { Text("Note") },
+                    singleLine    = true,
+                    trailingIcon  = {
+                        Text(
+                            "${editingNoteText.length}/200",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.updateNote(editingNoteItemId!!, editingNoteText)
+                    editingNoteItemId = null
+                }) { Text("Save") }
+            },
+            dismissButton = {
+                TextButton(onClick = { editingNoteItemId = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (applyToSimilarItemId != null && applyToSimilarCategoryId != null) {
+        val categoryName = categoryMap[applyToSimilarCategoryId]?.name ?: "this category"
+
+        AlertDialog(
+            onDismissRequest = {
+                applyToSimilarItemId     = null
+                applyToSimilarCategoryId = null
+            },
+            containerColor = MaterialTheme.colorScheme.surface,
+            title = { Text("Apply to similar?") },
+            text  = {
+                Text(
+                    "Apply \"$categoryName\" to $applyToSimilarCount similar transaction${if (applyToSimilarCount > 1) "s" else ""}?",
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.applyCategoryToSimilar(
+                        applyToSimilarItemId!!,
+                        applyToSimilarCategoryId
+                    )
+                    applyToSimilarItemId     = null
+                    applyToSimilarCategoryId = null
+                }) {
+                    Text("Apply to all $applyToSimilarCount")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    applyToSimilarItemId     = null
+                    applyToSimilarCategoryId = null
+                }) {
+                    Text("Just this one")
+                }
+            }
+        )
+    }
+
+    if (showBulkAssignPicker && state is ImportReviewState.Reviewing) {
+        val s = state as ImportReviewState.Reviewing
+        // Determine if majority are credit or expense to show right categories
+        val mostlyCredit = s.includedItems.count { it.parsed.isCredit } >
+                s.includedItems.count { !it.parsed.isCredit }
+        ImportCategoryPickerSheet(
+            isCredit   = mostlyCredit,
+            categories = categories,
+            currentId  = null,
+            onSelect   = { categoryId ->
+                if (categoryId != null) {
+                    viewModel.applyCategoriesToAllUncategorized(categoryId)
+                }
+                showBulkAssignPicker = false
+            },
+            onDismiss = { showBulkAssignPicker = false }
         )
     }
 }
@@ -247,11 +358,13 @@ private fun ImportingView(state: ImportReviewState.Importing) {
 
 @Composable
 private fun ReviewingContent(
-    reviewing:          ImportReviewState.Reviewing,
-    categoryMap:        Map<String, CategoryUiModel>,
-    onFilterChange:     (ReviewFilter) -> Unit,
-    onToggle:           (String) -> Unit,
-    onCategoryTap:      (String) -> Unit,
+    reviewing:           ImportReviewState.Reviewing,
+    categoryMap:         Map<String, CategoryUiModel>,
+    onFilterChange:      (ReviewFilter) -> Unit,
+    onToggle:            (String) -> Unit,
+    onCategoryTap:       (String) -> Unit,
+    onNoteTap:           (String) -> Unit,
+    onBulkAssign:        () -> Unit,
     onExcludeDuplicates: () -> Unit
 ) {
     val currency by CurrencyManager.currency.collectAsState()
@@ -295,12 +408,34 @@ private fun ReviewingContent(
 
         // Hint — shown once to orient the user
         item {
-            Text(
-                text     = "Tap any category chip to change it  ·  Uncheck rows to exclude them",
-                style    = MaterialTheme.typography.labelSmall,
-                color    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
-                modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically
+            ) {
+                Text(
+                    text     = "Tap description to edit note  ·  Tap category to assign",
+                    style    = MaterialTheme.typography.labelSmall,
+                    color    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+                    modifier = Modifier.weight(1f)
+                )
+                // Show bulk assign button only when uncategorized items exist
+                val uncategorizedCount = reviewing.includedItems.count { it.categoryId == null }
+                if (uncategorizedCount > 0) {
+                    TextButton(
+                        onClick        = onBulkAssign,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                    ) {
+                        Text(
+                            "Assign all ($uncategorizedCount)",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            }
         }
 
         // Warnings
@@ -368,7 +503,8 @@ private fun ReviewingContent(
                     categoryMap   = categoryMap,
                     currency      = currency,
                     onToggle      = { onToggle(item.id) },
-                    onCategoryTap = { onCategoryTap(item.id) }
+                    onCategoryTap = { onCategoryTap(item.id) },
+                    onNoteTap     = { onNoteTap(item.id) }
                 )
                 HorizontalDivider(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f),
@@ -391,7 +527,8 @@ private fun TransactionRow(
     categoryMap:   Map<String, CategoryUiModel>,
     currency:      com.greenicephoenix.traceledger.core.currency.Currency,
     onToggle:      () -> Unit,
-    onCategoryTap: () -> Unit
+    onCategoryTap: () -> Unit,
+    onNoteTap:     () -> Unit
 ) {
     val leftColor by animateColorAsState(
         targetValue = when {
@@ -451,51 +588,104 @@ private fun TransactionRow(
 
             // Description + category
             Column(modifier = Modifier.weight(1f)) {
+                // Bank description — always visible, read-only, muted
                 Text(
-                    text      = item.note,
-                    style     = MaterialTheme.typography.bodyMedium,
-                    maxLines  = 1,
-                    overflow  = TextOverflow.Ellipsis,
-                    color     = MaterialTheme.colorScheme.onSurface,
+                    text     = item.parsed.description,
+                    style    = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     textDecoration = if (!item.isIncluded && !item.hasDateError)
                         TextDecoration.LineThrough else TextDecoration.None
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(5.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.height(3.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    verticalAlignment     = Alignment.CenterVertically
+                ) {
                     if (item.isDuplicate) {
-                        Text(
-                            "⚠ Duplicate?",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = AmberWarning, fontSize = 9.sp
-                        )
+                        Text("⚠ Duplicate?", style = MaterialTheme.typography.labelSmall,
+                            color = AmberWarning, fontSize = 9.sp)
                     }
-                    val category = item.categoryId?.let { categoryMap[it] }
+                    // Category chip
+                    // 1. Auto-suggested (categoryId set but equals suggestedCategoryId) — show dimmed
+                    // 2. User confirmed (categoryId set and differs from suggested, or user tapped) — show bright
+                    // 3. Not set — show "Set category" in red/orange
+
+                    // Replace the existing category chip Row with:
+                    val category       = item.categoryId?.let { categoryMap[it] }
+                    val isAutoSuggested = item.categoryId != null &&
+                            item.categoryId == item.suggestedCategoryId
+
                     Row(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
                             .background(
-                                if (category != null) MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+                                when {
+                                    category != null && !isAutoSuggested ->
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                    category != null ->
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.06f)
+                                    else ->
+                                        MaterialTheme.colorScheme.error.copy(alpha = 0.10f)
+                                }
                             )
                             .clickable(enabled = !item.hasDateError) { onCategoryTap() }
                             .padding(horizontal = 6.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment     = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(3.dp)
                     ) {
                         Text(
-                            text      = category?.name ?: "Set category",
-                            style     = MaterialTheme.typography.labelSmall,
-                            color     = if (category != null) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                            fontSize  = 10.sp
+                            text = when {
+                                category != null && isAutoSuggested  -> "~ ${category.name}"
+                                category != null                     -> category.name
+                                else                                 -> "Set category"
+                            },
+                            style    = MaterialTheme.typography.labelSmall,
+                            color    = when {
+                                category != null && !isAutoSuggested -> MaterialTheme.colorScheme.primary
+                                category != null                     -> MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
+                                else                                 -> MaterialTheme.colorScheme.error
+                            },
+                            fontSize = 10.sp
                         )
                         Icon(
                             Icons.Default.Edit,
-                            contentDescription = "Change category",
-                            tint     = if (category != null) MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
-                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                            contentDescription = null,
+                            tint = when {
+                                category != null && !isAutoSuggested ->
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                                category != null ->
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)
+                                else ->
+                                    MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                            },
                             modifier = Modifier.size(10.dp)
                         )
+                    }
+                    // Note chip — shows "+ note" if empty, or note text if set
+                    if (!item.hasDateError) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f))
+                                .clickable { onNoteTap() }
+                                .padding(horizontal = 6.dp, vertical = 3.dp),
+                            verticalAlignment     = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Icon(Icons.Default.Edit, null,
+                                tint     = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.35f),
+                                modifier = Modifier.size(9.dp))
+                            Text(
+                                text     = if (item.note.isBlank()) "+ note" else item.note,
+                                style    = MaterialTheme.typography.labelSmall,
+                                color    = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                fontSize = 10.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }
@@ -581,7 +771,6 @@ private fun BottomActionBar(
     onShowBalanceSheet: () -> Unit,
     onConfirm:          () -> Unit
 ) {
-    val currency      by CurrencyManager.currency.collectAsState()
     val includedCount  = reviewing.includedItems.size
 
     HorizontalDivider(color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
@@ -618,15 +807,19 @@ private fun BottomActionBar(
 
         Button(
             onClick  = onConfirm,
-            enabled  = includedCount > 0,
+            enabled  = includedCount > 0 && reviewing.includedItems.all { it.categoryId != null },
             modifier = Modifier.fillMaxWidth(),
             shape    = RoundedCornerShape(12.dp)
         ) {
             Icon(Icons.Default.FileDownload, null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(
-                if (includedCount > 0) "Import $includedCount transaction${if (includedCount > 1) "s" else ""}"
-                else "No transactions selected",
+                when {
+                    includedCount == 0 -> "No transactions selected"
+                    reviewing.includedItems.any { it.categoryId == null } ->
+                        "⚠ ${reviewing.includedItems.count { it.categoryId == null }} need a category"
+                    else -> "Import $includedCount transaction${if (includedCount > 1) "s" else ""}"
+                },
                 style = MaterialTheme.typography.titleSmall
             )
         }

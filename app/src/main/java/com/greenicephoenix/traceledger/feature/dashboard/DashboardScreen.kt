@@ -27,6 +27,7 @@ import com.greenicephoenix.traceledger.feature.budgets.domain.BudgetState
 import com.greenicephoenix.traceledger.feature.budgets.ui.BudgetColors
 import com.greenicephoenix.traceledger.feature.dashboard.components.BudgetWarningBanner
 import com.greenicephoenix.traceledger.core.ui.theme.DotMatrixFont
+import com.greenicephoenix.traceledger.feature.budgets.BudgetsViewModel
 import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.format.DateTimeFormatter
@@ -37,7 +38,7 @@ import kotlin.math.min
 fun DashboardScreen(
     accounts: List<AccountUiModel>,
     dashboardViewModel: DashboardViewModel,
-    budgetsViewModel: com.greenicephoenix.traceledger.feature.budgets.BudgetsViewModel,
+    budgetsViewModel: BudgetsViewModel,
     categories: List<CategoryUiModel>,
     onNavigate: (String) -> Unit,
     onAddAccount: () -> Unit,

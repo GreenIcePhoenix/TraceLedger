@@ -11,7 +11,6 @@ import com.greenicephoenix.traceledger.feature.accountimport.categorizer.AutoCat
 import com.greenicephoenix.traceledger.feature.accountimport.model.BalanceStrategy
 import com.greenicephoenix.traceledger.feature.accountimport.model.BankFormat
 import com.greenicephoenix.traceledger.feature.accountimport.model.ImportReviewItem
-import com.greenicephoenix.traceledger.feature.accountimport.model.ParsedTransaction
 import com.greenicephoenix.traceledger.feature.accountimport.parser.ParseResult
 import com.greenicephoenix.traceledger.feature.accountimport.parser.StatementParserFactory
 import com.greenicephoenix.traceledger.feature.accountimport.repository.StatementImportRepository
@@ -92,7 +91,8 @@ sealed class ImportReviewState {
 
 class StatementImportViewModel(
     private val appContext:       Context,
-    private val importRepository: StatementImportRepository
+    private val importRepository: StatementImportRepository,
+    private val learningStore:    com.greenicephoenix.traceledger.feature.accountimport.store.ImportLearningStore
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<ImportReviewState>(ImportReviewState.Idle)
@@ -174,6 +174,15 @@ class StatementImportViewModel(
         )
     }
 
+    fun updateNote(itemId: String, note: String) {
+        val current = _state.value as? ImportReviewState.Reviewing ?: return
+        _state.value = current.copy(
+            items = current.items.map { item ->
+                if (item.id == itemId) item.copy(note = note.take(200)) else item
+            }
+        )
+    }
+
     fun setFilter(filter: ReviewFilter) {
         val current = _state.value as? ImportReviewState.Reviewing ?: return
         _state.value = current.copy(filterMode = filter)
@@ -194,6 +203,24 @@ class StatementImportViewModel(
         _state.value = current.copy(
             items = current.items.map { item ->
                 if (item.isDuplicate) item.copy(isIncluded = false) else item
+            }
+        )
+    }
+
+    /**
+     * Applies [categoryId] to all included items that currently have no category.
+     * Used by the "Assign all uncategorized" bulk action in the review screen.
+     */
+    fun applyCategoriesToAllUncategorized(categoryId: String) {
+        val current = _state.value as? ImportReviewState.Reviewing ?: return
+        _state.value = current.copy(
+            items = current.items.map { item ->
+                if (!item.hasDateError &&
+                    item.isIncluded &&
+                    item.categoryId == null
+                ) {
+                    item.copy(categoryId = categoryId)
+                } else item
             }
         )
     }
@@ -285,11 +312,83 @@ class StatementImportViewModel(
                 }
             }
 
+            val learningEntries = toImport.map { item ->
+                com.greenicephoenix.traceledger.feature.accountimport.store.LearningEntry(
+                    description         = item.parsed.description,
+                    isCredit            = item.parsed.isCredit,
+                    categoryId          = item.categoryId,
+                    suggestedCategoryId = item.suggestedCategoryId
+                )
+            }
+            learningStore.learnAll(learningEntries)
+
             _state.value = ImportReviewState.Completed(
                 imported   = toImport.size,
                 skipped    = skipped,
                 duplicates = duplicates
             )
+        }
+    }
+
+    /**
+     * Returns how many OTHER items share the same description prefix as [itemId].
+     * Used by the UI to decide whether to show the "Apply to similar" dialog.
+     * Returns 0 if only 1 item matches (no point showing the dialog).
+     */
+    fun countSimilar(itemId: String, categoryId: String?): Int {
+        if (categoryId == null) return 0
+        val current = _state.value as? ImportReviewState.Reviewing ?: return 0
+        val source  = current.items.firstOrNull { it.id == itemId } ?: return 0
+        val prefix  = descriptionPrefix(source.parsed.description)
+        return current.items.count { item ->
+            item.id != itemId &&
+                    !item.hasDateError &&
+                    item.parsed.isCredit == source.parsed.isCredit &&
+                    descriptionPrefix(item.parsed.description) == prefix &&
+                    item.categoryId != categoryId   // only count items that don't already have this category
+        }
+    }
+
+    /**
+     * Applies [categoryId] to all items whose description prefix matches [itemId]'s prefix.
+     * Only updates items that don't already have this category assigned.
+     * Only updates items of the same credit/debit direction.
+     */
+    fun applyCategoryToSimilar(itemId: String, categoryId: String?) {
+        if (categoryId == null) return
+        val current = _state.value as? ImportReviewState.Reviewing ?: return
+        val source  = current.items.firstOrNull { it.id == itemId } ?: return
+        val prefix  = descriptionPrefix(source.parsed.description)
+        _state.value = current.copy(
+            items = current.items.map { item ->
+                if (!item.hasDateError &&
+                    item.parsed.isCredit == source.parsed.isCredit &&
+                    descriptionPrefix(item.parsed.description) == prefix &&
+                    item.categoryId != categoryId
+                ) {
+                    item.copy(categoryId = categoryId)
+                } else item
+            }
+        )
+    }
+
+    /**
+     * Extracts a normalised prefix from a bank description for similarity matching.
+     *
+     * Strategy:
+     *  - UPI transactions: "UPI/SWIGGY ORDER/..." → "upi/swiggy"  (first 2 segments)
+     *  - ACH transactions: "ACH/RAIL VIKAS NIGAM/..." → "ach/rail vikas nigam" (first 2)
+     *  - Others: first 15 chars lowercased
+     *
+     * This groups "UPI/SWIGGY ORDER/ref1" and "UPI/SWIGGY DELIVERY/ref2" together
+     * while keeping "UPI/AMAZON" and "UPI/SWIGGY" separate.
+     */
+    private fun descriptionPrefix(description: String): String {
+        val lower    = description.lowercase().trim()
+        val segments = lower.split("/")
+        return when {
+            segments.size >= 2 -> "${segments[0]}/${segments[1].take(12)}"
+            else               -> lower.take(15)
         }
     }
 
@@ -324,11 +423,11 @@ class StatementImportViewModel(
                 categories.firstOrNull { cat ->
                     cat.name.equals(parsed.importedCategoryName, ignoreCase = true) &&
                             cat.type.name == targetTypeName
-                }?.id
-                // If name not found in user's categories, fall back to auto-categoriser
-                    ?: AutoCategorizer.suggest(parsed.description, parsed.isCredit, categories)
+                }?.id ?: AutoCategorizer.suggest(parsed.description, parsed.isCredit, categories)
             } else {
-                AutoCategorizer.suggest(parsed.description, parsed.isCredit, categories)
+                // Check learning store first — user's previous assignments take priority
+                learningStore.getSuggestion(parsed.description, parsed.isCredit)
+                    ?: AutoCategorizer.suggest(parsed.description, parsed.isCredit, categories)
             }
             val isDuplicate = parsed.date != null && existingInRange.any { existing ->
                 val sameDir = if (parsed.isCredit) existing.toAccountId == account.id
@@ -343,7 +442,7 @@ class StatementImportViewModel(
                 parsed              = parsed,
                 suggestedCategoryId = suggestedCategoryId,
                 categoryId          = suggestedCategoryId,
-                note                = parsed.description,
+                note                = "",
                 isIncluded          = parsed.date != null,
                 isDuplicate         = isDuplicate,
                 hasDateError        = parsed.date == null
@@ -371,7 +470,10 @@ class StatementImportViewModelFactory(
     private val appContext:       Context,
     private val importRepository: StatementImportRepository
 ) : ViewModelProvider.Factory {
-    @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        StatementImportViewModel(appContext, importRepository) as T
+        StatementImportViewModel(
+            appContext       = appContext,
+            importRepository = importRepository,
+            learningStore    = com.greenicephoenix.traceledger.feature.accountimport.store.ImportLearningStore(appContext)
+        ) as T
 }
